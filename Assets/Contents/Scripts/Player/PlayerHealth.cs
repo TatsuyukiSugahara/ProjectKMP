@@ -18,6 +18,10 @@ namespace ProjectKMP.Player
         private const float RESPAWN_RADIUS    = 8.0f;
         private const float RESPAWN_HEIGHT    = 1.0f;
 
+        // ---- 参照 ----------------------------------------
+        [SerializeField] private BiteVfx _biteVfxPrefab;
+        [SerializeField] private float _biteVfxHeight = 1.1f;
+
         // ---- 内部状態 ------------------------------------
         private CharacterController _controller;
         private PlayerMover _mover;
@@ -55,6 +59,12 @@ namespace ProjectKMP.Player
             if (_isDead) return;
             _isDead = true;
             SetAlive(false);
+
+            // 被弾エフェクトは全員のクライアントで出す。この RPC が全員に届くので追加の通信は不要
+            if (_biteVfxPrefab != null)
+            {
+                BiteVfx.Spawn(_biteVfxPrefab, transform.position + Vector3.up * _biteVfxHeight);
+            }
 
             // 死んだ本人が自分の死亡数を加算し、復帰も自分で行う
             if (photonView.IsMine)

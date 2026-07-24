@@ -144,6 +144,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d17722626b5947da9cdc92231ccf4f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.PlayerHealth
+  _biteVfxPrefab: {fileID: 331138683628392021, guid: e1418f9337a2c445ba88d2f4199f497b, type: 3}
+  _biteVfxHeight: 1.1
 --- !u!114 &8804879345773476733
 MonoBehaviour:
   m_ObjectHideFlags: 0
