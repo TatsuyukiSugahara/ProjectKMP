@@ -14,6 +14,8 @@ GameObject:
   - component: {fileID: 1076763322154000756}
   - component: {fileID: 644609916797723237}
   - component: {fileID: 5795177688433341215}
+  - component: {fileID: 8490899025224719816}
+  - component: {fileID: 8804879345773476733}
   m_Layer: 0
   m_Name: PF_Player_Test
   m_TagString: Untagged
@@ -130,6 +132,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.PlayerVisual
   _targetRenderer: {fileID: 7406620465006100348}
+--- !u!114 &8490899025224719816
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3967837857487987112}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d17722626b5947da9cdc92231ccf4f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.PlayerHealth
+--- !u!114 &8804879345773476733
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3967837857487987112}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4046b56b8505a4c718d549d525b8d8f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.PlayerShooter
+  _bulletPrefab: {fileID: 5878689711618794531, guid: 755df29da043e4d8fb231ad2f9db4ddc, type: 3}
+  _fireIntervalSec: 0.8
+  _muzzleOffset: {x: 0, y: 1.2, z: 0.7}
 --- !u!1 &5749221413106096565
 GameObject:
   m_ObjectHideFlags: 0

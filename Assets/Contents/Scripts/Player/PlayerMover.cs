@@ -1,4 +1,5 @@
 using Photon.Pun;
+using ProjectKMP.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -68,7 +69,7 @@ namespace ProjectKMP.Player
 
         // ---- 内部処理 ------------------------------------
 
-        /// <summary>キーボード(WASD/矢印)とゲームパッド左スティックを合成して入力値を取得する</summary>
+        /// <summary>キーボード(WASD/矢印)・ゲームパッド左スティック・仮想スティックを合成して取得する</summary>
         private Vector2 ReadMoveInput()
         {
             Vector2 value = Vector2.zero;
@@ -87,6 +88,14 @@ namespace ProjectKMP.Player
             {
                 Vector2 stick = gamepad.leftStick.ReadValue();
                 if (stick.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) value += stick;
+            }
+
+            // タッチ端末では画面上の仮想スティックからも受け取る(未配置なら null が返る)
+            VirtualStick virtualStick = ServiceLocator.TryGet<VirtualStick>();
+            if (virtualStick != null)
+            {
+                Vector2 touch = virtualStick.Value;
+                if (touch.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) value += touch;
             }
 
             return Vector2.ClampMagnitude(value, 1.0f);
