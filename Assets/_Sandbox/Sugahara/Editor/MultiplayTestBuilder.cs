@@ -30,7 +30,15 @@ namespace ProjectKMP.Sandbox
         }
 
         [MenuItem("ProjectKMP/Build/MultiplayTest APK (Android)")]
-        public static void BuildAndroid()
+        public static void BuildAndroid() => Build(false);
+
+        /// <summary>ビルド後、USB接続中の端末へインストールして起動する</summary>
+        [MenuItem("ProjectKMP/Build/MultiplayTest APK (Android) + Deploy")]
+        public static void BuildAndDeployAndroid() => Build(true);
+
+        // ---- 内部処理 ------------------------------------
+
+        private static void Build(bool deployToDevice)
         {
             Build(SCENE_PATH, APK_NAME);
         }
@@ -60,17 +68,20 @@ namespace ProjectKMP.Sandbox
                 PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, BASE_IDENTIFIER + SANDBOX_SUFFIX);
                 EditorUserBuildSettings.buildAppBundle = false; // AAB ではなく APK を出す
 
+                BuildOptions buildOptions = BuildOptions.Development;
+                if (deployToDevice) buildOptions |= BuildOptions.AutoRunPlayer; // 実機へインストールして起動
+
                 var options = new BuildPlayerOptions
                 {
                     scenes = new[] { scenePath },
                     locationPathName = Path.Combine(OUTPUT_DIR, apkName),
                     target = BuildTarget.Android,
                     targetGroup = BuildTargetGroup.Android,
-                    options = BuildOptions.Development, // 実機のログを追えるように開発ビルドにする
+                    options = buildOptions,
                 };
 
                 BuildReport report = BuildPipeline.BuildPlayer(options);
-                LogReport(report, options.locationPathName);
+                LogReport(report, options.locationPathName, deployToDevice);
             }
             finally
             {
@@ -87,7 +98,8 @@ namespace ProjectKMP.Sandbox
             if (summary.result == BuildResult.Succeeded)
             {
                 float megaBytes = summary.totalSize / (1024.0f * 1024.0f);
-                Debug.Log($"[Build] 成功 : {outputPath} / {megaBytes:F1} MB / {summary.totalTime.TotalMinutes:F1} 分");
+                string suffix = deployed ? " / 実機へインストール＋起動" : "";
+                Debug.Log($"[Build] 成功 : {outputPath} / {megaBytes:F1} MB / {summary.totalTime.TotalMinutes:F1} 分{suffix}");
                 return;
             }
 
