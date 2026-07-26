@@ -24,28 +24,22 @@ namespace ProjectKMP.Sandbox
         // ---- 公開API -------------------------------------
 
         [MenuItem("ProjectKMP/Build/TagGameTest APK (Android)")]
-        public static void BuildTagGameAndroid()
-        {
-            Build(TAG_SCENE_PATH, TAG_APK_NAME);
-        }
+        public static void BuildTagGameAndroid() => Build(TAG_SCENE_PATH, TAG_APK_NAME, false);
+
+        /// <summary>ビルド後、USB接続中の端末へインストールして起動する</summary>
+        [MenuItem("ProjectKMP/Build/TagGameTest APK (Android) + Deploy")]
+        public static void BuildAndDeployTagGameAndroid() => Build(TAG_SCENE_PATH, TAG_APK_NAME, true);
 
         [MenuItem("ProjectKMP/Build/MultiplayTest APK (Android)")]
-        public static void BuildAndroid() => Build(false);
+        public static void BuildAndroid() => Build(SCENE_PATH, APK_NAME, false);
 
         /// <summary>ビルド後、USB接続中の端末へインストールして起動する</summary>
         [MenuItem("ProjectKMP/Build/MultiplayTest APK (Android) + Deploy")]
-        public static void BuildAndDeployAndroid() => Build(true);
+        public static void BuildAndDeployAndroid() => Build(SCENE_PATH, APK_NAME, true);
 
         // ---- 内部処理 ------------------------------------
 
-        private static void Build(bool deployToDevice)
-        {
-            Build(SCENE_PATH, APK_NAME);
-        }
-
-        // ---- 内部処理 ------------------------------------
-
-        private static void Build(string scenePath, string apkName)
+        private static void Build(string scenePath, string apkName, bool deployToDevice)
         {
             // ターゲットが違う場合、切り替えでドメインリロードが走ってビルドが中断される。
             // そのため切り替えだけ先に済ませ、完了後に再実行してもらう。
@@ -91,7 +85,7 @@ namespace ProjectKMP.Sandbox
             }
         }
 
-        private static void LogReport(BuildReport report, string outputPath)
+        private static void LogReport(BuildReport report, string outputPath, bool deployed)
         {
             BuildSummary summary = report.summary;
 
