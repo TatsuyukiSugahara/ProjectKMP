@@ -14,6 +14,8 @@ namespace ProjectKMP.Sandbox
     {
         // ---- 定数 ----------------------------------------
         private const string SCENE_PATH      = "Assets/_Sandbox/Sugahara/MultiplayTest.unity";
+        private const string TAG_SCENE_PATH  = "Assets/_Sandbox/Sugahara/TagGameTest.unity";
+        private const string TAG_APK_NAME    = "TagGameTest.apk";
         private const string BASE_IDENTIFIER = "jp.projectkmp.opencampus";
         private const string SANDBOX_SUFFIX  = ".sandbox"; // 本番APKと同一端末に共存させるため末尾を分ける
         private const string OUTPUT_DIR      = "Builds/Android";
@@ -21,8 +23,21 @@ namespace ProjectKMP.Sandbox
 
         // ---- 公開API -------------------------------------
 
+        [MenuItem("ProjectKMP/Build/TagGameTest APK (Android)")]
+        public static void BuildTagGameAndroid()
+        {
+            Build(TAG_SCENE_PATH, TAG_APK_NAME);
+        }
+
         [MenuItem("ProjectKMP/Build/MultiplayTest APK (Android)")]
         public static void BuildAndroid()
+        {
+            Build(SCENE_PATH, APK_NAME);
+        }
+
+        // ---- 内部処理 ------------------------------------
+
+        private static void Build(string scenePath, string apkName)
         {
             // ターゲットが違う場合、切り替えでドメインリロードが走ってビルドが中断される。
             // そのため切り替えだけ先に済ませ、完了後に再実行してもらう。
@@ -47,8 +62,8 @@ namespace ProjectKMP.Sandbox
 
                 var options = new BuildPlayerOptions
                 {
-                    scenes = new[] { SCENE_PATH },
-                    locationPathName = Path.Combine(OUTPUT_DIR, APK_NAME),
+                    scenes = new[] { scenePath },
+                    locationPathName = Path.Combine(OUTPUT_DIR, apkName),
                     target = BuildTarget.Android,
                     targetGroup = BuildTargetGroup.Android,
                     options = BuildOptions.Development, // 実機のログを追えるように開発ビルドにする
@@ -64,8 +79,6 @@ namespace ProjectKMP.Sandbox
                 AssetDatabase.SaveAssets();
             }
         }
-
-        // ---- 内部処理 ------------------------------------
 
         private static void LogReport(BuildReport report, string outputPath)
         {

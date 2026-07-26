@@ -12,9 +12,22 @@ namespace ProjectKMP.Battle
         // ---- 定数 ----------------------------------------
         public const string KEY_START_TIME = "bst";
         public const string KEY_ROUND      = "rnd";
-        public const double DURATION_SEC   = 120.0;
+        public const double DEFAULT_DURATION_SEC = 120.0;
+
+        // ---- 内部状態 ------------------------------------
+        // ゲームモードごとに試合時間が違うため、シーン側から差し替えられるようにする
+        private static double _durationSec = DEFAULT_DURATION_SEC;
 
         // ---- 公開API -------------------------------------
+
+        /// <summary>現在の試合時間(秒)</summary>
+        public static double DurationSec => _durationSec;
+
+        /// <summary>試合時間を設定する。シーンの初期化時に呼ぶ</summary>
+        public static void SetDurationSec(double seconds)
+        {
+            _durationSec = seconds > 0.0 ? seconds : DEFAULT_DURATION_SEC;
+        }
 
         /// <summary>試合を開始する。MasterClient だけが呼ぶこと</summary>
         public static void StartNewRound()
@@ -31,9 +44,9 @@ namespace ProjectKMP.Battle
         /// <summary>残り秒数。未開始なら試合時間そのものを返す</summary>
         public static double GetRemainingSeconds()
         {
-            if (!TryGetStartTime(out double startTime)) return DURATION_SEC;
+            if (!TryGetStartTime(out double startTime)) return _durationSec;
 
-            double remaining = DURATION_SEC - (PhotonNetwork.Time - startTime);
+            double remaining = _durationSec - (PhotonNetwork.Time - startTime);
             return remaining > 0.0 ? remaining : 0.0;
         }
 

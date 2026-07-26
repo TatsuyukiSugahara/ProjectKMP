@@ -14,6 +14,8 @@ namespace ProjectKMP.Player
         private const string PLAYER_PREFAB_PATH = "NetworkPrefabs/PF_Player_Test";
 
         // ---- 調整パラメータ ------------------------------
+        // 空なら PLAYER_PREFAB_PATH を使う。既存シーンの設定を壊さないための作り
+        [SerializeField] private string _prefabPathOverride;
         [SerializeField] private float _spawnRadius = 3.0f;
         [SerializeField] private float _spawnHeight = 1.0f;
 
@@ -37,7 +39,11 @@ namespace ProjectKMP.Player
             int slotCount   = (int)PhotonNetwork.CurrentRoom.MaxPlayers;
             Vector3 position = CalcSpawnPosition(actorNumber, slotCount);
 
-            _localPlayer = PhotonNetwork.Instantiate(PLAYER_PREFAB_PATH, position, Quaternion.identity);
+            string prefabPath = string.IsNullOrEmpty(_prefabPathOverride)
+                ? PLAYER_PREFAB_PATH
+                : _prefabPathOverride;
+
+            _localPlayer = PhotonNetwork.Instantiate(prefabPath, position, Quaternion.identity);
             Debug.Log($"[Player] 生成 Actor={actorNumber} pos={position}");
             return _localPlayer;
         }
