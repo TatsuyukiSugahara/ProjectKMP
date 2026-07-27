@@ -1,0 +1,153 @@
+﻿using UnityEngine;
+using UnityEngine.InputSystem;
+using ProjectKMP.UI;
+
+namespace ProjectKMP.Player
+{
+    /// <summary>
+    /// ネットワーク同期を伴わない、ローカル操作専用のプレイヤー移動。WASD で移動する。
+    /// 移動方向はカメラ基準。矢印キーはサードパーソンカメラの回転に使うため、移動には割り当てない。
+    /// </summary>
+    [RequireComponent(typeof(CharacterController))]
+    public class LocalPlayerMover : MonoBehaviour
+    {
+        // ---- 定数 ----------------------------------------
+
+        /// <summary>接地判定を安定させるために常にかけておく下向き速度</summary>
+        private const float GROUNDED_PULL = -2.0f;
+
+        private const float STICK_DEAD_ZONE = 0.2f;
+
+        // ---- インスペクタ設定 ------------------------------
+
+        [Header("移動")]
+        [SerializeField, Tooltip("移動速度(m/秒)")]
+        private float _moveSpeed = 6.0f;
+
+        [SerializeField, Tooltip("左Shift を押している間の速度倍率")]
+        private float _sprintMultiplier = 1.8f;
+
+        [SerializeField, Tooltip("進行方向へ向き直る速さ(度/秒)")]
+        private float _turnSpeedDeg = 720.0f;
+
+        [SerializeField, Tooltip("重力加速度(m/秒^2)。負の値を入れる")]
+        private float _gravity = -20.0f;
+
+        [Header("参照")]
+        [SerializeField, Tooltip("移動方向の基準にするカメラ。未設定なら Camera.main を使う")]
+        private Transform _cameraTransform;
+
+        // ---- 内部状態 ------------------------------------
+
+        private CharacterController _controller;
+        private float _verticalVelocity;
+
+        // ---- 公開API -------------------------------------
+
+        /// <summary>いまの水平方向の速さ(m/秒)。アニメーション接続などに使う</summary>
+        public float CurrentSpeed { get; private set; }
+
+        /// <summary>移動の基準にするカメラを差し替える</summary>
+        public void SetCamera(Transform cameraTransform)
+        {
+            _cameraTransform = cameraTransform;
+        }
+
+        // ---- Unityイベント -------------------------------
+
+        private void Awake()
+        {
+            _controller = GetComponent<CharacterController>();
+        }
+
+        private void Start()
+        {
+            if (_cameraTransform == null && Camera.main != null)
+            {
+                _cameraTransform = Camera.main.transform;
+            }
+        }
+
+        private void Update()
+        {
+            Vector2 input = ReadMoveInput();
+            Vector3 moveDir = ToWorldDirection(input);
+
+            if (moveDir.sqrMagnitude > 0.0001f)
+            {
+                Quaternion look = Quaternion.LookRotation(moveDir);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, look, _turnSpeedDeg * Time.deltaTime);
+            }
+
+            // 接地中に重力を溜め続けると坂道で跳ねるため、接地したら一定値に戻す
+            if (_controller.isGrounded && _verticalVelocity < 0.0f)
+            {
+                _verticalVelocity = GROUNDED_PULL;
+            }
+            else
+            {
+                _verticalVelocity += _gravity * Time.deltaTime;
+            }
+
+            float speed = _moveSpeed * (IsSprinting() ? _sprintMultiplier : 1.0f);
+            Vector3 velocity = moveDir * speed + Vector3.up * _verticalVelocity;
+            _controller.Move(velocity * Time.deltaTime);
+
+            CurrentSpeed = new Vector3(velocity.x, 0.0f, velocity.z).magnitude;
+        }
+
+        // ---- 内部処理 ------------------------------------
+
+        /// <summary>WASD とゲームパッド左スティックから移動入力を取る</summary>
+        private Vector2 ReadMoveInput()
+        {
+            Vector2 value = Vector2.zero;
+
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null)
+            {
+                if (keyboard.wKey.isPressed) value.y += 1.0f;
+                if (keyboard.sKey.isPressed) value.y -= 1.0f;
+                if (keyboard.dKey.isPressed) value.x += 1.0f;
+                if (keyboard.aKey.isPressed) value.x -= 1.0f;
+            }
+
+            Gamepad gamepad = Gamepad.current;
+            if (gamepad != null)
+            {
+                Vector2 stick = gamepad.leftStick.ReadValue();
+                if (stick.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) value += stick;
+            }
+
+            // スマホでは画面上のスティックからも受け取る
+            TouchControls touch = TouchControls.Instance;
+            if (touch != null)
+            {
+                Vector2 stick = touch.MoveValue;
+                if (stick.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) value += stick;
+            }
+
+            return Vector2.ClampMagnitude(value, 1.0f);
+        }
+
+        /// <summary>ダッシュ入力(左Shift / ゲームパッドの左スティック押し込み)</summary>
+        private bool IsSprinting()
+        {
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.leftShiftKey.isPressed) return true;
+
+            Gamepad gamepad = Gamepad.current;
+            return gamepad != null && gamepad.leftStickButton.isPressed;
+        }
+
+        /// <summary>入力をカメラ基準のワールド方向に変換する。カメラが無ければワールド軸をそのまま使う</summary>
+        private Vector3 ToWorldDirection(Vector2 input)
+        {
+            if (_cameraTransform == null) return new Vector3(input.x, 0.0f, input.y);
+
+            Vector3 forward = Vector3.ProjectOnPlane(_cameraTransform.forward, Vector3.up).normalized;
+            Vector3 right = Vector3.ProjectOnPlane(_cameraTransform.right, Vector3.up).normalized;
+            return forward * input.y + right * input.x;
+        }
+    }
+}
