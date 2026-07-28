@@ -1,105 +1,175 @@
-using Photon.Pun;
+using System;
+using ProjectKMP.Attack;
+using ProjectKMP.Player;
+using R3;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace ProjectKMP.Dog
 {
     /// <summary>
-    /// 犬(Husky)の歩行/待機アニメーション再生。
-    /// PlayerMover 等が CharacterController を動かした結果の速度を見て切り替えるだけなので、
-    /// 移動ロジック側(PlayerMover)には手を加えない。
-    /// Jキーで頭突き(Attack)アニメーションをワンショット再生する(とりあえず実装)。
+    /// 犬(Husky)のアニメーション制御。
+    ///
+    /// 移動アニメは「実際に動いた距離」から速さを求めて切り替えるため、
+    /// 入力を持つ自分のキャラでも、PhotonTransformView で位置だけ書き込まれる他人のキャラでも、
+    /// 同じコードで正しく歩き/走りが再生される。
+    ///
+    /// 頭突き(Attack)は PlayerAttack が全クライアントで発火するイベントを購読して再生する。
+    /// RPC はすでに PlayerAttack 側にあるので、アニメ用のRPCを追加する必要はない。
     /// </summary>
-    [RequireComponent(typeof(Animator))]
-    [RequireComponent(typeof(CharacterController))]
     public class DogAnimationDriver : MonoBehaviour
     {
         // ---- 定数 ----------------------------------------
-        private const string ANIM_IDLE   = "Idle_A";
-        private const string ANIM_WALK   = "Walk";
-        private const string ANIM_ATTACK = "Attack"; // 頭突き
-        private const float ANIM_CROSSFADE = 0.2f;
-        private const int ANIM_BASE_LAYER = 0; // Idle_A/Walk/Attack は Base Layer にのみ存在するため明示指定する(Shapekeyレイヤーと分離)
-        private const float MOVE_SPEED_THRESHOLD = 0.1f;
-        private const float ATTACK_DURATION = 0.4166667f; // Attackクリップの長さ(秒)
+
+        private const string ANIM_IDLE = "Idle_A";
+        private const string ANIM_WALK = "Walk";
+        private const string ANIM_RUN = "Run";
+        private const string ANIM_ATTACK = "Attack";
+
+        /// <summary>Idle_A/Walk/Run/Attack は Base Layer にのみ存在する(Shapekeyレイヤーとは分離)</summary>
+        private const int BASE_LAYER = 0;
+
+        // ---- インスペクタ設定 ------------------------------
+
+        [SerializeField, Tooltip("再生対象の Animator。未設定なら子から自動で探す")]
+        private Animator _animator;
+
+        [SerializeField, Tooltip("攻撃を購読する相手。未設定なら同じオブジェクトから探す")]
+        private PlayerAttack _playerAttack;
+
+        [SerializeField, Tooltip("この速さ(m/秒)を超えたら歩きに切り替える")]
+        private float _walkSpeedThreshold = 0.15f;
+
+        [SerializeField, Tooltip("この速さ(m/秒)を超えたら走りに切り替える。ダッシュ時の速度に合わせる")]
+        private float _runSpeedThreshold = 7.5f;
+
+        [SerializeField, Tooltip("アニメを切り替えるときの補間時間(秒)")]
+        private float _crossFadeSec = 0.15f;
+
+        [SerializeField, Tooltip("頭突きモーションの長さ(秒)。この間は移動アニメに戻さない")]
+        private float _attackDurationSec = 0.4166667f;
+
+        [SerializeField, Tooltip("速さのなめらかさ。大きいほど反応が速い。通信のガタつきをならすために使う")]
+        private float _speedSmoothing = 12.0f;
 
         // ---- 内部状態 ------------------------------------
-        private Animator _animator;
-        private CharacterController _controller;
-        private PhotonView _photonView;
-        private bool _isWalking;
-        private bool _isAttacking;
-        private float _attackTimer;
 
-        /// <summary>頭突き(Attack)アニメーション再生中かどうか。PlayerMover等が移動制限の判定に使う。</summary>
-        public bool IsAttacking => _isAttacking;
+        private IDisposable _attackSubscription;
+        private Vector3 _lastPosition;
+        private float _speed;
+        private float _attackRemainSec;
+        private string _currentState = string.Empty;
+
+        // ---- 公開API -------------------------------------
+
+        /// <summary>頭突きモーションの再生中かどうか</summary>
+        public bool IsAttacking => _attackRemainSec > 0.0f;
+
+        /// <summary>アニメ判定に使っている水平方向の速さ(m/秒)</summary>
+        public float CurrentSpeed => _speed;
+
+        /// <summary>頭突き(Attack)モーションを再生する。全クライアントで呼ばれる想定</summary>
+        public void PlayAttack()
+        {
+            if (_animator == null) return;
+
+            _attackRemainSec = Mathf.Max(0.01f, _attackDurationSec);
+
+            // 連続で噛みついたときも頭突きを出し直したいので、同じステートでも強制的に再生する
+            CrossFadeTo(ANIM_ATTACK, true);
+        }
+
+        // ---- Unityイベント -------------------------------
+
+        private void Reset()
+        {
+            _animator = GetComponentInChildren<Animator>(true);
+            _playerAttack = GetComponent<PlayerAttack>();
+        }
 
         private void Awake()
         {
-            _animator = GetComponent<Animator>();
-            _controller = GetComponent<CharacterController>();
-            _photonView = GetComponent<PhotonView>();
+            if (_animator == null) _animator = GetComponentInChildren<Animator>(true);
+            if (_playerAttack == null) _playerAttack = GetComponent<PlayerAttack>();
+
+            if (_animator == null)
+            {
+                Debug.LogError("[Dog] Animator が見つかりません。犬のモデルが子に入っているか確認してください", this);
+            }
+
+            _lastPosition = transform.position;
+        }
+
+        private void OnEnable()
+        {
+            if (_playerAttack == null) return;
+
+            // RpcPlayAttack は全員のクライアントで呼ばれるので、購読するだけで頭突きが全画面で揃う
+            _attackSubscription = _playerAttack.AttackStarted.Subscribe(OnAttackStarted);
+        }
+
+        private void OnDisable()
+        {
+            _attackSubscription?.Dispose();
+            _attackSubscription = null;
         }
 
         private void Update()
         {
-            if (_isAttacking)
+            UpdateSpeed();
+
+            if (_attackRemainSec > 0.0f)
             {
-                _attackTimer -= Time.deltaTime;
-                if (_attackTimer <= 0.0f)
-                {
-                    _isAttacking = false;
-                    // 攻撃終了後、現在の移動状態に合わせてIdle/Walkへ戻す
-                    ApplyMoveAnimation(HorizontalSpeed() > MOVE_SPEED_THRESHOLD);
-                }
-                return;
+                _attackRemainSec -= Time.deltaTime;
+                if (_attackRemainSec > 0.0f) return;
             }
 
-            if (IsLocalInputAllowed() && TryReadAttackInput())
-            {
-                StartAttack();
-                return;
-            }
-
-            bool isMoving = HorizontalSpeed() > MOVE_SPEED_THRESHOLD;
-            if (isMoving == _isWalking) return;
-
-            ApplyMoveAnimation(isMoving);
+            ApplyMoveAnimation();
         }
 
         // ---- 内部処理 ------------------------------------
 
-        /// <summary>PhotonViewが無い(オフライン単体テスト等)場合は許可、あれば自分の所有物のときだけ許可する</summary>
-        private bool IsLocalInputAllowed()
+        private void OnAttackStarted(AttackData data)
         {
-            return _photonView == null || _photonView.IsMine;
+            PlayAttack();
         }
 
-        private bool TryReadAttackInput()
+        /// <summary>
+        /// 前フレームからの移動量から速さを求める。
+        /// CharacterController.velocity を使わないのは、他人のキャラでは値がゼロのままになるため。
+        /// </summary>
+        private void UpdateSpeed()
         {
-            Keyboard keyboard = Keyboard.current;
-            return keyboard != null && keyboard.jKey.wasPressedThisFrame;
+            float deltaTime = Time.deltaTime;
+            if (deltaTime <= 0.0f) return;
+
+            Vector3 current = transform.position;
+            Vector3 moved = current - _lastPosition;
+            moved.y = 0.0f;
+            _lastPosition = current;
+
+            float instantSpeed = moved.magnitude / deltaTime;
+
+            // 通信では位置がまとめて届くため、そのまま使うと歩き/停止がチカチカする
+            float t = 1.0f - Mathf.Exp(-Mathf.Max(0.01f, _speedSmoothing) * deltaTime);
+            _speed = Mathf.Lerp(_speed, instantSpeed, t);
         }
 
-        private void StartAttack()
+        /// <summary>いまの速さに合ったアニメを流す</summary>
+        private void ApplyMoveAnimation()
         {
-            _isAttacking = true;
-            _attackTimer = ATTACK_DURATION;
-            _animator.CrossFade(ANIM_ATTACK, ANIM_CROSSFADE, ANIM_BASE_LAYER);
+            if (_speed > _runSpeedThreshold) CrossFadeTo(ANIM_RUN);
+            else if (_speed > _walkSpeedThreshold) CrossFadeTo(ANIM_WALK);
+            else CrossFadeTo(ANIM_IDLE);
         }
 
-        private void ApplyMoveAnimation(bool isMoving)
+        /// <summary>同じステートへの二重再生を避けつつ、なめらかに切り替える</summary>
+        private void CrossFadeTo(string stateName, bool force = false)
         {
-            _isWalking = isMoving;
-            _animator.CrossFade(isMoving ? ANIM_WALK : ANIM_IDLE, ANIM_CROSSFADE, ANIM_BASE_LAYER);
-        }
+            if (_animator == null) return;
+            if (!force && _currentState == stateName) return;
 
-        /// <summary>CharacterController が実際に動いた速度から水平成分だけを取り出す</summary>
-        private float HorizontalSpeed()
-        {
-            Vector3 velocity = _controller.velocity;
-            velocity.y = 0.0f;
-            return velocity.magnitude;
+            _currentState = stateName;
+            _animator.CrossFade(stateName, _crossFadeSec, BASE_LAYER);
         }
     }
 }

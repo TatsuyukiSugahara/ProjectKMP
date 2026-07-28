@@ -810,10 +810,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.ThirdPersonCamera
   _target: {fileID: 0}
-  _targetHeight: 1.5
-  _distance: 8
-  _minDistance: 2
-  _maxDistance: 25
+  _targetHeight: 0.7
+  _distance: 5
+  _minDistance: 1.5
+  _maxDistance: 15
   _zoomSpeed: 1
   _yawSpeedDeg: 120
   _pitchSpeedDeg: 80
@@ -828,7 +828,7 @@ MonoBehaviour:
   _obstacleMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  _obstacleRadius: 0.3
+  _obstacleRadius: 0.2
 --- !u!81 &940877453
 AudioListener:
   m_ObjectHideFlags: 0
