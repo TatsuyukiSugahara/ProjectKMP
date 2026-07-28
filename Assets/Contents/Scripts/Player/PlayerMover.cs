@@ -1,4 +1,5 @@
 using Photon.Pun;
+using ProjectKMP.Dog;
 using ProjectKMP.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -23,16 +24,25 @@ namespace ProjectKMP.Player
 
         // ---- 内部状態 ------------------------------------
         private CharacterController _controller;
+        private DogAnimationDriver _animationDriver;
         private Transform _cameraTransform;
         private float _verticalVelocity;
 
         private void Awake()
         {
             _controller = GetComponent<CharacterController>();
+            _animationDriver = GetComponent<DogAnimationDriver>();
         }
 
         private void Start()
         {
+            if (photonView == null)
+            {
+                Debug.LogWarning($"[PlayerMover] PhotonView が見つからないため無効化します: {name}", this);
+                enabled = false;
+                return;
+            }
+
             // 他人のキャラで入力処理を回す意味は無いので、所有者以外は自分を無効化する
             if (!photonView.IsMine)
             {
@@ -45,7 +55,8 @@ namespace ProjectKMP.Player
 
         private void Update()
         {
-            Vector3 moveDir = ToWorldDirection(ReadMoveInput());
+            bool isAttacking = _animationDriver != null && _animationDriver.IsAttacking;
+            Vector3 moveDir = isAttacking ? Vector3.zero : ToWorldDirection(ReadMoveInput());
 
             if (moveDir.sqrMagnitude > 0.0001f)
             {
