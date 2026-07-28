@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using Photon.Pun;
 using ProjectKMP.Attack;
 using ProjectKMP.UI;
+using R3;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -54,6 +55,7 @@ namespace ProjectKMP.Player
 
         private readonly Collider[] _overlapBuffer = new Collider[OVERLAP_BUFFER_SIZE];
         private readonly HashSet<int> _hitObjectIds = new HashSet<int>();
+        private readonly Subject<AttackData> _attackStarted = new Subject<AttackData>();
         private float _cooldownRemainSec;
         private float _cooldownTotalSec;
         private bool _isAttacking;
@@ -62,6 +64,12 @@ namespace ProjectKMP.Player
 
         /// <summary>いま操作しているプレイヤーの攻撃。UI から参照する</summary>
         public static PlayerAttack Local { get; private set; }
+
+        /// <summary>
+        /// 攻撃モーションの開始。RPC 経由で全クライアントで発火するので、
+        /// アニメーションやエフェクトなど「見た目」の再生はこれを購読すればよい。
+        /// </summary>
+        public Observable<AttackData> AttackStarted => _attackStarted;
 
         /// <summary>クールタイムの残り具合(1=撃った直後、0=撃てる)</summary>
         public float CooldownRatio01 =>
@@ -109,6 +117,7 @@ namespace ProjectKMP.Player
         private void OnDestroy()
         {
             if (Local == this) Local = null;
+            _attackStarted.Dispose();
         }
 
         private void Update()
@@ -158,6 +167,9 @@ namespace ProjectKMP.Player
                     data.HitEffectScale,
                     data.HitEffectLifeSec);
             }
+
+            // 攻撃モーションは全員のクライアントで再生する(頭突きアニメなど)
+            _attackStarted.OnNext(data);
 
             // 当たり判定は操作している本人だけが取る。二重ヒットを防ぐため
             if (!IsOwner) return;

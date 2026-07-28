@@ -14,13 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Attack.AttackData
   _displayName: "\u304B\u307F\u3064\u304D"
   _hitEffectPrefab: {fileID: 5441942405708919810, guid: e1418f9337a2c445ba88d2f4199f497b, type: 3}
-  _hitEffectScale: 1
+  _hitEffectScale: 0.6
   _hitEffectOffset: {x: 0, y: 0, z: 0}
   _hitEffectLifeSec: 2
   _swingEffectPrefab: {fileID: 0}
-  _swingEffectOffset: {x: 0, y: 0.9, z: 0.84000003}
-  _hitRadius: 0.8
-  _hitOffset: {x: 0, y: 0.9, z: 0.84000003}
+  _swingEffectOffset: {x: 0, y: 0.45, z: 0.5}
+  _hitRadius: 0.45
+  _hitOffset: {x: 0, y: 0.45, z: 0.5}
   _hitStartSec: 0.08
   _hitDurationSec: 0.15
   _cooldownSec: 0.6
