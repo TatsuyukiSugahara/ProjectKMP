@@ -32,6 +32,13 @@ namespace ProjectKMP.Player
 
         private void Start()
         {
+            if (photonView == null)
+            {
+                Debug.LogWarning($"[PlayerShooter] PhotonView が見つからないため無効化します: {name}", this);
+                enabled = false;
+                return;
+            }
+
             // 他人のキャラで発射入力を見る必要は無い
             if (!photonView.IsMine) enabled = false;
         }
