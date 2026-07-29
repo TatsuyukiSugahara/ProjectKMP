@@ -146,33 +146,41 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!1 &460156470 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 399bd93a31143ac40b6b02b55d31d423, type: 3}
-  m_PrefabInstance: {fileID: 1983199294}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &2000000002
+--- !u!114 &101158242
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 460156470}
+  m_GameObject: {fileID: 101158239}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: PhotonUnityNetworking::Photon.Pun.PhotonView
-  ObservedComponentsFoldoutOpen: 1
-  Group: 0
-  prefixField: -1
-  Synchronization: 0
-  OwnershipTransfer: 0
-  observableSearch: 2
-  ObservedComponents: []
-  sceneViewId: 1
-  InstantiationId: 0
-  isRuntimeInstantiated: 0
+  m_Script: {fileID: 11500000, guid: cee2d98077c564a36bf29f7a093a6ede, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Gorilla.GorillaAI
+  _searchRadius: 8
+  _viewAngle: 120
+  _loseSightRadius: 10
+  _attackRange: 2.5
+  _stampAttackNearDistance: 1.2
+  _stampAttackProbability: 0.3
+  _normalAttackStaggerTime: 0.6
+  _stampAttackStaggerTime: 1.2
+  _patrolSpeed: 1.5
+  _chaseSpeed: 2.5
+  _turnSpeedDeg: 180
+  _wanderRadius: 5
+  _idleTimeMin: 1.5
+  _idleTimeMax: 3
+  _patrolWaitTimeMin: 1
+  _patrolWaitTimeMax: 2.5
+  _animationSpeed: 0.5
+  _target: {fileID: 2000000004}
+--- !u!1 &460156470 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 399bd93a31143ac40b6b02b55d31d423, type: 3}
+  m_PrefabInstance: {fileID: 1983199294}
+  m_PrefabAsset: {fileID: 0}
 --- !u!143 &460156472
 CharacterController:
   m_ObjectHideFlags: 0
@@ -270,18 +278,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.PlayerHealth
   _biteVfxPrefab: {fileID: 0}
   _biteVfxHeight: 1.1
---- !u!114 &2000000003
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 460156470}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 94ec0a828dc13b64e9684901cbd26de8, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Dog.DogAnimationDriver
 --- !u!95 &460156481
 Animator:
   serializedVersion: 7
@@ -299,7 +295,7 @@ Animator:
   m_LinearVelocityBlending: 0
   m_StabilizeFeet: 0
   m_AnimatePhysics: 0
-  m_WarningMessage:
+  m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
@@ -440,6 +436,18 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 939cb10c88ca52a45871b215bd6d8595, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 939cb10c88ca52a45871b215bd6d8595, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 939cb10c88ca52a45871b215bd6d8595, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 939cb10c88ca52a45871b215bd6d8595, type: 3}
       propertyPath: m_LocalPosition.x
       value: -1.9037529
       objectReference: {fileID: 0}
@@ -479,6 +487,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 939cb10c88ca52a45871b215bd6d8595, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 939cb10c88ca52a45871b215bd6d8595, type: 3}
       propertyPath: m_Name
       value: Gorilla_LOD0
@@ -490,6 +502,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 939cb10c88ca52a45871b215bd6d8595, type: 3}
       insertIndex: -1
       addedObject: {fileID: 101158240}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 939cb10c88ca52a45871b215bd6d8595, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 101158242}
   m_SourcePrefab: {fileID: 100100000, guid: 939cb10c88ca52a45871b215bd6d8595, type: 3}
 --- !u!1 &1455423054
 GameObject:
@@ -884,6 +899,52 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1522080045}
   m_SourcePrefab: {fileID: 100100000, guid: 399bd93a31143ac40b6b02b55d31d423, type: 3}
+--- !u!114 &2000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 460156470}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PhotonUnityNetworking::Photon.Pun.PhotonView
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 0
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents: []
+  sceneViewId: 1
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
+--- !u!114 &2000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 460156470}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94ec0a828dc13b64e9684901cbd26de8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Dog.DogAnimationDriver
+  _animator: {fileID: 0}
+  _playerAttack: {fileID: 0}
+  _walkSpeedThreshold: 0.15
+  _runSpeedThreshold: 7.5
+  _crossFadeSec: 0.15
+  _attackDurationSec: 0.4166667
+  _speedSmoothing: 12
+--- !u!4 &2000000004 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 399bd93a31143ac40b6b02b55d31d423, type: 3}
+  m_PrefabInstance: {fileID: 1983199294}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2000000010
 GameObject:
   m_ObjectHideFlags: 0
@@ -926,8 +987,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 550d09bb16154ee4a8fdc395b49ad4eb, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -938,4 +999,4 @@ SceneRoots:
   - {fileID: 1568412490}
   - {fileID: 1983199294}
   - {fileID: 1162545738}
-  - {fileID: 2000000010}
+  - {fileID: 2000000011}

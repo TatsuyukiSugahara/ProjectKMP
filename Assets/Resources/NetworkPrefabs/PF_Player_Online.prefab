@@ -200,7 +200,7 @@ GameObject:
   - component: {fileID: 579247525850942068}
   m_Layer: 0
   m_Name: PF_Player_Online
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -353,6 +353,7 @@ MonoBehaviour:
   _normalAttackIndex: 0
   _hitOrigin: {fileID: 0}
   _useSpaceKey: 1
+  _useKKey: 1
   _useGamepadSouth: 1
   _useTouchButton: 1
   _logHit: 1
