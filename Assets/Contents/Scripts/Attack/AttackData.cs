@@ -15,6 +15,9 @@ namespace ProjectKMP.Attack
         [SerializeField, Tooltip("ログなどに出す攻撃の名前")]
         private string _displayName = "かみつき";
 
+        [SerializeField, Min(0), Tooltip("この攻撃1回ぶんのダメージ。当たった相手はこのぶんHPが減る")]
+        private int _attackPower = 10;
+
         // ---- エフェクト ----------------------------------
 
         [Header("エフェクト")]
@@ -35,6 +38,15 @@ namespace ProjectKMP.Attack
 
         [SerializeField, Tooltip("攻撃エフェクトを出す位置(プレイヤーからの相対)")]
         private Vector3 _swingEffectOffset = new Vector3(0f, 0.7f, 1f);
+
+        // ---- ダメージ表示 --------------------------------
+
+        [Header("ダメージ表示")]
+        [SerializeField, Tooltip("当たった位置に出すダメージ数字のプレハブ。未設定なら数字を出さない")]
+        private GameObject _damagePopupPrefab;
+
+        [SerializeField, Tooltip("数字を出す位置のずらし(ワールド座標)")]
+        private Vector3 _damagePopupOffset = new Vector3(0f, 0.3f, 0f);
 
         // ---- 当たり判定 ----------------------------------
 
@@ -89,6 +101,9 @@ namespace ProjectKMP.Attack
         /// <summary>ログなどに出す攻撃の名前</summary>
         public string DisplayName => _displayName;
 
+        /// <summary>この攻撃1回ぶんのダメージ</summary>
+        public int AttackPower => _attackPower;
+
         /// <summary>当たったときに出すヒットエフェクト</summary>
         public GameObject HitEffectPrefab => _hitEffectPrefab;
 
@@ -106,6 +121,12 @@ namespace ProjectKMP.Attack
 
         /// <summary>攻撃エフェクトを出す位置(プレイヤーからの相対)</summary>
         public Vector3 SwingEffectOffset => _swingEffectOffset;
+
+        /// <summary>ダメージ数字のプレハブ</summary>
+        public GameObject DamagePopupPrefab => _damagePopupPrefab;
+
+        /// <summary>数字を出す位置のずらし</summary>
+        public Vector3 DamagePopupOffset => _damagePopupOffset;
 
         /// <summary>判定の球の半径(m)</summary>
         public float HitRadius => _hitRadius;

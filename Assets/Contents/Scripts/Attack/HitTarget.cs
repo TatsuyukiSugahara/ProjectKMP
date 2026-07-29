@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using R3;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -34,6 +35,8 @@ namespace ProjectKMP.Attack
 
         private static readonly Dictionary<int, HitTarget> REGISTRY = new Dictionary<int, HitTarget>();
 
+        private readonly Subject<HitInfo> _hit = new Subject<HitInfo>();
+
         // ---- 公開API -------------------------------------
 
         /// <summary>しぼりこみ用のID</summary>
@@ -68,10 +71,17 @@ namespace ProjectKMP.Attack
         }
 
         /// <summary>当たった瞬間に全クライアントで呼ばれる</summary>
-        public void NotifyHit(Vector3 hitPosition, int attackerActorNumber)
+        public void NotifyHit(Vector3 hitPosition, int attackerActorNumber, int damage)
         {
+            _hit.OnNext(new HitInfo(hitPosition, attackerActorNumber, damage));
             _onHit?.Invoke();
         }
+
+        /// <summary>
+        /// 当たったときの通知。全クライアントで流れるので、HPを減らすなど
+        /// ゲーム状態を変える処理は MasterClient かどうかを見てから行うこと。
+        /// </summary>
+        public Observable<HitInfo> Hit => _hit;
 
         // ---- Unityイベント -------------------------------
 
@@ -80,12 +90,37 @@ namespace ProjectKMP.Attack
             if (_networkId != 0) REGISTRY[_networkId] = this;
         }
 
+        private void OnDestroy()
+        {
+            _hit.Dispose();
+        }
+
         private void OnDisable()
         {
             if (_networkId == 0) return;
             if (REGISTRY.TryGetValue(_networkId, out HitTarget target) && target == this)
             {
                 REGISTRY.Remove(_networkId);
+            }
+        }
+
+        /// <summary>1回のヒットの内容</summary>
+        public readonly struct HitInfo
+        {
+            /// <summary>当たった位置(ワールド座標)</summary>
+            public readonly Vector3 Position;
+
+            /// <summary>攻撃してきた相手の ActorNumber。不明なら -1</summary>
+            public readonly int AttackerActorNumber;
+
+            /// <summary>この一撃ぶんのダメージ</summary>
+            public readonly int Damage;
+
+            public HitInfo(Vector3 position, int attackerActorNumber, int damage)
+            {
+                Position = position;
+                AttackerActorNumber = attackerActorNumber;
+                Damage = damage;
             }
         }
 

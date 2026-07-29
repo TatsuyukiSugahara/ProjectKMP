@@ -204,7 +204,9 @@ namespace ProjectKMP.Player
             AttackEffect.Spawn(prefab, position, rotation, data.HitEffectScale, data.HitEffectLifeSec);
 
             int attackerActorNumber = info.Sender != null ? info.Sender.ActorNumber : -1;
-            if (target != null) target.NotifyHit(position, attackerActorNumber);
+            SpawnDamagePopup(data, hitPoint);
+
+            if (target != null) target.NotifyHit(position, attackerActorNumber, data.AttackPower);
 
             if (_logHit)
             {
@@ -214,6 +216,16 @@ namespace ProjectKMP.Player
         }
 
         // ---- 内部処理 ------------------------------------
+
+        /// <summary>当たった位置にダメージの数字を出す</summary>
+        private void SpawnDamagePopup(AttackData data, Vector3 hitPoint)
+        {
+            if (data.DamagePopupPrefab == null) return;
+
+            GameObject popup = Instantiate(data.DamagePopupPrefab, hitPoint + data.DamagePopupOffset, Quaternion.identity);
+            DamagePopup component = popup.GetComponent<DamagePopup>();
+            if (component != null) component.Play(data.AttackPower);
+        }
 
         /// <summary>このクライアントがこのキャラを操作しているか</summary>
         private bool IsOwner => photonView == null || photonView.IsMine;
