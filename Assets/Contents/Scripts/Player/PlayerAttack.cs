@@ -38,6 +38,9 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("スペースキーで攻撃する")]
         private bool _useSpaceKey = true;
 
+        [SerializeField, Tooltip("Kキーで攻撃する(頭突き)")]
+        private bool _useKKey = true;
+
         [SerializeField, Tooltip("ゲームパッドのAボタン(下ボタン)で攻撃する")]
         private bool _useGamepadSouth = true;
 
@@ -231,6 +234,12 @@ namespace ProjectKMP.Player
             {
                 Keyboard keyboard = Keyboard.current;
                 if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame) pressed = true;
+            }
+
+            if (_useKKey)
+            {
+                Keyboard keyboard = Keyboard.current;
+                if (keyboard != null && keyboard.kKey.wasPressedThisFrame) pressed = true;
             }
 
             if (_useGamepadSouth)
