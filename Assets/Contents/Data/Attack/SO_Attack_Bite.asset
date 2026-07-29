@@ -13,12 +13,15 @@ MonoBehaviour:
   m_Name: SO_Attack_Bite
   m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Attack.AttackData
   _displayName: "\u304B\u307F\u3064\u304D"
+  _attackPower: 10
   _hitEffectPrefab: {fileID: 5441942405708919810, guid: e1418f9337a2c445ba88d2f4199f497b, type: 3}
   _hitEffectScale: 0.6
   _hitEffectOffset: {x: 0, y: 0, z: 0}
   _hitEffectLifeSec: 2
   _swingEffectPrefab: {fileID: 0}
   _swingEffectOffset: {x: 0, y: 0.45, z: 0.5}
+  _damagePopupPrefab: {fileID: 334619725715907676, guid: dc738a3d7ee4b430aab1e466091f1be0, type: 3}
+  _damagePopupOffset: {x: 0, y: 0.3, z: 0}
   _hitRadius: 0.45
   _hitOffset: {x: 0, y: 0.45, z: 0.5}
   _hitStartSec: 0.08
