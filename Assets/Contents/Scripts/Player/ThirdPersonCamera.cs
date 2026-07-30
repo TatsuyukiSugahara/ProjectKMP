@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using ProjectKMP.UI;
 
@@ -97,6 +97,24 @@ namespace ProjectKMP.Player
         {
             get => _distance;
             set => _distance = Mathf.Clamp(value, _minDistance, _maxDistance);
+        }
+
+        /// <summary>
+        /// いま追従を始めるとしたら、カメラがどの位置・向きになるかを返す。
+        /// カットシーンのカメラから通常の追従へ滑らかに戻すために使う。
+        /// 対象がまだ居ないときは false を返し、引数には今の値をそのまま入れる。
+        /// </summary>
+        public bool TryGetFollowPose(out Vector3 position, out Quaternion rotation)
+        {
+            position = transform.position;
+            rotation = transform.rotation;
+
+            if (_target == null) return false;
+
+            position = CalcDesiredPosition();
+            Vector3 focus = _target.position + Vector3.up * _targetHeight;
+            rotation = Quaternion.LookRotation(focus - position, Vector3.up);
+            return true;
         }
 
         // ---- Unityイベント -------------------------------

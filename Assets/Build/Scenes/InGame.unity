@@ -12591,6 +12591,90 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4938559794611775962, guid: 525197fe6ec2f4895a8009b36d5e388c, type: 3}
   m_PrefabInstance: {fileID: 1253662828}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1260771476
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1260771478}
+  - component: {fileID: 1260771477}
+  m_Layer: 0
+  m_Name: BattleIntro
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1260771477
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1260771476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40e99408fbced44a183954e6155acabb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Battle.BattleIntroDirector
+  _gorillaAI: {fileID: 1472372952}
+  _camera: {fileID: 940877454}
+  _thirdPersonCamera: {fileID: 940877452}
+  _ui: {fileID: 1723578329}
+  _bossGauge: {fileID: 854204500}
+  _touchControls: {fileID: 1809228233}
+  _fadeInSeconds: 1
+  _useFog: 1
+  _fogColor: {r: 0.8, g: 0.82, b: 0.85, a: 1}
+  _fogStartDensity: 0.09
+  _fogEndDensity: 0
+  _fogClearSeconds: 2.6
+  _landPosition: {x: 0, y: 0, z: 0}
+  _comeFromDirection: {x: 0, y: 0, z: 1}
+  _runStartDistance: 22
+  _approachEndDistance: 10
+  _jumpStartDistance: 6
+  _approachSeconds: 2.4
+  _runSeconds: 1
+  _jumpSeconds: 0.8
+  _jumpHeight: 3.2
+  _landSeconds: 0.7
+  _introAnimationSpeed: 1
+  _laneDistance: 5
+  _laneHeight: 1.15
+  _laneLookHeight: 1.1
+  _feetLead: 3.2
+  _feetSide: 1.6
+  _feetHeight: 0.35
+  _feetLookHeight: 0.35
+  _wideDistance: 7
+  _wideHeight: 1.3
+  _wideLookHeight: 0.9
+  _jumpCameraBlend: 0.45
+  _shakeStrength: 0.35
+  _shakeSeconds: 0.25
+  _nameHoldSeconds: 1
+  _returnDelaySeconds: 0.7
+  _returnSeconds: 1.1
+  _playOnStart: 1
+--- !u!4 &1260771478
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1260771476}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1264278990
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15421,6 +15505,17 @@ MonoBehaviour:
   sceneViewId: 1
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &1472372952 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+  m_PrefabInstance: {fileID: 1371257803}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1472372942}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cee2d98077c564a36bf29f7a093a6ede, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Gorilla.GorillaAI
 --- !u!1001 &1475479098
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -16776,6 +16871,118 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!1001 &1723578328
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2373805066643543167, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_AdditionalShaderChannelsFlag
+      value: 25
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5056892235886554133, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9051904061120220734, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+      propertyPath: m_Name
+      value: BattleIntroUI
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+--- !u!114 &1723578329 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1784225087542032184, guid: cf3c6ac8682434e6b9c6c9c70db8d3c3, type: 3}
+  m_PrefabInstance: {fileID: 1723578328}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1177c677168d44e19c3fafa9edbaf7e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.UI.Battle.BattleIntroUI
 --- !u!1001 &1737593611
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -20706,3 +20913,5 @@ SceneRoots:
   - {fileID: 95605831}
   - {fileID: 1809228237}
   - {fileID: 1371257803}
+  - {fileID: 1260771478}
+  - {fileID: 1723578328}

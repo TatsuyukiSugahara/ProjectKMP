@@ -33,6 +33,13 @@ namespace ProjectKMP.UI
         /// <summary>攻撃ボタンが押されているか</summary>
         public bool AttackHeld => _attackButton != null && _attackButton.IsHeld;
 
+        /// <summary>スティックと攻撃ボタンの表示を切り替える。カットシーン中に隠すのに使う</summary>
+        public void SetControlsVisible(bool visible)
+        {
+            if (_moveStick != null) _moveStick.SetVisible(visible);
+            if (_attackButton != null) _attackButton.SetVisible(visible);
+        }
+
         /// <summary>攻撃ボタンを押した瞬間を1回だけ取り出す</summary>
         public bool ConsumeAttackPress()
         {
