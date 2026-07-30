@@ -77,6 +77,12 @@ namespace ProjectKMP.UI.Battle
 
         // ---- 公開API -------------------------------------
 
+        /// <summary>
+        /// 名前の出現と「バトルスタート」にかかる合計秒数。
+        /// 進行役が演出全体の長さを見積もるのに使う(名前を見せている時間は進行役が持っている)。
+        /// </summary>
+        public float TotalSeconds => _namePopSeconds + _bandEnterSeconds + _bandHoldSeconds + _bandExitSeconds;
+
         /// <summary>演出の開始時に呼ぶ。暗転を張り、名前とバトルスタートを隠す</summary>
         public void Prepare()
         {
@@ -86,12 +92,27 @@ namespace ProjectKMP.UI.Battle
             SetAlpha(_nameGroup, 0.0f);
             SetAlpha(_battleStartGroup, 0.0f);
             SetAlpha(_mainBandGroup, 0.0f);
-            SetAlpha(_skipGroup, 1.0f);
+
+            // スキップを出すかどうかは進行役が決めるので、ここでは隠しておく
+            SetSkipAvailable(false);
 
             if (_nameRect != null) _nameRect.localScale = Vector3.one;
             if (_skipFillImage != null) _skipFillImage.fillAmount = 0.0f;
             SetAnchoredX(_topBandRect, -_bandTravelDistance);
             SetAnchoredX(_bottomBandRect, _bandTravelDistance);
+        }
+
+        /// <summary>
+        /// スキップの受付と表示を切り替える。
+        /// マルチプレイでは飛ばすかどうかをホストが決めるので、ホスト以外では出さない。
+        /// </summary>
+        public void SetSkipAvailable(bool available)
+        {
+            SetAlpha(_skipGroup, available ? 1.0f : 0.0f);
+
+            // 見えていないボタンを押せてしまわないよう、受付そのものも止める
+            if (_holdArea != null) _holdArea.gameObject.SetActive(available);
+            if (_skipFillImage != null) _skipFillImage.fillAmount = 0.0f;
         }
 
         /// <summary>暗転を明ける。霧の奥からゴリラが見えてくる導入に使う</summary>

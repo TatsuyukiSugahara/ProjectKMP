@@ -1,12 +1,15 @@
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Photon.Pun;
 using ProjectKMP.Gorilla;
 using ProjectKMP.Player;
 using ProjectKMP.UI;
 using ProjectKMP.UI.Battle;
 using ProjectKMP.UI.InGame;
+using R3;
 using UnityEngine;
+using Hashtable = ExitGames.Client.Photon.Hashtable;
 
 namespace ProjectKMP.Battle
 {
@@ -34,6 +37,11 @@ namespace ProjectKMP.Battle
             Wide,
         }
 
+        // ---- 定数 ----------------------------------------
+
+        /// <summary>カットシーンの開始時刻を入れる Room のキー。BattleClock と同じやり方で共有する</summary>
+        private const string KEY_INTRO_START_TIME = "ist";
+
         // ---- インスペクタ設定 ------------------------------
 
         [Header("参照")]
@@ -54,6 +62,16 @@ namespace ProjectKMP.Battle
 
         [SerializeField, Tooltip("演出中は隠すタッチ操作UI。未設定ならシーンから探す")]
         private TouchControls _touchControls;
+
+        [SerializeField, Tooltip("スキップを全員に配るための同期。未設定なら同じ GameObject から探す")]
+        private BattleIntroSyncObject _sync;
+
+        [Header("開始タイミングを揃える")]
+        [SerializeField, Min(0.0f), Tooltip("ホストが決める開始時刻の猶予(秒)。読み込みが遅い人にも届くだけの余裕をとる")]
+        private float _startDelaySeconds = 1.5f;
+
+        [SerializeField, Min(0.1f), Tooltip("開始時刻が届かないときに、あきらめて自分だけで始めるまでの時間(秒)")]
+        private float _startWaitLimitSeconds = 6.0f;
 
         [Header("導入: 暗転と霧")]
         [SerializeField, Min(0.0f), Tooltip("暗転が明けるまでの時間(秒)。明けた先は霧だけが見えている")]
@@ -173,6 +191,8 @@ namespace ProjectKMP.Battle
         private float _savedAnimatorSpeed = 1.0f;
         private float _groundY;
 
+        private System.IDisposable _skipSubscription;
+
         private bool _fogApplied;
         private bool _savedFogEnabled;
         private FogMode _savedFogMode;
@@ -210,6 +230,11 @@ namespace ProjectKMP.Battle
             RestoreFog();
         }
 
+        private void OnDestroy()
+        {
+            _skipSubscription?.Dispose();
+        }
+
         // ---- 内部処理 ------------------------------------
 
         private void ResolveReferences()
@@ -224,6 +249,7 @@ namespace ProjectKMP.Battle
             if (_ui == null) _ui = FindAnyObjectByType<BattleIntroUI>(FindObjectsInactive.Include);
             if (_bossGauge == null) _bossGauge = FindAnyObjectByType<BossHealthGauge>(FindObjectsInactive.Include);
             if (_touchControls == null) _touchControls = FindAnyObjectByType<TouchControls>(FindObjectsInactive.Include);
+            if (_sync == null) _sync = GetComponent<BattleIntroSyncObject>();
 
             if (_gorilla == null) Debug.LogError("[BattleIntro] ゴリラが見つからないため演出できません", this);
             if (_camera == null) Debug.LogError("[BattleIntro] カメラが見つからないため演出できません", this);
@@ -242,6 +268,7 @@ namespace ProjectKMP.Battle
                 PrepareStage();
 
                 cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                SubscribeSkip(cts);
                 WatchSkipAsync(cts).Forget();
 
                 try
@@ -260,23 +287,69 @@ namespace ProjectKMP.Battle
             }
             finally
             {
+                _skipSubscription?.Dispose();
+                _skipSubscription = null;
                 if (cts != null) { cts.Cancel(); cts.Dispose(); }
             }
 
             Finish();
         }
 
-        /// <summary>Aボタンの長押しを見張り、成立したら演出を打ち切る</summary>
+        /// <summary>
+        /// 配られてきたスキップの合図を待ち受ける。ホスト自身もこの経路で止まるので、
+        /// ホストとゲストで打ち切りのしかたが分かれない。
+        /// </summary>
+        private void SubscribeSkip(CancellationTokenSource cts)
+        {
+            if (_sync == null) return;
+
+            _skipSubscription = _sync.Value.Subscribe(data =>
+            {
+                if (data == null || !data.IsSkipped) return;
+                if (cts.IsCancellationRequested) return;
+
+                Debug.Log("[BattleIntro] ホストがスキップしました");
+                cts.Cancel();
+            });
+        }
+
+        /// <summary>
+        /// Aボタンの長押しを見張る。長押しできるのはホストだけで、
+        /// 成立したら自分で止めるのではなく、同期に載せて全員同時に飛ばす。
+        /// </summary>
         private async UniTaskVoid WatchSkipAsync(CancellationTokenSource cts)
         {
             try
             {
                 if (_ui == null) return;
-                if (await _ui.WaitForSkipAsync(cts.Token)) cts.Cancel();
+                if (!HasSkipAuthority) return;
+
+                if (!await _ui.WaitForSkipAsync(cts.Token)) return;
+
+                if (IsPhotonReady && _sync != null)
+                {
+                    // 全員に配る。自分の画面も SubscribeSkip 経由で止まる
+                    _sync.SetValue(data => data.IsSkipped = true);
+                }
+                else
+                {
+                    // Photon に繋がっていないので自分だけ止める
+                    cts.Cancel();
+                }
             }
             catch (OperationCanceledException) { }
             catch (ObjectDisposedException) { }
         }
+
+        /// <summary>Photon が動いているか(オフラインモードも含む)</summary>
+        private bool IsPhotonReady => PhotonNetwork.IsConnected || PhotonNetwork.OfflineMode;
+
+        /// <summary>
+        /// スキップを決めてよい側か。マルチプレイでは MasterClient だけが決める。
+        /// 各自が勝手に飛ばすと、飛ばした人だけ先に動けてしまい足並みが揃わないため。
+        /// Photon に繋がっていないとき(エディタで直接再生したとき)は自分で飛ばせる。
+        /// </summary>
+        private bool HasSkipAuthority => IsPhotonReady ? PhotonNetwork.IsMasterClient : true;
 
         /// <summary>演出を始める前に、邪魔な表示を隠して暗転と霧を張る</summary>
         private void PrepareStage()
@@ -289,7 +362,19 @@ namespace ProjectKMP.Battle
 
             if (_bossGauge != null) _bossGauge.SetVisible(false);
             if (_touchControls != null) _touchControls.SetControlsVisible(false);
-            if (_ui != null) _ui.Prepare();
+
+            if (_ui != null)
+            {
+                _ui.Prepare();
+                // 押せない人にゲージを見せると混乱するので、ホストにだけ出す
+                _ui.SetSkipAvailable(HasSkipAuthority);
+            }
+
+            // 前の試合の値が残っていると開始直後に飛んでしまうので、ホストが入れ直す
+            if (IsPhotonReady && _sync != null && PhotonNetwork.IsMasterClient)
+            {
+                _sync.SetValue(data => data.IsSkipped = false);
+            }
 
             ApplyFog();
         }
@@ -305,6 +390,9 @@ namespace ProjectKMP.Battle
 
             // 暗転が明ける前に構図を合わせておく。1フレーム目からブレない
             ApplyCamera(_gorilla.position, runDirection, Shot.Lane, Shot.Lane, 0.0f, Vector3.zero);
+
+            // 全員の足並みを揃えるため、ホストが決めた開始時刻まで暗転のまま待つ
+            await WaitForSharedStartAsync(ct);
 
             // 1) 霧の奥から近づいてくる。カメラは中央付近に据えたまま。
             //    霧は薄めない。遠いほど霧で見えないので、近づくだけで自然に姿が浮かび上がる
@@ -497,6 +585,79 @@ namespace ProjectKMP.Battle
             RenderSettings.fogDensity = _fogStartDensity;
 
             _fogApplied = true;
+        }
+
+        /// <summary>カットシーンの想定所要時間(秒)。前の試合の古い開始時刻を見分けるのに使う</summary>
+        private float TotalIntroSeconds
+        {
+            get
+            {
+                float total = _approachSeconds + _runSeconds + _jumpSeconds + _landSeconds + _nameHoldSeconds;
+                if (_ui != null) total += _ui.TotalSeconds;
+                return total;
+            }
+        }
+
+        /// <summary>
+        /// ホストが決めた開始時刻まで、暗転のまま待つ。
+        /// PhotonNetwork.Time はサーバで揃えられた時刻なので、待ち終わる瞬間が全員で一致する。
+        /// 開始時刻を Room の CustomProperties に置くのは、あとから読み込みが終わった人でも
+        /// 読めるようにするため。SyncObject は値が変わった瞬間に1回送るだけなので、
+        /// その時点でまだシーンに居ない人には届かない。
+        /// </summary>
+        private async UniTask WaitForSharedStartAsync(CancellationToken ct)
+        {
+            // ひとりで遊ぶときや繋がっていないときは待つ相手が居ない
+            if (!IsPhotonReady || !PhotonNetwork.InRoom) return;
+
+            // ホストが決めて部屋に貼る。毎回上書きするので2戦目でも古い値が残らない
+            if (PhotonNetwork.IsMasterClient)
+            {
+                double startAt = PhotonNetwork.Time + _startDelaySeconds;
+                PhotonNetwork.CurrentRoom.SetCustomProperties(new Hashtable { { KEY_INTRO_START_TIME, startAt } });
+                Debug.Log($"[BattleIntro] 開始時刻を {_startDelaySeconds} 秒後に決めました");
+            }
+
+            // 開始時刻が届くまで待つ
+            double waitBegan = PhotonNetwork.Time;
+            while (!TryGetIntroStartTime(out _))
+            {
+                if (PhotonNetwork.Time - waitBegan >= _startWaitLimitSeconds)
+                {
+                    Debug.LogWarning("[BattleIntro] 開始時刻が届かないので自分だけで始めます", this);
+                    return;
+                }
+
+                await UniTask.Yield(PlayerLoopTiming.Update, ct);
+            }
+
+            // その時刻になるまで待つ。読み込みが遅れてもう過ぎていれば、すぐ始まる
+            while (TryGetIntroStartTime(out double target) && PhotonNetwork.Time < target)
+            {
+                await UniTask.Yield(PlayerLoopTiming.Update, ct);
+            }
+
+            if (TryGetIntroStartTime(out double decided))
+            {
+                double late = PhotonNetwork.Time - decided;
+                if (late > 0.3) Debug.Log($"[BattleIntro] {late:F2} 秒 出遅れて開始します", this);
+            }
+        }
+
+        /// <summary>部屋に貼られた開始時刻を読む。古すぎる値は前の試合のものとして無視する</summary>
+        private bool TryGetIntroStartTime(out double startTime)
+        {
+            startTime = 0.0;
+            if (!PhotonNetwork.InRoom) return false;
+
+            if (!PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(KEY_INTRO_START_TIME, out object value)) return false;
+            if (!(value is double time)) return false;
+
+            // 前の試合の値が残っていると開始直後に演出が飛んでしまうので、演出時間より古いものは捨てる
+            if (PhotonNetwork.Time - time > TotalIntroSeconds) return false;
+
+            startTime = time;
+            return true;
         }
 
         /// <summary>霧をだんだん晴らす</summary>
