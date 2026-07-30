@@ -4,7 +4,7 @@ namespace ProjectKMP.Gorilla
 {
     /// <summary>
     /// スタンプ攻撃ステート（近距離 or 確率で選ばれる範囲攻撃）。
-    /// その場で真上にジャンプし、頂点で少し溜めてから地面に向かって落下、
+    /// その場で真上にジャンプし、頂点で溜めながらチャージ演出を見せてから地面に向かって落下、
     /// 着地の瞬間に範囲ダメージを発生させる。着地後、硬直ステートへ遷移する。
     /// </summary>
     public class GorillaStateStampAttack : IGorillaState
@@ -15,8 +15,8 @@ namespace ProjectKMP.Gorilla
         /// <summary>上昇にかける時間（秒）</summary>
         private const float RISE_TIME = 0.35f;
 
-        /// <summary>頂点での溜め時間（秒）</summary>
-        private const float HOLD_TIME = 0.15f;
+        /// <summary>頂点での溜め時間（秒）。チャージ演出を見せるため少し長めに取る</summary>
+        private const float HOLD_TIME = 0.4f;
 
         /// <summary>落下にかける時間（秒）。上昇より短くして「落ちる」勢いを出す</summary>
         private const float FALL_TIME = 0.25f;
@@ -24,16 +24,22 @@ namespace ProjectKMP.Gorilla
         /// <summary>着地後、硬直ステートへ遷移するまでの余韻（秒）</summary>
         private const float LANDING_RECOVERY_TIME = 0.2f;
 
+        /// <summary>頂点で溜めている間の体の震え幅の最大値(メートル)</summary>
+        private const float MAX_SHAKE_AMOUNT = 0.1f;
+
         private float _elapsedTime;
         private Vector3 _groundPosition;
         private bool _hasApplyDamage;
         private bool _hasPlayedFallAnim;
+        private bool _hasSpawnedCharge;
+        private GameObject _chargeEffectInstance;
 
         public void Enter(GorillaAI owner)
         {
             _elapsedTime = 0f;
             _hasApplyDamage = false;
             _hasPlayedFallAnim = false;
+            _hasSpawnedCharge = false;
             _groundPosition = owner.transform.position;
 
             // 上昇開始（ジャンプモーション）
@@ -58,8 +64,21 @@ namespace ProjectKMP.Gorilla
             }
             else if (_elapsedTime <= holdEnd)
             {
-                // ---- 頂点での溜め ----
-                SetHeight(owner, RISE_HEIGHT);
+                // ---- 頂点での溜め：チャージ演出(震え + エフェクト) ----
+                if (!_hasSpawnedCharge)
+                {
+                    _hasSpawnedCharge = true;
+                    if (owner.StampAttackChargeEffectPrefab != null)
+                    {
+                        Vector3 pos = owner.transform.position + Vector3.up * owner.StampAttackChargeEffectHeight;
+                        _chargeEffectInstance = Object.Instantiate(owner.StampAttackChargeEffectPrefab, pos, Quaternion.identity, owner.transform);
+                    }
+                }
+
+                float holdElapsed = _elapsedTime - riseEnd;
+                float chargeRatio = Mathf.Clamp01(holdElapsed / HOLD_TIME);
+                Vector2 jitter = Random.insideUnitCircle * (MAX_SHAKE_AMOUNT * chargeRatio);
+                SetHeight(owner, RISE_HEIGHT, new Vector3(jitter.x, 0f, jitter.y));
 
                 if (!_hasPlayedFallAnim)
                 {
@@ -70,6 +89,13 @@ namespace ProjectKMP.Gorilla
             }
             else if (_elapsedTime <= fallEnd)
             {
+                // 落下に入ったのでチャージエフェクトは消す
+                if (_chargeEffectInstance != null)
+                {
+                    Object.Destroy(_chargeEffectInstance);
+                    _chargeEffectInstance = null;
+                }
+
                 // ---- 落下フェーズ：重力のように加速しながら落ちる ----
                 float t = (_elapsedTime - holdEnd) / FALL_TIME;
                 float eased = t * t; // ease-in（加速）
@@ -83,7 +109,8 @@ namespace ProjectKMP.Gorilla
                 if (!_hasApplyDamage)
                 {
                     _hasApplyDamage = true;
-                    // @todo 着地の瞬間に範囲ダメージ・地面エフェクト・カメラシェイクなどを発生させる
+                    SpawnImpactEffect(owner);
+                    // @todo 範囲ダメージ・カメラシェイクは別途対応
                 }
 
                 if (_elapsedTime >= recoverEnd)
@@ -97,14 +124,38 @@ namespace ProjectKMP.Gorilla
         {
             // 位置ズレが残らないよう、地面の高さに戻しておく
             SetHeight(owner, 0f);
+
+            if (_chargeEffectInstance != null)
+            {
+                Object.Destroy(_chargeEffectInstance);
+                _chargeEffectInstance = null;
+            }
         }
 
-        /// <summary>地面の位置を基準に高さだけを変更する</summary>
-        private void SetHeight(GorillaAI owner, float height)
+        /// <summary>地面の位置を基準に高さと水平方向のズレ(震え用)を反映する</summary>
+        private void SetHeight(GorillaAI owner, float height, Vector3 horizontalOffset = default)
         {
-            Vector3 pos = _groundPosition;
+            Vector3 pos = _groundPosition + horizontalOffset;
             pos.y = _groundPosition.y + height;
             owner.transform.position = pos;
+        }
+
+        /// <summary>着地位置に衝撃波エフェクトを出す</summary>
+        private void SpawnImpactEffect(GorillaAI owner)
+        {
+            if (owner.StampImpactEffectPrefab == null) return;
+            var instance = Object.Instantiate(owner.StampImpactEffectPrefab, _groundPosition, Quaternion.identity);
+
+            // ScalingMode が Shape のパーティクルは Transform.localScale を変えても大きさが反映されないため、
+            // Hierarchy に切り替えてから scale を適用する
+            var particleSystems = instance.GetComponentsInChildren<ParticleSystem>(true);
+            foreach (var ps in particleSystems)
+            {
+                var main = ps.main;
+                main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            }
+
+            instance.transform.localScale = Vector3.one * owner.StampImpactEffectScale;
         }
     }
 }

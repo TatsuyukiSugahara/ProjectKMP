@@ -61,6 +61,35 @@ namespace ProjectKMP.Gorilla
 
         private float _targetSearchTimer;
 
+        // ---- スタンプ攻撃 ----
+        [Header("スタンプ攻撃")]
+        [SerializeField, Tooltip("スタンプ攻撃が着地した瞬間に出す衝撃波エフェクト")]
+        private GameObject _stampImpactEffectPrefab;
+        [SerializeField, Tooltip("衝撃波エフェクトの大きさ倍率。1で原寸"), Min(0.01f)]
+        private float _stampImpactEffectScale = 0.5f;
+
+        // ---- 通常攻撃(頭突き)の予備動作 ----
+        [Header("通常攻撃の予備動作")]
+        [SerializeField, Tooltip("振りかぶり中に体に出すチャージエフェクト")]
+        private GameObject _normalAttackChargeEffectPrefab;
+        [SerializeField, Tooltip("チャージエフェクトを出す高さ(足元からのオフセット、メートル)")]
+        private float _normalAttackChargeEffectHeight = 1.2f;
+        [SerializeField, Tooltip("振りかぶり終了(振り切り開始)の瞬間に出す解放エフェクト")]
+        private GameObject _normalAttackSwingEffectPrefab;
+        [SerializeField, Tooltip("頭突きが命中した瞬間に出すヒットエフェクト")]
+        private GameObject _normalAttackHitEffectPrefab;
+        [SerializeField, Tooltip("ヒットエフェクトの大きさ倍率。1で原寸"), Min(0.01f)]
+        private float _normalAttackHitEffectScale = 5f;
+        [SerializeField, Tooltip("ヒットエフェクトを出す前方オフセット(メートル)")]
+        private float _normalAttackHitEffectForwardOffset = 2f;
+
+        // ---- スタンプ攻撃の予備動作 ----
+        [Header("スタンプ攻撃の予備動作")]
+        [SerializeField, Tooltip("頂点で溜めている間に体に出すチャージエフェクト")]
+        private GameObject _stampAttackChargeEffectPrefab;
+        [SerializeField, Tooltip("チャージエフェクトを出す高さ(足元からのオフセット、メートル)")]
+        private float _stampAttackChargeEffectHeight = 1.2f;
+
         // ---- 内部状態 ----
         private Animator _animator;
         private IGorillaState _currentState;
@@ -68,6 +97,16 @@ namespace ProjectKMP.Gorilla
 
         public Animator Animator => _animator;
         public Transform Target => _target;
+        public GameObject StampImpactEffectPrefab => _stampImpactEffectPrefab;
+        public float StampImpactEffectScale => _stampImpactEffectScale;
+        public GameObject NormalAttackChargeEffectPrefab => _normalAttackChargeEffectPrefab;
+        public float NormalAttackChargeEffectHeight => _normalAttackChargeEffectHeight;
+        public GameObject NormalAttackSwingEffectPrefab => _normalAttackSwingEffectPrefab;
+        public GameObject NormalAttackHitEffectPrefab => _normalAttackHitEffectPrefab;
+        public float NormalAttackHitEffectScale => _normalAttackHitEffectScale;
+        public float NormalAttackHitEffectForwardOffset => _normalAttackHitEffectForwardOffset;
+        public GameObject StampAttackChargeEffectPrefab => _stampAttackChargeEffectPrefab;
+        public float StampAttackChargeEffectHeight => _stampAttackChargeEffectHeight;
         public Vector3 HomePosition => _homePosition;
         public float PatrolSpeed => _patrolSpeed;
         public float ChaseSpeed => _chaseSpeed;

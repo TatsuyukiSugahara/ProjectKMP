@@ -148,6 +148,16 @@ MonoBehaviour:
   _animationSpeed: 0.5
   _target: {fileID: 0}
   _targetSearchIntervalSec: 0.5
+  _stampImpactEffectPrefab: {fileID: 100012, guid: a905d8e5159ffeb46baa8d2a7624717f, type: 3}
+  _stampImpactEffectScale: 0.25
+  _normalAttackChargeEffectPrefab: {fileID: 3526373135642884375, guid: 9c3c4cf28e1304cc199ca4022dcc1ecc, type: 3}
+  _normalAttackChargeEffectHeight: 1.2
+  _normalAttackSwingEffectPrefab: {fileID: 0}
+  _normalAttackHitEffectPrefab: {fileID: 5024009746357069194, guid: ec3f674830402cc45bce805cf6493db7, type: 3}
+  _normalAttackHitEffectScale: 2.5
+  _normalAttackHitEffectForwardOffset: 2
+  _stampAttackChargeEffectPrefab: {fileID: 3526373135642884375, guid: 9c3c4cf28e1304cc199ca4022dcc1ecc, type: 3}
+  _stampAttackChargeEffectHeight: 1.2
 --- !u!114 &3114836833867332793
 MonoBehaviour:
   m_ObjectHideFlags: 0
