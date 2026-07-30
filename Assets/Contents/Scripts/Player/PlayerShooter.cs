@@ -78,6 +78,8 @@ namespace ProjectKMP.Player
         /// <summary>キーボードSpace / ゲームパッドR1 / タッチ用発射ボタンのいずれか</summary>
         private bool IsFirePressed()
         {
+            if (!Battle.BattlePlayGate.IsPlayable) return false;
+
             Keyboard keyboard = Keyboard.current;
             if (keyboard != null && keyboard.spaceKey.isPressed) return true;
 

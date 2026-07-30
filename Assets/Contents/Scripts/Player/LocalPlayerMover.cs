@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using ProjectKMP.UI;
 
@@ -101,6 +101,9 @@ namespace ProjectKMP.Player
         /// <summary>WASD とゲームパッド左スティックから移動入力を取る</summary>
         private Vector2 ReadMoveInput()
         {
+            // カットシーン中などは操作を受け付けない
+            if (!Battle.BattlePlayGate.IsPlayable) return Vector2.zero;
+
             Vector2 value = Vector2.zero;
 
             Keyboard keyboard = Keyboard.current;
@@ -133,6 +136,8 @@ namespace ProjectKMP.Player
         /// <summary>ダッシュ入力(左Shift / ゲームパッドの左スティック押し込み)</summary>
         private bool IsSprinting()
         {
+            if (!Battle.BattlePlayGate.IsPlayable) return false;
+
             Keyboard keyboard = Keyboard.current;
             if (keyboard != null && keyboard.leftShiftKey.isPressed) return true;
 

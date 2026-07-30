@@ -240,6 +240,9 @@ namespace ProjectKMP.Player
         /// <summary>スペース / ゲームパッドAボタン / 画面上の噛みつきボタン</summary>
         private bool ReadAttackInput()
         {
+            // カットシーン中は攻撃できない。スキップの長押しと取り違えないためでもある
+            if (!Battle.BattlePlayGate.IsPlayable) return false;
+
             bool pressed = false;
 
             if (_useSpaceKey)

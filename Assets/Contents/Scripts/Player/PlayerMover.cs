@@ -83,6 +83,9 @@ namespace ProjectKMP.Player
         /// <summary>キーボード(WASD/矢印)・ゲームパッド左スティック・仮想スティックを合成して取得する</summary>
         private Vector2 ReadMoveInput()
         {
+            // カットシーン中などは操作を受け付けない
+            if (!Battle.BattlePlayGate.IsPlayable) return Vector2.zero;
+
             Vector2 value = Vector2.zero;
 
             Keyboard keyboard = Keyboard.current;
