@@ -1,0 +1,31 @@
+TOTAL CS FILES: 66
+
+Assets/Contents/Scripts/Gorilla/GorillaStateNormalAttack.cs -> ApplyDamage
+Assets/Contents/Scripts/Gorilla/GorillaStateStampAttack.cs -> ApplyDamage
+Assets/Contents/Scripts/Monster/BossHealth.cs -> currentHp, MaxHp, MaxHP
+Assets/Contents/Scripts/Monster/MonsterSyncData.cs -> MaxHP
+
+=== Player dir listing ===
+Assets/Contents/Scripts/Player/BiteVfx.cs
+Assets/Contents/Scripts/Player/InGamePlayerSpawner.cs
+Assets/Contents/Scripts/Player/LocalPlayerMover.cs
+Assets/Contents/Scripts/Player/NetworkOwnerGate.cs
+Assets/Contents/Scripts/Player/PlayerAttack.cs
+Assets/Contents/Scripts/Player/PlayerHealth.cs
+Assets/Contents/Scripts/Player/PlayerMover.cs
+Assets/Contents/Scripts/Player/PlayerNameLabel.cs
+Assets/Contents/Scripts/Player/PlayerShooter.cs
+Assets/Contents/Scripts/Player/PlayerSpawner.cs
+Assets/Contents/Scripts/Player/PlayerVisual.cs
+Assets/Contents/Scripts/Player/ThirdPersonCamera.cs
+
+=== Attack dir listing ===
+Assets/Contents/Scripts/Attack/AttackData.cs
+Assets/Contents/Scripts/Attack/AttackEffect.cs
+Assets/Contents/Scripts/Attack/DamagePopup.cs
+Assets/Contents/Scripts/Attack/HitTarget.cs
+
+=== Monster dir listing ===
+Assets/Contents/Scripts/Monster/BossHealth.cs
+Assets/Contents/Scripts/Monster/MonsterSyncData.cs
+Assets/Contents/Scripts/Monster/MonsterSyncObject.cs

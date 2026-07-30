@@ -1,10 +1,11 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace ProjectKMP.Gorilla
 {
     /// <summary>
     /// ゴリラ敵AI本体（ステートパターンのコンテキスト）。
-    /// 待機→徘徊→追跡→攻撃範囲内?→攻撃タイプ判定→スタンプ攻撃/通常攻撃→硬直→再追跡、
+    /// 待機→徘徊→追跡→攻撃範囲内?→攻撃タイプ判定→スタンプ攻撃/通常攻撃/破壊光線→硬直→再追跡、
     /// 見失ったら徘徊へ戻る、という一連の挙動を各ステートクラスに委譲して実行する。
     /// </summary>
     [RequireComponent(typeof(Animator))]
@@ -18,6 +19,7 @@ namespace ProjectKMP.Gorilla
         public const string ANIM_STAMP_ATTACK  = "Bounce"; // @todo 専用の踏みつけモーションがあれば差し替える
         public const string ANIM_NORMAL_ATTACK = "Attack";
         public const string ANIM_HIT           = "Hit";
+        public const string ANIM_DEATH         = "Death";
         private const float ANIM_CROSSFADE = 0.15f;
 
         // ---- 索敵 ----
@@ -90,10 +92,60 @@ namespace ProjectKMP.Gorilla
         [SerializeField, Tooltip("チャージエフェクトを出す高さ(足元からのオフセット、メートル)")]
         private float _stampAttackChargeEffectHeight = 1.2f;
 
+        // ---- 破壊光線攻撃 ----
+        [Header("破壊光線攻撃")]
+        [SerializeField, Tooltip("この距離以内にいると破壊光線を使える(近すぎるとスタンプ/通常攻撃が優先される)")]
+        private float _beamAttackRange = 6.0f;
+        [SerializeField, Range(0f, 1f), Tooltip("射程内かつクールタイム明けのとき、破壊光線を選ぶ確率")]
+        private float _beamAttackProbability = 0.5f;
+        [SerializeField, Tooltip("破壊光線を撃った後、再び使えるようになるまでのクールタイム(秒)")]
+        private float _beamAttackCooldownSec = 6.0f;
+        [SerializeField, Tooltip("発射前の予備動作(狙い)の時間(秒)")]
+        private float _beamWindupTime = 0.6f;
+        [SerializeField, Tooltip("光線を出し続ける時間(秒)")]
+        private float _beamDuration = 3.0f;
+        [SerializeField, Tooltip("光線終了後、硬直ステートに留まる時間(秒)")]
+        private float _beamStaggerTime = 1.0f;
+        [SerializeField, Tooltip("光線が届く距離(メートル)")]
+        private float _beamLength = 10.0f;
+        [SerializeField, Min(0f), Tooltip("発射開始時、光線が0から実際の長さまで伸びきるのにかかる時間(秒)。0にすると一瞬で全長になる")]
+        private float _beamGrowDuration = 0.2f;
+        [SerializeField, Tooltip("光線の当たり判定の太さ(半径、メートル)")]
+        private float _beamWidth = 1.2f;
+        [SerializeField, Tooltip("光線を出す高さ(足元からのオフセット、メートル)")]
+        private float _beamOriginHeight = 1.2f;
+        [SerializeField, Tooltip("光線の発射位置を正面方向にずらす距離(メートル)。体に光線がめり込んで見えるのを防ぐ")]
+        private float _beamOriginForwardOffset = 1.2f;
+        [SerializeField, Min(0), Tooltip("光線に初めて当たった瞬間のダメージ")]
+        private int _beamInitialDamage = 3;
+        [SerializeField, Min(0), Tooltip("光線に当たり続けている間、一定間隔ごとに入るダメージ(初撃より弱くする想定)")]
+        private int _beamContinuousDamage = 1;
+        [SerializeField, Min(0.01f), Tooltip("継続ダメージが入る間隔(秒)。この間隔より短い周期では追加ダメージは入らない")]
+        private float _beamTickIntervalSec = 0.5f;
+        [SerializeField, Tooltip("予備動作中に体に出すチャージエフェクト")]
+        private GameObject _beamChargeEffectPrefab;
+        [SerializeField, Tooltip("発射中に出し続ける光線本体のエフェクト")]
+        private GameObject _beamEffectPrefab;
+        [SerializeField, Tooltip("発射中、体を震わせる揺れ幅(メートル)。頭突きモーションのまま止まって見えないようにするための演出")]
+        private float _beamFiringShakeAmount = 0.06f;
+        [SerializeField, Min(0.01f), Tooltip("発射終了時、光線がパッと消えず徐々に透明になっていく時間(秒)")]
+        private float _beamFadeOutDuration = 0.8f;
+
+        private float _beamCooldownRemain;
+
         // ---- 内部状態 ----
         private Animator _animator;
         private IGorillaState _currentState;
         private Vector3 _homePosition;
+
+        // ---- 死亡・復活(デバッグ用) ----
+        private bool _isDead;
+        private Vector3 _preDeathPosition;
+        private Quaternion _preDeathRotation;
+        private Vector3 _preDeathScale;
+
+        /// <summary>死亡ステート中かどうか</summary>
+        public bool IsDead => _isDead;
 
         public Animator Animator => _animator;
         public Transform Target => _target;
@@ -118,6 +170,34 @@ namespace ProjectKMP.Gorilla
         public float PatrolWaitTimeMax => _patrolWaitTimeMax;
         public float NormalAttackStaggerTime => _normalAttackStaggerTime;
         public float StampAttackStaggerTime => _stampAttackStaggerTime;
+
+        // ---- 破壊光線攻撃の公開API ----
+        public float BeamAttackRange => _beamAttackRange;
+        public float BeamAttackProbability => _beamAttackProbability;
+        public float BeamWindupTime => _beamWindupTime;
+        public float BeamDuration => _beamDuration;
+        public float BeamStaggerTime => _beamStaggerTime;
+        public float BeamLength => _beamLength;
+        public float BeamGrowDuration => _beamGrowDuration;
+        public float BeamWidth => _beamWidth;
+        public float BeamOriginHeight => _beamOriginHeight;
+        public float BeamOriginForwardOffset => _beamOriginForwardOffset;
+        public int BeamInitialDamage => _beamInitialDamage;
+        public int BeamContinuousDamage => _beamContinuousDamage;
+        public float BeamTickIntervalSec => _beamTickIntervalSec;
+        public GameObject BeamChargeEffectPrefab => _beamChargeEffectPrefab;
+        public GameObject BeamEffectPrefab => _beamEffectPrefab;
+        public float BeamFiringShakeAmount => _beamFiringShakeAmount;
+        public float BeamFadeOutDuration => _beamFadeOutDuration;
+
+        /// <summary>クールタイムが明けていて破壊光線を使えるか</summary>
+        public bool CanUseBeamAttack => _beamCooldownRemain <= 0f;
+
+        /// <summary>破壊光線を使ったことを伝え、クールタイムを開始する</summary>
+        public void NotifyBeamAttackUsed()
+        {
+            _beamCooldownRemain = _beamAttackCooldownSec;
+        }
 
         private void Awake()
         {
@@ -171,7 +251,30 @@ namespace ProjectKMP.Gorilla
                 }
             }
 
+            if (_beamCooldownRemain > 0f)
+            {
+                _beamCooldownRemain -= Time.deltaTime;
+            }
+
             _currentState?.Update(this);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // @todo 動作確認用デバッグ入力。Iキーで死亡⇔復活をトグルする
+            // (このプロジェクトはInput System Packageを使用しているため、
+            //  legacyのInput.GetKeyDownではなくKeyboard.currentを使う)
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.iKey.wasPressedThisFrame)
+            {
+                if (_isDead)
+                {
+                    Revive();
+                }
+                else
+                {
+                    ChangeState(new GorillaStateDeath());
+                }
+            }
+#endif
         }
 
         /// <summary>
@@ -182,6 +285,29 @@ namespace ProjectKMP.Gorilla
             _currentState?.Exit(this);
             _currentState = newState;
             _currentState?.Enter(this);
+        }
+
+        /// <summary>
+        /// 死亡ステートに入る直前の座標・回転・スケールを記録する。
+        /// GorillaStateDeath.Enter() から呼び出される想定。
+        /// </summary>
+        public void NotifyDeathStarted()
+        {
+            _preDeathPosition = transform.position;
+            _preDeathRotation = transform.rotation;
+            _preDeathScale = transform.localScale;
+            _isDead = true;
+        }
+
+        /// <summary>死亡状態から復活させる(デバッグ用)。座標・回転・スケールを死亡前の状態に戻し、待機ステートへ遷移する</summary>
+        public void Revive()
+        {
+            transform.position = _preDeathPosition;
+            transform.rotation = _preDeathRotation;
+            transform.localScale = _preDeathScale;
+            _isDead = false;
+
+            ChangeState(new GorillaStateIdle());
         }
 
         /// <summary>指定したアニメーションステートをクロスフェードで再生する</summary>
@@ -244,6 +370,12 @@ namespace ProjectKMP.Gorilla
             return _target != null && GetDistanceToTarget() <= _attackRange;
         }
 
+        /// <summary>破壊光線の射程内か(距離判定)</summary>
+        public bool IsPlayerInBeamRange()
+        {
+            return _target != null && GetDistanceToTarget() <= _beamAttackRange;
+        }
+
         /// <summary>攻撃タイプ判定(近距離 or 確率でスタンプ攻撃か通常攻撃かを決める)</summary>
         public bool ShouldUseStampAttack()
         {
@@ -252,6 +384,12 @@ namespace ProjectKMP.Gorilla
                 return true;
             }
             return Random.value < _stampAttackProbability;
+        }
+
+        /// <summary>破壊光線を使うかどうかの確率判定(射程・クールタイムは呼び出し側で確認済みの前提)</summary>
+        public bool ShouldUseBeamAttack()
+        {
+            return Random.value < _beamAttackProbability;
         }
 
         /// <summary>目標地点へ向けて移動・旋回する</summary>
@@ -270,6 +408,21 @@ namespace ProjectKMP.Gorilla
             transform.position = Vector3.MoveTowards(transform.position, targetPosition, speed * Time.deltaTime);
         }
 
+        /// <summary>その場で目標方向へ旋回のみ行う(移動しない)</summary>
+        public void TurnTowards(Vector3 targetPosition)
+        {
+            Vector3 direction = targetPosition - transform.position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 0.0001f)
+            {
+                return;
+            }
+            direction.Normalize();
+
+            Quaternion look = Quaternion.LookRotation(direction);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, look, _turnSpeedDeg * Time.deltaTime);
+        }
+
 #if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
@@ -277,6 +430,8 @@ namespace ProjectKMP.Gorilla
             UnityEditor.Handles.DrawWireDisc(transform.position, Vector3.up, _searchRadius);
             UnityEditor.Handles.color = Color.red;
             UnityEditor.Handles.DrawWireDisc(transform.position, Vector3.up, _attackRange);
+            UnityEditor.Handles.color = new Color(0.2f, 0.6f, 1f, 1f);
+            UnityEditor.Handles.DrawWireDisc(transform.position, Vector3.up, _beamAttackRange);
 
             // 視野角の扇形を表示
             UnityEditor.Handles.color = new Color(1f, 1f, 0f, 0.15f);
