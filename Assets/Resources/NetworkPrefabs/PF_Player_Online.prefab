@@ -198,6 +198,7 @@ GameObject:
   - component: {fileID: 1377373027966603258}
   - component: {fileID: 8189920735579963244}
   - component: {fileID: 579247525850942068}
+  - component: {fileID: 2564157730794531983}
   m_Layer: 0
   m_Name: PF_Player_Online
   m_TagString: Player
@@ -377,6 +378,29 @@ MonoBehaviour:
   _crossFadeSec: 0.15
   _attackDurationSec: 0.4166667
   _speedSmoothing: 12
+--- !u!114 &2564157730794531983
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3612530661535202673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d17722626b5947da9cdc92231ccf4f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.PlayerHealth
+  _maxHp: 100
+  _respawnDelaySec: 5
+  _respawnMinRadius: 8
+  _respawnMaxRadius: 20
+  _respawnHeight: 0.5
+  _deathAnimationSec: 0
+  _disableWhileDead:
+  - {fileID: 8189920735579963244}
+  _biteVfxPrefab: {fileID: 0}
+  _biteVfxHeight: 1.1
+  _bodyRoot: {fileID: 4628211592738385048}
 --- !u!1001 &8618206059551019404
 PrefabInstance:
   m_ObjectHideFlags: 0
