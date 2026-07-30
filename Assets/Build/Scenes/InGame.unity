@@ -12601,6 +12601,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1260771478}
   - component: {fileID: 1260771477}
+  - component: {fileID: 1260771480}
+  - component: {fileID: 1260771479}
   m_Layer: 0
   m_Name: BattleIntro
   m_TagString: Untagged
@@ -12626,6 +12628,7 @@ MonoBehaviour:
   _ui: {fileID: 1723578329}
   _bossGauge: {fileID: 854204500}
   _touchControls: {fileID: 1809228233}
+  _sync: {fileID: 1260771479}
   _fadeInSeconds: 1
   _useFog: 1
   _fogColor: {r: 0.8, g: 0.82, b: 0.85, a: 1}
@@ -12675,6 +12678,41 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1260771479
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1260771476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 444ceb4f7f5844e87900bd58581dc8df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BattleIntroSyncObject
+--- !u!114 &1260771480
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1260771476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PhotonUnityNetworking::Photon.Pun.PhotonView
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 1
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents:
+  - {fileID: 1260771479}
+  sceneViewId: 2
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
 --- !u!1001 &1264278990
 PrefabInstance:
   m_ObjectHideFlags: 0
