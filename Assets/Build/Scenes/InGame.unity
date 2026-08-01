@@ -12783,6 +12783,8 @@ MonoBehaviour:
   _jumpCameraBlend: 0.45
   _shakeStrength: 0.35
   _shakeSeconds: 0.25
+  _landDecalPrefab: {fileID: 1426292960322628520, guid: 4ad4ac40bc9c04de382334e67c31f4f5, type: 3}
+  _landDecalDiameter: 4.5
   _nameHoldSeconds: 1
   _returnDelaySeconds: 0.7
   _returnSeconds: 1.1

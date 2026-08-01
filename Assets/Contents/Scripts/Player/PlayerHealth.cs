@@ -213,6 +213,10 @@ namespace ProjectKMP.Player
             Teleport(position);
             SetAlive(true);
             SetDeathPose(false);
+
+            // リスポーン直後はボス(敵)を画面に捉えた向きから再開する(自分のキャラのみ)
+            if (photonView.IsMine) AimCameraAtBoss();
+
             _revived.OnNext(Unit.Default);
         }
 
@@ -361,6 +365,21 @@ namespace ProjectKMP.Player
             float radian = UnityEngine.Random.value * 2.0f * Mathf.PI;
 
             return new Vector3(Mathf.Cos(radian) * radius, _respawnHeight, Mathf.Sin(radian) * radius);
+        }
+
+        /// <summary>
+        /// 自分を追いかけているサードパーソンカメラを、ボス(敵)の方へ向ける。
+        /// ボスやカメラが居ないシーン(Battleなど)では何もしない。
+        /// </summary>
+        private void AimCameraAtBoss()
+        {
+            var camera = FindAnyObjectByType<ThirdPersonCamera>();
+            if (camera == null || camera.Target != transform) return;
+
+            var boss = FindAnyObjectByType<ProjectKMP.Monster.BossHealth>();
+            if (boss == null) return;
+
+            camera.AimAt(boss.transform.position);
         }
 
         /// <summary>CharacterController が有効なままだと位置を代入しても戻されるので、一度切る</summary>
