@@ -9819,6 +9819,26 @@ PrefabInstance:
       propertyPath: m_Name
       value: PF_UI_PlayerHpGauge
       objectReference: {fileID: 0}
+    - target: {fileID: 2521374562743321222, guid: 2e95029a5bd52484c8e6b6174e199d9e, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4285454335
+      objectReference: {fileID: 0}
+    - target: {fileID: 2521374562743321222, guid: 2e95029a5bd52484c8e6b6174e199d9e, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 2786604561300676420, guid: 2e95029a5bd52484c8e6b6174e199d9e, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 3844422941721164192, guid: 2e95029a5bd52484c8e6b6174e199d9e, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 7767023016671952054, guid: 2e95029a5bd52484c8e6b6174e199d9e, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -14379,6 +14399,10 @@ PrefabInstance:
       value: 0.3264
       objectReference: {fileID: 0}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _beamDecalPrefab
+      value: 
+      objectReference: {fileID: 3723947236444742271, guid: f847b4c4183974e25aa3a4547d6059c6, type: 3}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamEffectPrefab
       value: 
       objectReference: {fileID: 4788525346617179989, guid: d9add86ad7f984ce985fdb585c43a954, type: 3}
@@ -14390,6 +14414,10 @@ PrefabInstance:
       propertyPath: _beamOriginHeight
       value: 1.7
       objectReference: {fileID: 0}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _stampDecalPrefab
+      value: 
+      objectReference: {fileID: 1426292960322628520, guid: 4ad4ac40bc9c04de382334e67c31f4f5, type: 3}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamInitialDamage
       value: 30

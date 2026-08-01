@@ -1,3 +1,4 @@
+using ProjectKMP.Attack;
 using ProjectKMP.Player;
 using UnityEngine;
 
@@ -111,6 +112,10 @@ namespace ProjectKMP.Gorilla
                 {
                     _hasApplyDamage = true;
                     SpawnImpactEffect(owner);
+
+                    // 着地点に地面を抉った痕を残す。エフェクトと同じく全クライアントで
+                    // 同じタイミングに呼ばれるため、追加の通信なしで全員の画面に痕が出る
+                    AttackDecal.Spawn(owner.StampDecalPrefab, _groundPosition, owner.StampDecalDiameter);
                     TryApplyDamageToLocalPlayer(owner);
                     // @todo カメラシェイクは別途対応
                 }

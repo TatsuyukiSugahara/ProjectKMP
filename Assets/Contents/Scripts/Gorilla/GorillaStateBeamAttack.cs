@@ -1,4 +1,5 @@
 using UnityEngine;
+using ProjectKMP.Attack;
 using ProjectKMP.Player;
 
 namespace ProjectKMP.Gorilla
@@ -39,6 +40,9 @@ namespace ProjectKMP.Gorilla
 
         /// <summary>発射中の震え演出の基準位置(この位置を中心に揺れる)</summary>
         private Vector3 _firingBasePosition;
+
+        /// <summary>次に痕(デカール)を置く、光線の根元からの距離</summary>
+        private float _nextBeamDecalDistance;
 
         public void Enter(GorillaAI owner)
         {
@@ -134,6 +138,9 @@ namespace ProjectKMP.Gorilla
             _beamOrigin = GetBeamOrigin(owner);
             _beamDirection = owner.transform.forward;
 
+            // 最初の痕は根元から1間隔ぶん先に置く(根元はゴリラの足元なので避ける)
+            _nextBeamDecalDistance = owner.BeamDecalIntervalMeters;
+
             if (owner.BeamEffectPrefab != null)
             {
                 _beamEffectInstance = Object.Instantiate(
@@ -160,6 +167,7 @@ namespace ProjectKMP.Gorilla
         {
             ApplyFiringShake(owner);
             UpdateBeamLength(owner);
+            SpawnBeamDecals(owner);
             UpdateBeamHit(owner);
 
             if (_elapsedTime < owner.BeamDuration) return;
@@ -203,6 +211,27 @@ namespace ProjectKMP.Gorilla
             if (_beamVisual != null)
             {
                 _beamVisual.Configure(_beamOrigin, _beamDirection, _currentBeamLength, owner.BeamWidth);
+            }
+        }
+
+        /// <summary>
+        /// 光線が伸びて指定間隔を越えるたびに、その真下の地面へ痕(デカール)を置く。
+        /// 見た目だけの演出なので、エフェクトと同じく全クライアントで動くこの処理から呼べば
+        /// 追加の通信なしで全員の画面に痕が出る。
+        /// </summary>
+        private void SpawnBeamDecals(GorillaAI owner)
+        {
+            if (owner.BeamDecalPrefab == null) return;
+
+            while (_nextBeamDecalDistance <= _currentBeamLength)
+            {
+                Vector3 point = _beamOrigin + _beamDirection * _nextBeamDecalDistance;
+
+                // 光線は体の高さから出ているので、真下の地面(ゴリラの足元の高さ)に落とす
+                point.y = owner.transform.position.y;
+
+                AttackDecal.Spawn(owner.BeamDecalPrefab, point, owner.BeamDecalDiameter);
+                _nextBeamDecalDistance += owner.BeamDecalIntervalMeters;
             }
         }
 
