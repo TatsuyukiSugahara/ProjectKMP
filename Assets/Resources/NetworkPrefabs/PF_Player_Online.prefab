@@ -395,6 +395,11 @@ MonoBehaviour:
   _respawnMinRadius: 8
   _respawnMaxRadius: 20
   _respawnHeight: 0.5
+  _knockbackDistance: 2.5
+  _knockbackDurationSec: 0.25
+  _deathKnockbackDistance: 16
+  _deathKnockbackDurationSec: 0.7
+  _deathKnockbackArcHeight: 3
   _deathAnimationSec: 0
   _disableWhileDead:
   - {fileID: 8189920735579963244}

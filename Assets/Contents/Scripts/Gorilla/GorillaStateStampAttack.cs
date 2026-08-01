@@ -1,3 +1,4 @@
+using ProjectKMP.Player;
 using UnityEngine;
 
 namespace ProjectKMP.Gorilla
@@ -110,7 +111,8 @@ namespace ProjectKMP.Gorilla
                 {
                     _hasApplyDamage = true;
                     SpawnImpactEffect(owner);
-                    // @todo 範囲ダメージ・カメラシェイクは別途対応
+                    TryApplyDamageToLocalPlayer(owner);
+                    // @todo カメラシェイクは別途対応
                 }
 
                 if (_elapsedTime >= recoverEnd)
@@ -138,6 +140,30 @@ namespace ProjectKMP.Gorilla
             Vector3 pos = _groundPosition + horizontalOffset;
             pos.y = _groundPosition.y + height;
             owner.transform.position = pos;
+        }
+
+        /// <summary>
+        /// 自分が操作しているローカルプレイヤーだけを対象に、着地点を中心とした円形範囲の当たり判定を取って
+        /// ダメージを与える。(破壊光線と同じ方式。全クライアントで同じ処理が走るため、各自が自分のぶんだけ
+        /// 判定することで多重ダメージを避ける。ダメージ自体は PlayerHealth の RPC で全員に同期される)
+        /// </summary>
+        private void TryApplyDamageToLocalPlayer(GorillaAI owner)
+        {
+            if (owner.StampAttackDamage <= 0) return;
+
+            PlayerAttack localAttack = PlayerAttack.Local;
+            if (localAttack == null) return;
+
+            PlayerHealth localHealth = localAttack.GetComponent<PlayerHealth>();
+            if (localHealth == null || localHealth.IsDead) return;
+
+            // 着地点からの水平距離で判定する
+            Vector3 toPlayer = localHealth.transform.position - _groundPosition;
+            toPlayer.y = 0f;
+            if (toPlayer.magnitude > owner.StampAttackRadius) return;
+
+            // 着地点を発生源として渡し、衝撃波の外側へ吹き飛ばす
+            localHealth.ApplyDamage(owner.StampAttackDamage, -1, _groundPosition);
         }
 
         /// <summary>着地位置に衝撃波エフェクトを出す</summary>

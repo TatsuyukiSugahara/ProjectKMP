@@ -290,7 +290,8 @@ namespace ProjectKMP.Gorilla
         private void ApplyDamage(PlayerHealth target, int damage)
         {
             if (damage <= 0) return;
-            target.ApplyDamage(damage, -1);
+            // 光線の発射位置を発生源として渡し、光線から離れる方向へ吹き飛ばす
+            target.ApplyDamage(damage, -1, _beamOrigin);
         }
 
         /// <summary>点が光線の判定(始点から一定方向・現在の長さのカプセル)の中にあるか</summary>

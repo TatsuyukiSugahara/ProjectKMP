@@ -37,6 +37,23 @@ namespace ProjectKMP.Gorilla
         [SerializeField] private float _normalAttackStaggerTime = 0.6f;
         [SerializeField] private float _stampAttackStaggerTime = 1.2f;
 
+        // ---- 攻撃の当たり判定・ダメージ ----
+        [Header("攻撃の当たり判定・ダメージ")]
+        [SerializeField, Min(0), Tooltip("通常攻撃(頭突き)のダメージ")]
+        private int _normalAttackDamage = 20;
+
+        [SerializeField, Min(0f), Tooltip("通常攻撃の当たり判定が届く距離(メートル、体の中心から)")]
+        private float _normalAttackHitRange = 3.0f;
+
+        [SerializeField, Range(0f, 360f), Tooltip("通常攻撃の当たり判定の角度(度)。正面を中心とした扇形")]
+        private float _normalAttackHitAngle = 120.0f;
+
+        [SerializeField, Min(0), Tooltip("スタンプ攻撃(踏みつけ)のダメージ")]
+        private int _stampAttackDamage = 30;
+
+        [SerializeField, Min(0f), Tooltip("スタンプ攻撃の衝撃波が届く半径(メートル、着地点から)")]
+        private float _stampAttackRadius = 3.5f;
+
         // ---- 移動 ----
         [Header("移動")]
         [SerializeField] private float _patrolSpeed = 1.5f;
@@ -170,6 +187,13 @@ namespace ProjectKMP.Gorilla
         public float PatrolWaitTimeMax => _patrolWaitTimeMax;
         public float NormalAttackStaggerTime => _normalAttackStaggerTime;
         public float StampAttackStaggerTime => _stampAttackStaggerTime;
+
+        // ---- 攻撃の当たり判定・ダメージの公開API ----
+        public int NormalAttackDamage => _normalAttackDamage;
+        public float NormalAttackHitRange => _normalAttackHitRange;
+        public float NormalAttackHitAngle => _normalAttackHitAngle;
+        public int StampAttackDamage => _stampAttackDamage;
+        public float StampAttackRadius => _stampAttackRadius;
 
         // ---- 破壊光線攻撃の公開API ----
         public float BeamAttackRange => _beamAttackRange;
@@ -432,6 +456,14 @@ namespace ProjectKMP.Gorilla
             UnityEditor.Handles.DrawWireDisc(transform.position, Vector3.up, _attackRange);
             UnityEditor.Handles.color = new Color(0.2f, 0.6f, 1f, 1f);
             UnityEditor.Handles.DrawWireDisc(transform.position, Vector3.up, _beamAttackRange);
+
+            // スタンプ攻撃の範囲(オレンジ)と通常攻撃の扇形(赤の面)
+            UnityEditor.Handles.color = new Color(1f, 0.5f, 0f, 1f);
+            UnityEditor.Handles.DrawWireDisc(transform.position, Vector3.up, _stampAttackRadius);
+            UnityEditor.Handles.color = new Color(1f, 0.2f, 0.2f, 0.15f);
+            Vector3 hitBaseDir = transform.forward * _normalAttackHitRange;
+            Quaternion hitLeftRot = Quaternion.AngleAxis(-_normalAttackHitAngle * 0.5f, Vector3.up);
+            UnityEditor.Handles.DrawSolidArc(transform.position, Vector3.up, hitLeftRot * hitBaseDir, _normalAttackHitAngle, _normalAttackHitRange);
 
             // 視野角の扇形を表示
             UnityEditor.Handles.color = new Color(1f, 1f, 0f, 0.15f);
