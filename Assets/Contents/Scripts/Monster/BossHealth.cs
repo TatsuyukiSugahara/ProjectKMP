@@ -63,6 +63,8 @@ namespace ProjectKMP.Monster
 
         private bool _isDefeated;
 
+        private readonly Subject<Unit> _defeated = new Subject<Unit>();
+
         // ---- 公開API -------------------------------------
 
         /// <summary>ひとりで遊ぶときの最大HP</summary>
@@ -70,6 +72,9 @@ namespace ProjectKMP.Monster
 
         /// <summary>実際に使われている最大HP(人数ぶん増えた後の値)</summary>
         public int MaxHp => _resolvedMaxHp;
+
+        /// <summary>倒された瞬間に流れる。HPは同期経由で届くため、全クライアントで発火する</summary>
+        public Observable<Unit> Defeated => _defeated;
 
         /// <summary>すでに倒されているか</summary>
         public bool IsDefeated => _isDefeated;
@@ -138,6 +143,7 @@ namespace ProjectKMP.Monster
         {
             _hitSubscription?.Dispose();
             _syncSubscription?.Dispose();
+            _defeated.Dispose();
         }
 
         // ---- 内部処理 ------------------------------------
@@ -221,6 +227,7 @@ namespace ProjectKMP.Monster
             if (_hitTarget != null) _hitTarget.SetCanBeHit(false);
 
             _onDefeated?.Invoke();
+            _defeated.OnNext(Unit.Default);
         }
     }
 }
