@@ -83,6 +83,7 @@ namespace ProjectKMP.Player
 
         private readonly ReactiveProperty<int> _hp = new ReactiveProperty<int>(0);
         private readonly ReactiveProperty<float> _respawnRemainingSec = new ReactiveProperty<float>(0.0f);
+        private readonly Subject<int> _damaged = new Subject<int>();
         private readonly Subject<Unit> _died = new Subject<Unit>();
         private readonly Subject<Unit> _revived = new Subject<Unit>();
 
@@ -101,6 +102,9 @@ namespace ProjectKMP.Player
 
         /// <summary>HPが変化するたびに、変化後の値を流す(HPバーなどのUIから購読する想定。購読時に現在値も流れる)</summary>
         public Observable<int> HpChanged => _hp;
+
+        /// <summary>ダメージを受けた瞬間に、その一撃ぶんのダメージ量を流す。全クライアントで発火する(ヒットエフェクトなどの演出用)</summary>
+        public Observable<int> Damaged => _damaged;
 
         /// <summary>死亡した瞬間に流れる。全クライアントで発火するので、死亡アニメーションを入れる場合はこれを購読する</summary>
         public Observable<Unit> Died => _died;
@@ -170,6 +174,7 @@ namespace ProjectKMP.Player
             CancelKnockback();
             _hp.Dispose();
             _respawnRemainingSec.Dispose();
+            _damaged.Dispose();
             _died.Dispose();
             _revived.Dispose();
         }
@@ -182,6 +187,7 @@ namespace ProjectKMP.Player
             if (_isDead) return;
 
             _hp.Value = Mathf.Max(0, _hp.Value - damage);
+            _damaged.OnNext(damage);
 
             if (_hp.Value <= 0)
             {
@@ -200,6 +206,7 @@ namespace ProjectKMP.Player
             if (_isDead) return;
 
             _hp.Value = 0;
+            _damaged.OnNext(_maxHp);
             Die(killerActorNumber, sourcePosition);
         }
 
