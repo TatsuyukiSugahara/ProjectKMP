@@ -199,6 +199,7 @@ GameObject:
   - component: {fileID: 8189920735579963244}
   - component: {fileID: 579247525850942068}
   - component: {fileID: 2564157730794531983}
+  - component: {fileID: 7589652690637285504}
   m_Layer: 0
   m_Name: PF_Player_Online
   m_TagString: Player
@@ -395,12 +396,34 @@ MonoBehaviour:
   _respawnMinRadius: 8
   _respawnMaxRadius: 20
   _respawnHeight: 0.5
+  _knockbackDistance: 2.5
+  _knockbackDurationSec: 0.25
+  _deathKnockbackDistance: 16
+  _deathKnockbackDurationSec: 0.7
+  _deathKnockbackArcHeight: 3
   _deathAnimationSec: 0
   _disableWhileDead:
   - {fileID: 8189920735579963244}
   _biteVfxPrefab: {fileID: 0}
   _biteVfxHeight: 1.1
   _bodyRoot: {fileID: 4628211592738385048}
+--- !u!114 &7589652690637285504
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3612530661535202673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93c9407b63005486ba09ef51a5a66299, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Attack.DamageHitEffect
+  _effectPrefab: {fileID: 7226583673155636401, guid: a2ab56839e1c9504ea9d141e95d0b16b, type: 3}
+  _effectScale: 1
+  _effectHeight: 0.8
+  _effectLifeSec: 2
+  _minIntervalSec: 0.15
 --- !u!1001 &8618206059551019404
 PrefabInstance:
   m_ObjectHideFlags: 0

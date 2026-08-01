@@ -117,6 +117,24 @@ namespace ProjectKMP.Player
             return true;
         }
 
+        /// <summary>
+        /// 指定したワールド座標が画面に入るように、水平角をその方向へ即座に合わせる。
+        /// カメラは対象の背後に回り込むため、「プレイヤーの背中越しに指定地点を見る」構図になる。
+        /// 見下ろし角は初期値に戻す。ゲーム開始時・リスポーン時にボスの方を向かせるのに使う。
+        /// </summary>
+        public void AimAt(Vector3 worldPosition)
+        {
+            if (_target == null) return;
+
+            Vector3 toPoint = worldPosition - _target.position;
+            toPoint.y = 0.0f;
+            if (toPoint.sqrMagnitude < 0.0001f) return;
+
+            _yawDeg = Quaternion.LookRotation(toPoint.normalized, Vector3.up).eulerAngles.y;
+            _pitchDeg = Mathf.Clamp(_initialPitchDeg, _minPitchDeg, _maxPitchDeg);
+            SnapToTarget();
+        }
+
         // ---- Unityイベント -------------------------------
 
         private void Awake()

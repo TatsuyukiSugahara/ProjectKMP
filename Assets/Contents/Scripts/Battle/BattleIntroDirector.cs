@@ -169,6 +169,12 @@ namespace ProjectKMP.Battle
         [SerializeField, Min(0.01f), Tooltip("揺れが収まるまでの時間(秒)")]
         private float _shakeSeconds = 0.25f;
 
+        [SerializeField, Tooltip("着地の瞬間に地面へ残す痕(デカール)。未設定なら残さない")]
+        private ProjectKMP.Attack.AttackDecal _landDecalPrefab;
+
+        [SerializeField, Min(0.01f), Tooltip("着地の痕の直径(メートル)")]
+        private float _landDecalDiameter = 4.5f;
+
         [Header("名前表示")]
         [SerializeField, Min(0.0f), Tooltip("「ゴリラ ゴリラ ゴリラ」を見せている時間(秒)")]
         private float _nameHoldSeconds = 1.0f;
@@ -192,6 +198,9 @@ namespace ProjectKMP.Battle
         private float _groundY;
 
         private System.IDisposable _skipSubscription;
+
+        /// <summary>着地の痕をすでに出したか(通常再生とスキップの二重生成を防ぐ)</summary>
+        private bool _hasSpawnedLandDecal;
 
         private bool _fogApplied;
         private bool _savedFogEnabled;
@@ -409,7 +418,8 @@ namespace ProjectKMP.Battle
             PlayGorillaAnimation(GorillaAI.ANIM_JUMP);
             await MoveGorillaAsync(jumpStart, _landPosition, runDirection, _jumpSeconds, _jumpHeight, Shot.Feet, Shot.Wide, 0.0f, _jumpCameraBlend, ct);
 
-            // 4) 着地。揺らしながら引き切って全身を見せる
+            // 4) 着地。揺らしながら引き切って全身を見せ、着地点に地面を抉った痕を残す
+            SpawnLandDecal();
             PlayGorillaAnimation(GorillaAI.ANIM_IDLE);
             await LandAsync(runDirection, ct);
 
@@ -512,6 +522,9 @@ namespace ProjectKMP.Battle
                 _gorilla.SetPositionAndRotation(OnGround(_landPosition), Quaternion.LookRotation(CalcRunDirection(), Vector3.up));
             }
 
+            // 着地前にスキップされた場合も、着地済みの見た目に合わせて痕を出す(生成済みなら何もしない)
+            SpawnLandDecal();
+
             if (_animator != null) _animator.speed = _savedAnimatorSpeed;
             if (_gorillaAI != null) _gorillaAI.enabled = true;
             if (_thirdPersonCamera != null) _thirdPersonCamera.enabled = true;
@@ -521,6 +534,19 @@ namespace ProjectKMP.Battle
 
             BattlePlayGate.SetPlayable(true);
             Debug.Log("[BattleIntro] カットシーン終了。操作を解放しました");
+        }
+
+        /// <summary>
+        /// 着地点に地面を抉った痕(デカール)を残す。通常再生では着地の瞬間、スキップ時は Finish() から
+        /// 呼ばれる。全クライアントがそれぞれ自分のカットシーン内で呼ぶため、追加の通信は不要。
+        /// </summary>
+        private void SpawnLandDecal()
+        {
+            if (_hasSpawnedLandDecal) return;
+            if (_landDecalPrefab == null) return;
+
+            _hasSpawnedLandDecal = true;
+            ProjectKMP.Attack.AttackDecal.Spawn(_landDecalPrefab, OnGround(_landPosition), _landDecalDiameter);
         }
 
         // ---- カメラ --------------------------------------

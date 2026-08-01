@@ -1,3 +1,4 @@
+using ProjectKMP.Player;
 using UnityEngine;
 
 namespace ProjectKMP.Gorilla
@@ -81,10 +82,11 @@ namespace ProjectKMP.Gorilla
 
             float swingElapsed = _elapsedTime - WINDUP_TIME;
 
-            // @todo アニメーションの特定タイミングで一度だけ単発ダメージを発生させる
+            // 振り切りの中間(ヒットエフェクトと同じタイミング)で一度だけ単発ダメージを発生させる
             if (!_hasApplyDamage && swingElapsed >= ATTACK_MOTION_TIME * 0.5f)
             {
                 _hasApplyDamage = true;
+                TryApplyDamageToLocalPlayer(owner);
 
                 // 命中の瞬間のヒットエフェクト
                 if (owner.NormalAttackHitEffectPrefab != null)
@@ -109,6 +111,37 @@ namespace ProjectKMP.Gorilla
             {
                 owner.ChangeState(new GorillaStateStagger(owner.NormalAttackStaggerTime));
             }
+        }
+
+        /// <summary>
+        /// 自分が操作しているローカルプレイヤーだけを対象に、正面扇形の当たり判定を取ってダメージを与える。
+        /// (破壊光線と同じ方式。全クライアントで同じ処理が走るため、各自が自分のぶんだけ判定することで
+        ///  多重ダメージを避ける。ダメージ自体は PlayerHealth の RPC で全員に同期される)
+        /// </summary>
+        private void TryApplyDamageToLocalPlayer(GorillaAI owner)
+        {
+            if (owner.NormalAttackDamage <= 0) return;
+
+            PlayerAttack localAttack = PlayerAttack.Local;
+            if (localAttack == null) return;
+
+            PlayerHealth localHealth = localAttack.GetComponent<PlayerHealth>();
+            if (localHealth == null || localHealth.IsDead) return;
+
+            // 距離判定(水平)
+            Vector3 toPlayer = localHealth.transform.position - owner.transform.position;
+            toPlayer.y = 0f;
+            if (toPlayer.magnitude > owner.NormalAttackHitRange) return;
+
+            // 正面を中心とした扇形の角度判定。ほぼ同一地点にいる場合は角度に関わらず命中扱い
+            if (toPlayer.sqrMagnitude > 0.0001f)
+            {
+                float angle = Vector3.Angle(owner.transform.forward, toPlayer.normalized);
+                if (angle > owner.NormalAttackHitAngle * 0.5f) return;
+            }
+
+            // ゴリラの位置を発生源として渡し、反対方向へ吹き飛ばす
+            localHealth.ApplyDamage(owner.NormalAttackDamage, -1, owner.transform.position);
         }
 
         public void Exit(GorillaAI owner)

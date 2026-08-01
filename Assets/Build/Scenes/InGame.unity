@@ -9819,6 +9819,26 @@ PrefabInstance:
       propertyPath: m_Name
       value: PF_UI_PlayerHpGauge
       objectReference: {fileID: 0}
+    - target: {fileID: 2521374562743321222, guid: 2e95029a5bd52484c8e6b6174e199d9e, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4285454335
+      objectReference: {fileID: 0}
+    - target: {fileID: 2521374562743321222, guid: 2e95029a5bd52484c8e6b6174e199d9e, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 2786604561300676420, guid: 2e95029a5bd52484c8e6b6174e199d9e, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 3844422941721164192, guid: 2e95029a5bd52484c8e6b6174e199d9e, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 7767023016671952054, guid: 2e95029a5bd52484c8e6b6174e199d9e, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -12763,6 +12783,8 @@ MonoBehaviour:
   _jumpCameraBlend: 0.45
   _shakeStrength: 0.35
   _shakeSeconds: 0.25
+  _landDecalPrefab: {fileID: 1426292960322628520, guid: 4ad4ac40bc9c04de382334e67c31f4f5, type: 3}
+  _landDecalDiameter: 4.5
   _nameHoldSeconds: 1
   _returnDelaySeconds: 0.7
   _returnSeconds: 1.1
@@ -14379,6 +14401,10 @@ PrefabInstance:
       value: 0.3264
       objectReference: {fileID: 0}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _beamDecalPrefab
+      value: 
+      objectReference: {fileID: 3723947236444742271, guid: f847b4c4183974e25aa3a4547d6059c6, type: 3}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamEffectPrefab
       value: 
       objectReference: {fileID: 4788525346617179989, guid: d9add86ad7f984ce985fdb585c43a954, type: 3}
@@ -14390,6 +14416,10 @@ PrefabInstance:
       propertyPath: _beamOriginHeight
       value: 1.7
       objectReference: {fileID: 0}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _stampDecalPrefab
+      value: 
+      objectReference: {fileID: 1426292960322628520, guid: 4ad4ac40bc9c04de382334e67c31f4f5, type: 3}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamInitialDamage
       value: 30
@@ -14423,6 +14453,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2319171089922761703, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1472372949}
+    - targetCorrespondingSourceObject: {fileID: 2319171089922761703, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1472372953}
   m_SourcePrefab: {fileID: 100100000, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
 --- !u!1001 &1375839694
 PrefabInstance:
@@ -15694,6 +15727,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cee2d98077c564a36bf29f7a093a6ede, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Gorilla.GorillaAI
+--- !u!114 &1472372953
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1472372942}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93c9407b63005486ba09ef51a5a66299, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Attack.DamageHitEffect
+  _effectPrefab: {fileID: 7226583673155636401, guid: a2ab56839e1c9504ea9d141e95d0b16b, type: 3}
+  _effectScale: 1.8
+  _effectHeight: 1.2
+  _effectLifeSec: 2
+  _minIntervalSec: 0.15
 --- !u!1001 &1475479098
 PrefabInstance:
   m_ObjectHideFlags: 0
