@@ -85,11 +85,20 @@ namespace ProjectKMP.Battle
             var gorillaAI = FindAnyObjectByType<GorillaAI>();
             if (gorillaAI != null && !gorillaAI.IsDead) gorillaAI.ChangeState(new GorillaStateDeath());
 
+            // UIが消えた状態を1フレーム反映させてから、倒した瞬間の画面を撮っておく(リザルトの背景に使う)
+            await UniTask.Yield(PlayerLoopTiming.Update, ct);
+            await UniTask.WaitForEndOfFrame(this, ct);
+            GameClearSnapshot.Set(ScreenCapture.CaptureScreenshotAsTexture());
+
             await UniTask.Delay(TimeSpan.FromSeconds(_delayBeforeShowSec), cancellationToken: ct);
 
             if (_ui != null) await _ui.ShowAsync(ct);
 
             await UniTask.Delay(TimeSpan.FromSeconds(_showSeconds), cancellationToken: ct);
+
+            // 全クライアントが自分の画面を黒にしてから遷移する。ゲストは暗転のままマスターの遷移を待つので、
+            // 切り替わりの瞬間が見えず、リザルト側のフェードインへ自然につながる
+            if (_ui != null) await _ui.FadeOutAsync(ct);
 
             // ルームに入っていればマスターの遷移に全員が追従する。オフライン確認時は自分で遷移する
             if (PhotonNetwork.InRoom)

@@ -1,6 +1,7 @@
 using System;
 using Photon.Pun;
 using ProjectKMP.Attack;
+using ProjectKMP.Battle;
 using ProjectKMP.UI.InGame;
 using R3;
 using UnityEngine;
@@ -106,6 +107,9 @@ namespace ProjectKMP.Monster
                 return;
             }
 
+            // バトル開始時に自分の与ダメージを初期化する(前回のぶんを持ち越さない)
+            DamageScore.ResetLocal();
+
             int playerCount = GetPlayerCount();
             _resolvedMaxHp = CalcMaxHp(playerCount);
             _offlineHp = _resolvedMaxHp;
@@ -169,6 +173,14 @@ namespace ProjectKMP.Monster
         {
             if (_isDefeated) return;
             if (info.Damage <= 0) return;
+
+            // 自分の攻撃だったら、与ダメージのスコアに加算する(リザルトのランキング用)。
+            // ヒット通知は全クライアントで流れるので、各自が自分のぶんだけ数えれば全員分がそろう
+            if (PhotonNetwork.LocalPlayer != null && info.AttackerActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+            {
+                DamageScore.AddLocalDamage(info.Damage);
+            }
+
             if (!HasAuthority) return;
 
             if (IsPhotonReady && _sync != null)
