@@ -1,6 +1,7 @@
 using System;
 using Photon.Pun;
 using ProjectKMP.Attack;
+using ProjectKMP.Battle;
 using ProjectKMP.UI.InGame;
 using R3;
 using UnityEngine;
@@ -63,6 +64,8 @@ namespace ProjectKMP.Monster
 
         private bool _isDefeated;
 
+        private readonly Subject<Unit> _defeated = new Subject<Unit>();
+
         // ---- 公開API -------------------------------------
 
         /// <summary>ひとりで遊ぶときの最大HP</summary>
@@ -70,6 +73,9 @@ namespace ProjectKMP.Monster
 
         /// <summary>実際に使われている最大HP(人数ぶん増えた後の値)</summary>
         public int MaxHp => _resolvedMaxHp;
+
+        /// <summary>倒された瞬間に流れる。HPは同期経由で届くため、全クライアントで発火する</summary>
+        public Observable<Unit> Defeated => _defeated;
 
         /// <summary>すでに倒されているか</summary>
         public bool IsDefeated => _isDefeated;
@@ -100,6 +106,9 @@ namespace ProjectKMP.Monster
                 Debug.LogError("[Boss] HitTarget が見つからないためダメージを受け取れません", this);
                 return;
             }
+
+            // バトル開始時に自分の与ダメージを初期化する(前回のぶんを持ち越さない)
+            DamageScore.ResetLocal();
 
             int playerCount = GetPlayerCount();
             _resolvedMaxHp = CalcMaxHp(playerCount);
@@ -138,6 +147,7 @@ namespace ProjectKMP.Monster
         {
             _hitSubscription?.Dispose();
             _syncSubscription?.Dispose();
+            _defeated.Dispose();
         }
 
         // ---- 内部処理 ------------------------------------
@@ -163,6 +173,14 @@ namespace ProjectKMP.Monster
         {
             if (_isDefeated) return;
             if (info.Damage <= 0) return;
+
+            // 自分の攻撃だったら、与ダメージのスコアに加算する(リザルトのランキング用)。
+            // ヒット通知は全クライアントで流れるので、各自が自分のぶんだけ数えれば全員分がそろう
+            if (PhotonNetwork.LocalPlayer != null && info.AttackerActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+            {
+                DamageScore.AddLocalDamage(info.Damage);
+            }
+
             if (!HasAuthority) return;
 
             if (IsPhotonReady && _sync != null)
@@ -221,6 +239,7 @@ namespace ProjectKMP.Monster
             if (_hitTarget != null) _hitTarget.SetCanBeHit(false);
 
             _onDefeated?.Invoke();
+            _defeated.OnNext(Unit.Default);
         }
     }
 }
