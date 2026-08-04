@@ -19,6 +19,12 @@ namespace ProjectKMP.UI
         [SerializeField, Tooltip("攻撃(かみつき)ボタン")]
         private AttackButton _attackButton;
 
+        [SerializeField, Tooltip("スキル(ビーム)ボタン")]
+        private SkillButton _skillButton;
+
+        [SerializeField, Tooltip("スキル(元気玉)ボタン")]
+        private SkillButton _energyBallButton;
+
         // ---- 公開API -------------------------------------
 
         /// <summary>シーン内で唯一のタッチ操作。無い環境では null になる</summary>
@@ -33,11 +39,19 @@ namespace ProjectKMP.UI
         /// <summary>攻撃ボタンが押されているか</summary>
         public bool AttackHeld => _attackButton != null && _attackButton.IsHeld;
 
+        /// <summary>スキル(ビーム)ボタンが押されているか。長押し判定に使う</summary>
+        public bool SkillHeld => _skillButton != null && _skillButton.IsHeld;
+
+        /// <summary>スキル(元気玉)ボタンが押されているか。長押し判定に使う</summary>
+        public bool EnergyBallHeld => _energyBallButton != null && _energyBallButton.IsHeld;
+
         /// <summary>スティックと攻撃ボタンの表示を切り替える。カットシーン中に隠すのに使う</summary>
         public void SetControlsVisible(bool visible)
         {
             if (_moveStick != null) _moveStick.SetVisible(visible);
             if (_attackButton != null) _attackButton.SetVisible(visible);
+            if (_skillButton != null) _skillButton.SetVisible(visible);
+            if (_energyBallButton != null) _energyBallButton.SetVisible(visible);
         }
 
         /// <summary>攻撃ボタンを押した瞬間を1回だけ取り出す</summary>
@@ -59,6 +73,8 @@ namespace ProjectKMP.UI
             // VirtualStick は生成直後に自分を隠すので、インゲームでは出しておく
             if (_moveStick != null) _moveStick.SetVisible(true);
             if (_attackButton != null) _attackButton.SetVisible(true);
+            if (_skillButton != null) _skillButton.SetVisible(true);
+            if (_energyBallButton != null) _energyBallButton.SetVisible(true);
         }
 
         private void OnDestroy()

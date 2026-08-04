@@ -97,6 +97,14 @@ namespace ProjectKMP.Player
             if (_isAttacking) return false;
             if (_cooldownRemainSec > 0f) return false;
 
+            // ビームスキルの狙い中・照射中は通常攻撃を出さない
+            PlayerBeamSkill beamSkill = GetComponent<PlayerBeamSkill>();
+            if (beamSkill != null && beamSkill.IsBusy) return false;
+
+            // 元気玉スキルの狙い中・投擲中も通常攻撃を出さない
+            PlayerEnergyBallSkill energyBallSkill = GetComponent<PlayerEnergyBallSkill>();
+            if (energyBallSkill != null && energyBallSkill.IsBusy) return false;
+
             AttackData data = GetAttack(attackIndex);
             if (data == null)
             {

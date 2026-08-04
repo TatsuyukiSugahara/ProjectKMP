@@ -82,6 +82,9 @@ namespace ProjectKMP.Player
         private float _currentDistance;
         private Vector3 _followVelocity;
         private bool _hasSnapped;
+        private float _shakeRemainSec;
+        private float _shakeDurationSec;
+        private float _shakeAmplitude;
 
         // ---- 公開API -------------------------------------
 
@@ -133,6 +136,14 @@ namespace ProjectKMP.Player
             _yawDeg = Quaternion.LookRotation(toPoint.normalized, Vector3.up).eulerAngles.y;
             _pitchDeg = Mathf.Clamp(_initialPitchDeg, _minPitchDeg, _maxPitchDeg);
             SnapToTarget();
+        }
+
+        /// <summary>カメラを短時間揺らす。スキルの爆発など衝撃の演出に使う</summary>
+        public void Shake(float amplitude, float durationSec)
+        {
+            _shakeAmplitude = amplitude;
+            _shakeDurationSec = Mathf.Max(0.01f, durationSec);
+            _shakeRemainSec = _shakeDurationSec;
         }
 
         // ---- Unityイベント -------------------------------
@@ -251,6 +262,14 @@ namespace ProjectKMP.Player
             else
             {
                 transform.position = Vector3.SmoothDamp(transform.position, desiredPosition, ref _followVelocity, _followSmoothTime);
+            }
+
+            // 揺れの演出。残り時間に応じて減衰しながらランダムにずらす
+            if (_shakeRemainSec > 0f)
+            {
+                _shakeRemainSec -= Time.deltaTime;
+                float strength = _shakeDurationSec <= 0f ? 0f : Mathf.Clamp01(_shakeRemainSec / _shakeDurationSec);
+                transform.position += Random.insideUnitSphere * (_shakeAmplitude * strength);
             }
 
             Vector3 focus = _target.position + Vector3.up * _targetHeight;

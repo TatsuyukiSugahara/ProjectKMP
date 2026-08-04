@@ -42,6 +42,22 @@ namespace ProjectKMP.Player
         private CharacterController _controller;
         private float _verticalVelocity;
 
+        /// <summary>移動の制限方法</summary>
+        public enum MovementLock
+        {
+            /// <summary>制限なし</summary>
+            None,
+
+            /// <summary>その場で向きだけ変えられる(ビームの狙い中など)</summary>
+            RotateOnly,
+
+            /// <summary>移動も向き変えもできない(ビームの照射中など)。重力は効く</summary>
+            Full,
+        }
+
+        /// <summary>スキルなどから移動を一時的に制限する</summary>
+        public MovementLock MoveLock { get; set; } = MovementLock.None;
+
         // ---- 公開API -------------------------------------
 
         /// <summary>いまの水平方向の速さ(m/秒)。アニメーション接続などに使う</summary>
@@ -73,6 +89,9 @@ namespace ProjectKMP.Player
             Vector2 input = ReadMoveInput();
             Vector3 moveDir = ToWorldDirection(input);
 
+            // 完全ロック中は向き変えもしない
+            if (MoveLock == MovementLock.Full) moveDir = Vector3.zero;
+
             if (moveDir.sqrMagnitude > 0.0001f)
             {
                 Quaternion look = Quaternion.LookRotation(moveDir);
@@ -90,7 +109,10 @@ namespace ProjectKMP.Player
             }
 
             float speed = _moveSpeed * (IsSprinting() ? _sprintMultiplier : 1.0f);
-            Vector3 velocity = moveDir * speed + Vector3.up * _verticalVelocity;
+
+            // 向きだけ変えられるロック中は、回転はさせつつ水平移動を止める
+            Vector3 horizontal = MoveLock == MovementLock.None ? moveDir * speed : Vector3.zero;
+            Vector3 velocity = horizontal + Vector3.up * _verticalVelocity;
             _controller.Move(velocity * Time.deltaTime);
 
             CurrentSpeed = new Vector3(velocity.x, 0.0f, velocity.z).magnitude;
