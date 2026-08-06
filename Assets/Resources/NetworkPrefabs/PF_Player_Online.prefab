@@ -128,7 +128,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -200,6 +200,8 @@ GameObject:
   - component: {fileID: 579247525850942068}
   - component: {fileID: 2564157730794531983}
   - component: {fileID: 7589652690637285504}
+  - component: {fileID: 3856614268932323207}
+  - component: {fileID: 4590471291921983139}
   m_Layer: 0
   m_Name: PF_Player_Online
   m_TagString: Player
@@ -424,6 +426,95 @@ MonoBehaviour:
   _effectHeight: 0.8
   _effectLifeSec: 2
   _minIntervalSec: 0.15
+--- !u!114 &3856614268932323207
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3612530661535202673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ef8b3fe6bc8a4485b1a516b48f77033, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.PlayerBeamSkill
+  _initialDamage: 10
+  _tickDamage: 2
+  _tickIntervalSec: 0.5
+  _cooldownSec: 10
+  _beamLength: 10
+  _beamWidth: 1.8
+  _originHeight: 1
+  _originForwardOffset: 0.8
+  _fireDurationSec: 2
+  _growDurationSec: 0.2
+  _fadeOutDurationSec: 0.5
+  _beamDecalPrefab: {fileID: 3723947236444742271, guid: f847b4c4183974e25aa3a4547d6059c6, type: 3}
+  _decalIntervalMeters: 2.5
+  _decalWidthScale: 1.5
+  _poseFreezeNormalizedTime: 0.5
+  _beamEffectPrefab: {fileID: 4788525346617179989, guid: 2551396ed736a4a88bd840813aba3445, type: 3}
+  _aimIndicatorPrefab: {fileID: 1381237403910770338, guid: 0f4c2ded39bed4510be73d8b926cec07, type: 3}
+  _damagePopupPrefab: {fileID: 334619725715907676, guid: dc738a3d7ee4b430aab1e466091f1be0, type: 3}
+  _hitEffectPrefab: {fileID: 0}
+  _hitEffectScale: 1
+  _hitEffectLifeSec: 1.5
+  _useRKey: 1
+  _useGamepadEast: 1
+  _useTouchButton: 1
+  _targetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &4590471291921983139
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3612530661535202673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3d5165c1fb5f4f97b349000ba90f8be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.PlayerEnergyBallSkill
+  _explosionDamage: 25
+  _zoneTickDamage: 3
+  _zoneTickIntervalSec: 0.5
+  _zoneDurationSec: 4
+  _cooldownSec: 15
+  _maxRange: 8
+  _markerMoveSpeed: 8
+  _chargeDurationSec: 1
+  _ballHeight: 4.5
+  _ballMaxScale: 6
+  _throwSpeed: 14
+  _arcHeight: 1
+  _explosionRadius: 3
+  _zoneRadius: 4.5
+  _impactLingerSec: 0.35
+  _explodeExpandSec: 0.25
+  _explodeScaleMul: 2.6
+  _chargeConvergeEffectPrefab: {fileID: 3526373135642884375, guid: 9c3c4cf28e1304cc199ca4022dcc1ecc, type: 3}
+  _chargeEffectScale: 2
+  _shockwavePrefab: {fileID: 2420929887232605178, guid: 7cd176b9bf1bc4912a4f95e52d3eddf9, type: 3}
+  _cameraShakeAmplitude: 0.4
+  _cameraShakeDurationSec: 0.35
+  _hitStopDurationSec: 0.07
+  _hitStopTimeScale: 0.05
+  _impactDecalPrefab: {fileID: 1426292960322628520, guid: 4ad4ac40bc9c04de382334e67c31f4f5, type: 3}
+  _decalWidthScale: 1.65
+  _ballPrefab: {fileID: 143401169253108070, guid: 3a075985537a9473b8b847f40c6238a2, type: 3}
+  _explosionEffectPrefab: {fileID: 1330026566090244725, guid: 963957b6b02764ab79ba97a5bd658fe6, type: 3}
+  _explosionEffectLifeSec: 2
+  _zoneVisualPrefab: {fileID: 3169192961628982556, guid: f12e166f4833f42cda9f9a98cebd268c, type: 3}
+  _aimIndicatorPrefab: {fileID: 3762744561026247363, guid: c00a353ffc58341cab6a76cc5ee4ab38, type: 3}
+  _damagePopupPrefab: {fileID: 334619725715907676, guid: dc738a3d7ee4b430aab1e466091f1be0, type: 3}
+  _useEKey: 1
+  _useGamepadNorth: 1
+  _useTouchButton: 1
+  _targetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1001 &8618206059551019404
 PrefabInstance:
   m_ObjectHideFlags: 0

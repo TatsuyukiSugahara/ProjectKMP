@@ -58,6 +58,9 @@ namespace ProjectKMP.Dog
         private float _speed;
         private float _attackRemainSec;
         private string _currentState = string.Empty;
+        private bool _isHoldingAttackPose;
+        private bool _isPoseFrozen;
+        private float _holdNormalizedTime;
 
         // ---- 公開API -------------------------------------
 
@@ -76,6 +79,38 @@ namespace ProjectKMP.Dog
 
             // 連続で噛みついたときも頭突きを出し直したいので、同じステートでも強制的に再生する
             CrossFadeTo(ANIM_ATTACK, true);
+        }
+
+        /// <summary>
+        /// 頭突き(Attack)モーションを指定位置(0〜1)で一時停止して保持する。
+        /// ビームの照射中など「頭を突き出したまま止める」演出に使う。
+        /// 解除するまで移動アニメには戻らない。全クライアントで呼ばれる想定。
+        /// </summary>
+        public void HoldAttackPose(float freezeNormalizedTime)
+        {
+            if (_animator == null) return;
+
+            _isHoldingAttackPose = true;
+            _isPoseFrozen = false;
+            _holdNormalizedTime = Mathf.Clamp01(freezeNormalizedTime);
+
+            CrossFadeTo(ANIM_ATTACK, true);
+        }
+
+        /// <summary>
+        /// 保持していた頭突きモーションを再開する。残りを最後まで再生してから移動アニメへ戻る。
+        /// </summary>
+        public void ReleaseAttackPose()
+        {
+            if (!_isHoldingAttackPose) return;
+
+            _isHoldingAttackPose = false;
+            _isPoseFrozen = false;
+
+            if (_animator != null) _animator.speed = 1.0f;
+
+            // 止めた位置から先の残り時間ぶんだけ、移動アニメへの復帰を待つ
+            _attackRemainSec = Mathf.Max(0.01f, _attackDurationSec * (1.0f - _holdNormalizedTime));
         }
 
         // ---- Unityイベント -------------------------------
@@ -117,6 +152,13 @@ namespace ProjectKMP.Dog
         {
             UpdateSpeed();
 
+            // ポーズ保持中は、頭を突き出した位置に達したところでアニメを止めて待つ
+            if (_isHoldingAttackPose)
+            {
+                UpdateAttackPoseHold();
+                return;
+            }
+
             if (_attackRemainSec > 0.0f)
             {
                 _attackRemainSec -= Time.deltaTime;
@@ -131,6 +173,19 @@ namespace ProjectKMP.Dog
         private void OnAttackStarted(AttackData data)
         {
             PlayAttack();
+        }
+
+        /// <summary>頭突きモーションが指定位置まで進んだらアニメを一時停止する</summary>
+        private void UpdateAttackPoseHold()
+        {
+            if (_isPoseFrozen || _animator == null) return;
+
+            AnimatorStateInfo state = _animator.GetCurrentAnimatorStateInfo(BASE_LAYER);
+            if (state.IsName(ANIM_ATTACK) && state.normalizedTime >= _holdNormalizedTime)
+            {
+                _animator.speed = 0.0f;
+                _isPoseFrozen = true;
+            }
         }
 
         /// <summary>
