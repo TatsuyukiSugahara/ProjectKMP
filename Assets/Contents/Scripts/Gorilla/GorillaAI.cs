@@ -314,6 +314,24 @@ namespace ProjectKMP.Gorilla
                     ChangeState(new GorillaStateDeath());
                 }
             }
+
+            // @todo 動作確認用デバッグ入力。Oキーで頭突き(通常攻撃)モーションを再生する
+            if (keyboard != null && keyboard.oKey.wasPressedThisFrame && !_isDead)
+            {
+                ChangeState(new GorillaStateNormalAttack());
+            }
+
+            // @todo 動作確認用デバッグ入力。Pキーで破壊光線モーションを再生する
+            if (keyboard != null && keyboard.pKey.wasPressedThisFrame && !_isDead)
+            {
+                ChangeState(new GorillaStateBeamAttack());
+            }
+
+            // @todo 動作確認用デバッグ入力。Lキーでスタンプ攻撃モーションを再生する
+            if (keyboard != null && keyboard.lKey.wasPressedThisFrame && !_isDead)
+            {
+                ChangeState(new GorillaStateStampAttack());
+            }
 #endif
         }
 
@@ -346,6 +364,12 @@ namespace ProjectKMP.Gorilla
             transform.rotation = _preDeathRotation;
             transform.localScale = _preDeathScale;
             _isDead = false;
+
+            // Flipフェーズ中に止めたアニメーション再生速度を元に戻す
+            if (_animator != null)
+            {
+                _animator.speed = _animationSpeed;
+            }
 
             ChangeState(new GorillaStateIdle());
         }
