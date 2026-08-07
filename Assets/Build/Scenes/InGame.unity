@@ -7822,7 +7822,10 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1802474752008428727, guid: 1b34536e340564c25bf1b589a7836cf0, type: 3}
       insertIndex: -1
       addedObject: {fileID: 533744223}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8160638308781801310, guid: 1b34536e340564c25bf1b589a7836cf0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1180597681}
   m_SourcePrefab: {fileID: 100100000, guid: 1b34536e340564c25bf1b589a7836cf0, type: 3}
 --- !u!4 &760600715 stripped
 Transform:
@@ -9352,6 +9355,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   _obstacleRadius: 0.2
+  _offsetBlendSpeed: 12
+  _fovBlendSpeed: 60
 --- !u!81 &940877453
 AudioListener:
   m_ObjectHideFlags: 0
@@ -12689,6 +12694,43 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4938559794611775962, guid: 525197fe6ec2f4895a8009b36d5e388c, type: 3}
   m_PrefabInstance: {fileID: 1179030891}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1180597679 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8160638308781801310, guid: 1b34536e340564c25bf1b589a7836cf0, type: 3}
+  m_PrefabInstance: {fileID: 760600714}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1180597681
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1180597679}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c36b28961a9d24d01982baab8b9e0a85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Field.GrassField
+  _areaSize: {x: 60, y: 60}
+  _clusterDensity: 5
+  _bladesPerCluster: {x: 4, y: 7}
+  _clusterRadius: 0.07
+  _chunkSize: 6
+  _baseHeight: 0.03
+  _excludeAreas:
+  - {fileID: 793921666}
+  _includeAreas:
+  - {fileID: 516080610}
+  _maskCellSize: 0.25
+  _excludeMargin: 0.3
+  _heightRange: {x: 0.25, y: 0.5}
+  _widthRange: {x: 0.045, y: 0.09}
+  _leanAmount: 0.5
+  _material: {fileID: 2100000, guid: 88c63ba65153b494198e846405f12f9a, type: 2}
+  _seed: 7777
+  _recoverDelaySec: 0.15
+  _recoverSec: 1
+  _buildOnStart: 1
 --- !u!1001 &1190710251
 PrefabInstance:
   m_ObjectHideFlags: 0

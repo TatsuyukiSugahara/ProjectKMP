@@ -158,6 +158,15 @@ namespace ProjectKMP.Player
         [SerializeField, Min(0.05f), Tooltip("背景オブジェクトの揺れの長さ(秒)")]
         private float _sceneryShakeDurationSec = 0.6f;
 
+        [SerializeField, Tooltip("衝撃波が通ったところの草をなぎ倒す")]
+        private bool _flattenGrass = true;
+
+        [SerializeField, Min(1), Tooltip("爆発の衝撃波を何回続けて出すか。回を追うごとに弱くなる")]
+        private int _shockwaveCount = 4;
+
+        [SerializeField, Min(0f), Tooltip("衝撃波と衝撃波の間隔(秒)")]
+        private float _shockwaveIntervalSec = 0.18f;
+
         [Header("地面の痕")]
         [SerializeField, Tooltip("着弾点の地面に残す痕(デカール)。未設定なら痕を残さない")]
         private AttackDecal _impactDecalPrefab;
@@ -764,17 +773,20 @@ namespace ProjectKMP.Player
         {
             if (_shockwavePrefab != null)
             {
-                // 速く走る薄いリング
+                // 速く走る薄いリング。これが通ったところの草をなぎ倒す。
+                // 1回だと草が一度倒れて終わりなので、弱まりながら何度も走らせて余韻を作る
                 EnergyShockwave.Spawn(
                     _shockwavePrefab, _throwTarget + Vector3.up * 0.1f,
-                    _ballMaxScale * 0.5f, _zoneRadius * 2.2f, 0.45f, 0.5f);
+                    _ballMaxScale * 0.5f, _zoneRadius * 2.2f, 0.45f, 0.5f, _flattenGrass,
+                    _shockwaveCount, _shockwaveIntervalSec);
 
                 // 遅れて広がる太いリング。2枚重なると規模が大きく見える
                 if (_useDoubleShockwave)
                 {
                     EnergyShockwave.Spawn(
                         _shockwavePrefab, _throwTarget + Vector3.up * 0.05f,
-                        _ballMaxScale * 0.3f, _zoneRadius * 3.2f, 0.9f, 2.0f);
+                        _ballMaxScale * 0.3f, _zoneRadius * 3.2f, 0.9f, 2.0f, _flattenGrass,
+                        Mathf.Max(1, _shockwaveCount - 1), _shockwaveIntervalSec * 1.6f);
                 }
             }
 
@@ -812,7 +824,7 @@ namespace ProjectKMP.Player
             _chargeRingTimerSec = _chargeRingIntervalSec;
             EnergyShockwave.Spawn(
                 _shockwavePrefab, transform.position + Vector3.up * 0.1f,
-                _maxRange * 0.45f, 0.3f, _chargeRingDurationSec, 0.35f);
+                _maxRange * 0.45f, 0.3f, _chargeRingDurationSec, 0.35f, _flattenGrass);
         }
 
         /// <summary>溜めが完成した瞬間に画面を光らせ、投げられる状態になったことを伝える</summary>

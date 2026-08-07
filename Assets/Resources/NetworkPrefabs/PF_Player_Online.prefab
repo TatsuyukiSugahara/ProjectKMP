@@ -460,6 +460,9 @@ MonoBehaviour:
   _beamDecalPrefab: {fileID: 3723947236444742271, guid: f847b4c4183974e25aa3a4547d6059c6, type: 3}
   _decalIntervalMeters: 2.5
   _decalWidthScale: 1.5
+  _grassFlattenScale: 1.3
+  _grassWaveIntervalSec: 0.25
+  _grassWaveSpeed: 20
   _riseHeight: 0.5
   _riseDurationSec: 0.45
   _spinTurns: 1
@@ -533,6 +536,9 @@ MonoBehaviour:
   _sceneryShakeRadius: 9
   _sceneryShakeAngleDeg: 6
   _sceneryShakeDurationSec: 0.6
+  _flattenGrass: 1
+  _shockwaveCount: 4
+  _shockwaveIntervalSec: 0.18
   _impactDecalPrefab: {fileID: 1426292960322628520, guid: 4ad4ac40bc9c04de382334e67c31f4f5, type: 3}
   _decalWidthScale: 1.65
   _ballPrefab: {fileID: 143401169253108070, guid: 3a075985537a9473b8b847f40c6238a2, type: 3}

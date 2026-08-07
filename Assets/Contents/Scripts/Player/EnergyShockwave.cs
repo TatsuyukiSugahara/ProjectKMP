@@ -31,6 +31,9 @@ namespace ProjectKMP.Player
 
         private static readonly int BASE_COLOR_ID = Shader.PropertyToID("_BaseColor");
 
+        /// <summary>波が1回来るごとに弱くなる割合</summary>
+        private const float WAVE_STRENGTH_DECAY = 0.72f;
+
         private MeshFilter _meshFilter;
         private Renderer _meshRenderer;
         private Mesh _mesh;
@@ -42,16 +45,28 @@ namespace ProjectKMP.Player
         private float _durationSec = 0.4f;
         private float _elapsedSec;
 
+        private bool _flattenGrass;
+        private float _previousRadius;
+
+        /// <summary>あと何回この輪を出すか</summary>
+        private int _waveRemaining = 1;
+        private float _waveIntervalSec;
+
+        /// <summary>波が来るたびに弱くしていく倍率。減衰して収まっていくように見せる</summary>
+        private float _waveStrength = 1f;
+
         // ---- 公開API -------------------------------------
 
         /// <summary>
         /// 衝撃波を生成する。startRadius から endRadius まで duration 秒で変化する。
         /// endRadius を startRadius より小さくすれば、外から内へ縮む収束リングになる。
         /// thickness に正の値を渡すと、プレハブの線の太さを上書きする。
+        /// flattenGrass を true にすると、輪が通り過ぎた場所の草をなぎ倒していく。
+        /// waveCount を2以上にすると、同じ輪を waveIntervalSec 間隔で繰り返し出す(草がなびいて見える)。
         /// </summary>
         public static EnergyShockwave Spawn(
             EnergyShockwave prefab, Vector3 position, float startRadius, float endRadius, float duration,
-            float thickness = 0f)
+            float thickness = 0f, bool flattenGrass = false, int waveCount = 1, float waveIntervalSec = 0.2f)
         {
             if (prefab == null) return null;
 
@@ -59,6 +74,10 @@ namespace ProjectKMP.Player
             instance._startRadius = Mathf.Max(0.1f, startRadius);
             instance._endRadius = Mathf.Max(0.1f, endRadius);
             instance._durationSec = Mathf.Max(0.05f, duration);
+            instance._flattenGrass = flattenGrass;
+            instance._previousRadius = instance._startRadius;
+            instance._waveRemaining = Mathf.Max(1, waveCount);
+            instance._waveIntervalSec = Mathf.Max(0f, waveIntervalSec);
             if (thickness > 0f) instance._ringThickness = thickness;
             return instance;
         }
@@ -83,14 +102,36 @@ namespace ProjectKMP.Player
         private void Update()
         {
             _elapsedSec += Time.deltaTime;
+
+            // 次の波が出るまでの待ち時間。この間は輪も光も消しておく
+            if (_elapsedSec < 0f)
+            {
+                SetVisible(false);
+                return;
+            }
+
+            SetVisible(true);
+
             float t = Mathf.Clamp01(_elapsedSec / _durationSec);
 
             // 勢いよく広がって減速する(イーズアウト)
             float eased = 1f - (1f - t) * (1f - t);
-            BuildRing(Mathf.Lerp(_startRadius, _endRadius, eased));
+            float radius = Mathf.Lerp(_startRadius, _endRadius, eased);
+            BuildRing(radius);
+
+            // 前のフレームからの差ぶんだけを倒す。内側は倒し済みなので調べ直さない
+            if (_flattenGrass)
+            {
+                Field.GrassField.FlattenRingAt(
+                    transform.position,
+                    Mathf.Min(_previousRadius, radius),
+                    Mathf.Max(_previousRadius, radius),
+                    _waveStrength);
+                _previousRadius = radius;
+            }
 
             // 広がりながら薄くなる
-            float alpha = 1f - t;
+            float alpha = (1f - t) * _waveStrength;
             Color color = _baseColor;
             color.a *= alpha;
             _meshRenderer.GetPropertyBlock(_propertyBlock);
@@ -99,7 +140,26 @@ namespace ProjectKMP.Player
 
             if (_flashLight != null) _flashLight.intensity = _flashIntensity * alpha;
 
-            if (t >= 1f) Destroy(gameObject);
+            if (t < 1f) return;
+
+            if (_waveRemaining > 1)
+            {
+                // 次の波を最初の半径からやり直す。弱くしていくことで収まっていくように見せる
+                _waveRemaining--;
+                _elapsedSec = -_waveIntervalSec;
+                _previousRadius = _startRadius;
+                _waveStrength *= WAVE_STRENGTH_DECAY;
+                return;
+            }
+
+            Destroy(gameObject);
+        }
+
+        /// <summary>波と波の間、輪を消しておく</summary>
+        private void SetVisible(bool visible)
+        {
+            if (_meshRenderer != null) _meshRenderer.enabled = visible;
+            if (!visible && _flashLight != null) _flashLight.intensity = 0f;
         }
 
         private void OnDestroy()

@@ -97,6 +97,15 @@ namespace ProjectKMP.Player
         [SerializeField, Min(0.1f), Tooltip("痕の直径をビームの太さ(直径)の何倍にするか")]
         private float _decalWidthScale = 1.2f;
 
+        [SerializeField, Min(0f), Tooltip("ビームが草をなぎ倒す半径を、ビームの太さ(半径)の何倍にするか。0でなぎ倒さない")]
+        private float _grassFlattenScale = 1.3f;
+
+        [SerializeField, Min(0f), Tooltip("なぎ倒しの波をビームに沿って流す間隔(秒)。0で波を出さない")]
+        private float _grassWaveIntervalSec = 0.25f;
+
+        [SerializeField, Min(0.1f), Tooltip("なぎ倒しの波がビームに沿って進む速さ(m/秒)")]
+        private float _grassWaveSpeed = 20f;
+
         [Header("跳び上がり")]
         [SerializeField, Min(0f), Tooltip("発射前に跳び上がる高さ(m)。0なら跳ばずにその場で撃つ")]
         private float _riseHeight = 2.5f;
@@ -182,6 +191,10 @@ namespace ProjectKMP.Player
 
         /// <summary>痕を落とす地面の高さ。口元は動くので、発射時の足元の高さを覚えておく</summary>
         private float _beamGroundY;
+
+        /// <summary>いま流れている、なぎ倒しの波それぞれの根元からの距離</summary>
+        private readonly List<float> _grassWaveDistances = new List<float>();
+        private float _grassWaveTimerSec;
 
         private CharacterController _controller;
         private bool _leapActive;
@@ -491,6 +504,9 @@ namespace ProjectKMP.Player
             _beamDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
             _targetStates.Clear();
 
+            _grassWaveDistances.Clear();
+            _grassWaveTimerSec = 0f;
+
             // 空中から撃つと自分の足元は地面ではないので、撃った本人が測った高さを使う
             _beamGroundY = groundY;
             if (_muzzleTransform != null) _beamOrigin = ResolveBeamOrigin();
@@ -522,6 +538,13 @@ namespace ProjectKMP.Player
 
             // 口元で顎を開いて噛み閉じることで「がぶっと吐き出した」感じを付ける
             PlayBiteVfx();
+
+            // 撃った本人の足元は、跳び上がった勢いで草がなぎ倒される
+            if (_grassFlattenScale > 0f)
+            {
+                var feet = new Vector3(transform.position.x, _beamGroundY, transform.position.z);
+                Field.GrassField.FlattenAt(feet, _beamWidth * _grassFlattenScale);
+            }
 
             // 照射中は動けない。跳び上がっている間は重力も止めて空中に留める(本人のみ)
             if (IsOwner && _mover != null)
@@ -584,6 +607,7 @@ namespace ProjectKMP.Player
 
             UpdateBeamLength();
             SpawnBeamDecals();
+            UpdateGrassWaves();
 
             // 当たり判定は操作している本人だけが取る(二重ダメージを防ぐ)
             if (IsOwner) UpdateBeamHit();
@@ -629,6 +653,41 @@ namespace ProjectKMP.Player
 
                 AttackDecal.Spawn(_beamDecalPrefab, point, _beamWidth * 2f * _decalWidthScale);
                 _nextDecalDistance += _decalIntervalMeters;
+            }
+        }
+
+        /// <summary>
+        /// 照射している間、なぎ倒しの波を一定間隔でビームの根元から先端へ走らせる。
+        /// 1回倒すだけだと草が伏せたままになるので、波が通るたびに倒れて起き上がり、なびいて見える。
+        /// </summary>
+        private void UpdateGrassWaves()
+        {
+            if (_grassFlattenScale <= 0f || _grassWaveIntervalSec <= 0f) return;
+
+            _grassWaveTimerSec -= Time.deltaTime;
+            if (_grassWaveTimerSec <= 0f)
+            {
+                _grassWaveTimerSec = _grassWaveIntervalSec;
+                _grassWaveDistances.Add(0f);
+            }
+
+            float radius = _beamWidth * _grassFlattenScale;
+
+            // 進めながら、先端を追い越した波は消す
+            for (int i = _grassWaveDistances.Count - 1; i >= 0; i--)
+            {
+                float distance = _grassWaveDistances[i] + _grassWaveSpeed * Time.deltaTime;
+                if (distance > _currentBeamLength)
+                {
+                    _grassWaveDistances.RemoveAt(i);
+                    continue;
+                }
+
+                _grassWaveDistances[i] = distance;
+
+                Vector3 point = _beamOrigin + _beamDirection * distance;
+                point.y = _beamGroundY;
+                Field.GrassField.FlattenAt(point, radius);
             }
         }
 
