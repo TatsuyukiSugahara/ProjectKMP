@@ -202,6 +202,7 @@ GameObject:
   - component: {fileID: 7589652690637285504}
   - component: {fileID: 3856614268932323207}
   - component: {fileID: 4590471291921983139}
+  - component: {fileID: 4087651730471892998}
   m_Layer: 0
   m_Name: PF_Player_Online
   m_TagString: Player
@@ -400,6 +401,7 @@ MonoBehaviour:
   _respawnHeight: 0.5
   _knockbackDistance: 2.5
   _knockbackDurationSec: 0.25
+  _blockKnockbackWhileBeam: 1
   _deathKnockbackDistance: 16
   _deathKnockbackDurationSec: 0.7
   _deathKnockbackArcHeight: 3
@@ -441,17 +443,29 @@ MonoBehaviour:
   _initialDamage: 10
   _tickDamage: 2
   _tickIntervalSec: 0.5
-  _cooldownSec: 10
+  _cooldownSec: 1
   _beamLength: 10
   _beamWidth: 1.8
-  _originHeight: 1
+  _originHeight: 1.3
   _originForwardOffset: 0.8
+  _muzzleTransform: {fileID: 372642322084930559}
+  _muzzleLocalOffset: {x: 0, y: 0.02, z: 1}
+  _biteVfxPrefab: {fileID: 331138683628392021, guid: e1418f9337a2c445ba88d2f4199f497b, type: 3}
+  _biteVfxScale: 1
   _fireDurationSec: 2
   _growDurationSec: 0.2
   _fadeOutDurationSec: 0.5
+  _fireCameraShakeAmplitude: 0.18
+  _fireCameraShakeDurationSec: 0.25
   _beamDecalPrefab: {fileID: 3723947236444742271, guid: f847b4c4183974e25aa3a4547d6059c6, type: 3}
   _decalIntervalMeters: 2.5
   _decalWidthScale: 1.5
+  _riseHeight: 0.5
+  _riseDurationSec: 0.45
+  _spinTurns: 1
+  _spinAxisLocal: {x: 1, y: 0, z: 0}
+  _descendSpeed: 8
+  _aimAtGroundEnd: 0
   _poseFreezeNormalizedTime: 0.5
   _beamEffectPrefab: {fileID: 4788525346617179989, guid: 2551396ed736a4a88bd840813aba3445, type: 3}
   _aimIndicatorPrefab: {fileID: 1381237403910770338, guid: 0f4c2ded39bed4510be73d8b926cec07, type: 3}
@@ -494,13 +508,31 @@ MonoBehaviour:
   _impactLingerSec: 0.35
   _explodeExpandSec: 0.25
   _explodeScaleMul: 2.6
-  _chargeConvergeEffectPrefab: {fileID: 3526373135642884375, guid: 9c3c4cf28e1304cc199ca4022dcc1ecc, type: 3}
+  _chargeConvergeEffectPrefab: {fileID: 3526373135642884375, guid: fcb7b236968f5445d83d6b2063efa1ac, type: 3}
   _chargeEffectScale: 2
   _shockwavePrefab: {fileID: 2420929887232605178, guid: 7cd176b9bf1bc4912a4f95e52d3eddf9, type: 3}
   _cameraShakeAmplitude: 0.4
   _cameraShakeDurationSec: 0.35
-  _hitStopDurationSec: 0.07
+  _hitStopDurationSec: 0.14
   _hitStopTimeScale: 0.05
+  _chargeTimeScale: 0.75
+  _chargeCameraDistanceOffset: -2.5
+  _chargeCameraFovOffset: -8
+  _chargeRingIntervalSec: 0.3
+  _chargeRingDurationSec: 0.45
+  _skillGlow: {fileID: 4087651730471892998}
+  _chargeCompleteFlashColor: {r: 0.75, g: 0.95, b: 1, a: 0.5}
+  _chargeCompleteFlashSec: 0.25
+  _hitStopRecoverSec: 0.2
+  _useDoubleShockwave: 1
+  _crackDecalCount: 5
+  _crackDecalScale: 0.45
+  _sceneryShakeLayers:
+    serializedVersion: 2
+    m_Bits: 1
+  _sceneryShakeRadius: 9
+  _sceneryShakeAngleDeg: 6
+  _sceneryShakeDurationSec: 0.6
   _impactDecalPrefab: {fileID: 1426292960322628520, guid: 4ad4ac40bc9c04de382334e67c31f4f5, type: 3}
   _decalWidthScale: 1.65
   _ballPrefab: {fileID: 143401169253108070, guid: 3a075985537a9473b8b847f40c6238a2, type: 3}
@@ -515,6 +547,28 @@ MonoBehaviour:
   _targetLayers:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &4087651730471892998
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3612530661535202673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: abd0228c93ba844cca92ecf65c21be88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.PlayerSkillGlow
+  _targetRenderers:
+  - {fileID: 4628211592599130887}
+  - {fileID: 4628211593749845080}
+  - {fileID: 4628211593798178193}
+  - {fileID: 4628211592345648750}
+  _glowColor: {r: 0.3, g: 0.8, b: 1, a: 1}
+  _minIntensity: 0.4
+  _maxIntensity: 2.6
+  _pulseSpeed: 8
+  _blendSec: 0.15
 --- !u!1001 &8618206059551019404
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -592,6 +646,21 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}
+--- !u!4 &372642322084930559 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8264633667139039859, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}
+  m_PrefabInstance: {fileID: 8618206059551019404}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &4628211592345648750 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 4008398642690076642, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}
+  m_PrefabInstance: {fileID: 8618206059551019404}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &4628211592599130887 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 4008398642403541643, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}
+  m_PrefabInstance: {fileID: 8618206059551019404}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &4628211592738385048 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4008398642261818644, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}
@@ -600,5 +669,15 @@ Transform:
 --- !u!95 &4628211592738385049 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: 4008398642261818645, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}
+  m_PrefabInstance: {fileID: 8618206059551019404}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &4628211593749845080 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 4008398641258923476, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}
+  m_PrefabInstance: {fileID: 8618206059551019404}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &4628211593798178193 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 4008398641168843805, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}
   m_PrefabInstance: {fileID: 8618206059551019404}
   m_PrefabAsset: {fileID: 0}

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
 using ProjectKMP.UI;
 
@@ -75,6 +75,13 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("障害物判定に使う球の半径(メートル)")]
         private float _obstacleRadius = 0.3f;
 
+        [Header("演出")]
+        [SerializeField, Min(0f), Tooltip("寄り・引きの寄せ量が変わる速さ(m/秒)")]
+        private float _offsetBlendSpeed = 12.0f;
+
+        [SerializeField, Min(0f), Tooltip("視野角の寄せが変わる速さ(度/秒)")]
+        private float _fovBlendSpeed = 60.0f;
+
         // ---- 内部状態 ------------------------------------
 
         private float _yawDeg;
@@ -82,6 +89,13 @@ namespace ProjectKMP.Player
         private float _currentDistance;
         private Vector3 _followVelocity;
         private bool _hasSnapped;
+        private Camera _camera;
+        private float _baseFieldOfView = 60f;
+        private float _distanceOffsetTarget;
+        private float _distanceOffsetCurrent;
+        private float _fovOffsetTarget;
+        private float _fovOffsetCurrent;
+
         private float _shakeRemainSec;
         private float _shakeDurationSec;
         private float _shakeAmplitude;
@@ -138,6 +152,21 @@ namespace ProjectKMP.Player
             SnapToTarget();
         }
 
+        /// <summary>
+        /// カメラの寄り(負の値で近づく)を指定する。0で元の距離に戻る。
+        /// 溜め演出などで使う。指定した値へは少しずつ変化する。
+        /// </summary>
+        public void SetDistanceOffset(float offset)
+        {
+            _distanceOffsetTarget = offset;
+        }
+
+        /// <summary>視野角の寄せ(負の値で狭くなる)を指定する。0で元に戻る</summary>
+        public void SetFovOffset(float offset)
+        {
+            _fovOffsetTarget = offset;
+        }
+
         /// <summary>カメラを短時間揺らす。スキルの爆発など衝撃の演出に使う</summary>
         public void Shake(float amplitude, float durationSec)
         {
@@ -153,6 +182,9 @@ namespace ProjectKMP.Player
             _yawDeg = _initialYawDeg;
             _pitchDeg = Mathf.Clamp(_initialPitchDeg, _minPitchDeg, _maxPitchDeg);
             _currentDistance = _distance;
+
+            _camera = GetComponent<Camera>();
+            if (_camera != null) _baseFieldOfView = _camera.fieldOfView;
         }
 
         private void Start()
@@ -165,6 +197,9 @@ namespace ProjectKMP.Player
 
         private void LateUpdate()
         {
+            // 対象が居なくても寄せは戻し続ける
+            UpdateShotOffsets();
+
             if (_target == null) return;
 
             // 対象が後から入ったときは、一度だけ位置を合わせてから追従を始める
@@ -227,15 +262,33 @@ namespace ProjectKMP.Player
             Distance = _distance - Mathf.Sign(scroll) * _zoomSpeed;
         }
 
+        /// <summary>
+        /// 演出用の寄せ(距離と視野角)を指定値へ少しずつ近づける。
+        /// ヒットストップやスローの最中でも同じ速さで動くよう、実時間で進める。
+        /// </summary>
+        private void UpdateShotOffsets()
+        {
+            _distanceOffsetCurrent = Mathf.MoveTowards(
+                _distanceOffsetCurrent, _distanceOffsetTarget, _offsetBlendSpeed * Time.unscaledDeltaTime);
+
+            _fovOffsetCurrent = Mathf.MoveTowards(
+                _fovOffsetCurrent, _fovOffsetTarget, _fovBlendSpeed * Time.unscaledDeltaTime);
+
+            if (_camera != null) _camera.fieldOfView = Mathf.Max(10f, _baseFieldOfView + _fovOffsetCurrent);
+        }
+
         /// <summary>回転と距離から、カメラが居るべき位置を求める</summary>
         private Vector3 CalcDesiredPosition()
         {
             Vector3 focus = _target.position + Vector3.up * _targetHeight;
             Quaternion rotation = Quaternion.Euler(_pitchDeg, _yawDeg, 0.0f);
-            Vector3 offset = rotation * Vector3.back * _distance;
 
-            float distance = _distance;
-            if (_avoidObstacles && Physics.SphereCast(focus, _obstacleRadius, offset.normalized, out RaycastHit hit, _distance, _obstacleMask, QueryTriggerInteraction.Ignore))
+            // 演出で寄せている量を足した距離を基準にする
+            float desired = Mathf.Max(_minDistance, _distance + _distanceOffsetCurrent);
+            Vector3 offset = rotation * Vector3.back * desired;
+
+            float distance = desired;
+            if (_avoidObstacles && Physics.SphereCast(focus, _obstacleRadius, offset.normalized, out RaycastHit hit, desired, _obstacleMask, QueryTriggerInteraction.Ignore))
             {
                 distance = Mathf.Max(_minDistance, hit.distance);
             }

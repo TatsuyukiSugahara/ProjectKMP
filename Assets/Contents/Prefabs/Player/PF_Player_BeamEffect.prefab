@@ -194,7 +194,11 @@ MonoBehaviour:
   _glowLine: {fileID: 5752300863084937724}
   _coreLine: {fileID: 7222924504766540970}
   _coreWidthRatio: 0.4
+  _visualWidthScale: 0.6
   _scrollSpeed: 3
+  _coreScrollMultiplier: 2.6
+  _coreWhiteHot: 0.55
+  _coreIntensityBoost: 1.6
   _pulseSpeed: 14
   _pulseAmount: 0.12
   _alongBeamParticles:
@@ -202,6 +206,31 @@ MonoBehaviour:
   _sparkleRatePerMeter: 40
   _tipParticles:
   - {fileID: 9114739161981649737}
+  _tipParticleSizeRatio: 1.2
+  _muzzleParticles:
+  - {fileID: 3265287699830323211}
+  _helixStrandCount: 2
+  _helixMaterial: {fileID: 0}
+  _helixColor: {r: 0.5875, g: 0.8625, b: 0.97249997, a: 0.65}
+  _helixRadiusRatio: 0.85
+  _helixTurnsPerMeter: 0.5
+  _helixScrollSpeed: 7
+  _helixWidthRatio: 0.05
+  _helixEmergeMeters: 1.2
+  _beamLightCount: 3
+  _beamLightColor: {r: 0.25, g: 0.75, b: 0.95, a: 1}
+  _beamLightIntensity: 5
+  _beamLightRangeRatio: 4.5
+  _lightFlickerAmount: 0.22
+  _lightFlickerSpeed: 24
+  _tipLightIntensity: 10
+  _tipLightColor: {r: 0.625, g: 0.875, b: 0.975, a: 1}
+  _tipLightRangeRatio: 6
+  _muzzleLightIntensity: 7
+  _muzzleLightColor: {r: 0.55, g: 0.85, b: 0.96999997, a: 1}
+  _muzzleLightRangeRatio: 4.5
+  _muzzleFlashDurationSec: 0.18
+  _muzzleFlashBoost: 3.5
 --- !u!1 &5687318206311803922
 GameObject:
   m_ObjectHideFlags: 0

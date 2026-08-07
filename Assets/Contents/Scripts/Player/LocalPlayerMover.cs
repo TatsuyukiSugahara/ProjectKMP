@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
 using ProjectKMP.UI;
 
@@ -53,6 +53,9 @@ namespace ProjectKMP.Player
 
             /// <summary>移動も向き変えもできない(ビームの照射中など)。重力は効く</summary>
             Full,
+
+            /// <summary>スキルが座標を直接動かす間、移動・向き変え・重力をすべて止める(空中に浮かせるときなど)</summary>
+            Frozen,
         }
 
         /// <summary>スキルなどから移動を一時的に制限する</summary>
@@ -86,6 +89,14 @@ namespace ProjectKMP.Player
 
         private void Update()
         {
+            // スキル側が座標を動かすので、移動・向き変え・重力のすべてをこちらでは行わない
+            if (MoveLock == MovementLock.Frozen)
+            {
+                _verticalVelocity = 0.0f;
+                CurrentSpeed = 0.0f;
+                return;
+            }
+
             Vector2 input = ReadMoveInput();
             Vector3 moveDir = ToWorldDirection(input);
 

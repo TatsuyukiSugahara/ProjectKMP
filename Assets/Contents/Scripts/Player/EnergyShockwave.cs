@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace ProjectKMP.Player
 {
@@ -44,16 +44,22 @@ namespace ProjectKMP.Player
 
         // ---- 公開API -------------------------------------
 
-        /// <summary>衝撃波を生成する。startRadius から endRadius まで duration 秒で広がる</summary>
+        /// <summary>
+        /// 衝撃波を生成する。startRadius から endRadius まで duration 秒で変化する。
+        /// endRadius を startRadius より小さくすれば、外から内へ縮む収束リングになる。
+        /// thickness に正の値を渡すと、プレハブの線の太さを上書きする。
+        /// </summary>
         public static EnergyShockwave Spawn(
-            EnergyShockwave prefab, Vector3 position, float startRadius, float endRadius, float duration)
+            EnergyShockwave prefab, Vector3 position, float startRadius, float endRadius, float duration,
+            float thickness = 0f)
         {
             if (prefab == null) return null;
 
             EnergyShockwave instance = Instantiate(prefab, position, Quaternion.identity);
             instance._startRadius = Mathf.Max(0.1f, startRadius);
-            instance._endRadius = Mathf.Max(startRadius + 0.1f, endRadius);
+            instance._endRadius = Mathf.Max(0.1f, endRadius);
             instance._durationSec = Mathf.Max(0.05f, duration);
+            if (thickness > 0f) instance._ringThickness = thickness;
             return instance;
         }
 
