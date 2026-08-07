@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Photon.Pun;
 using ProjectKMP.Attack;
 using ProjectKMP.Dog;
@@ -20,11 +20,14 @@ namespace ProjectKMP.Player
     /// </summary>
     public class PlayerBeamSkill : MonoBehaviourPun
     {
-        private enum Phase { Ready, Aiming, Firing }
+        private enum Phase { Ready, Aiming, Rising, Firing, Descending }
 
         // ---- 定数 ----------------------------------------
 
         private const int OVERLAP_BUFFER_SIZE = 32;
+
+        /// <summary>着地できないまま降下し続けるのを防ぐ保険の時間(秒)</summary>
+        private const float MAX_DESCEND_SEC = 3.0f;
 
         // ---- インスペクタ設定 ------------------------------
 
@@ -50,10 +53,23 @@ namespace ProjectKMP.Player
         private float _beamWidth = 0.8f;
 
         [SerializeField, Tooltip("発射位置の高さ(足元からのオフセット・m)")]
-        private float _originHeight = 0.6f;
+        private float _originHeight = 1.3f;
 
         [SerializeField, Tooltip("発射位置の前方オフセット(m)。体にビームが重ならないようにする")]
         private float _originForwardOffset = 0.8f;
+
+        [Header("口元から出す")]
+        [SerializeField, Tooltip("ビームの発射口にする Transform(犬の head ボーンなど)。未設定なら上の発射位置設定を使う")]
+        private Transform _muzzleTransform;
+
+        [SerializeField, Tooltip("発射口の微調整(m)。キャラの右/上/前を軸にしたオフセット")]
+        private Vector3 _muzzleLocalOffset = new Vector3(0f, 0.02f, 0.35f);
+
+        [SerializeField, Tooltip("発射の瞬間に口元で再生する噛みつきエフェクト。未設定なら出さない")]
+        private BiteVfx _biteVfxPrefab;
+
+        [SerializeField, Min(0.01f), Tooltip("噛みつきエフェクトの大きさ倍率")]
+        private float _biteVfxScale = 1f;
 
         [Header("発射")]
         [SerializeField, Min(0.1f), Tooltip("ビームを照射し続ける時間(秒)。この間は移動できない")]
@@ -65,6 +81,12 @@ namespace ProjectKMP.Player
         [SerializeField, Min(0.01f), Tooltip("照射終了後、ビームが消えるまでのフェード時間(秒)")]
         private float _fadeOutDurationSec = 0.5f;
 
+        [SerializeField, Min(0f), Tooltip("発射の瞬間にカメラを揺らす大きさ。0で揺らさない")]
+        private float _fireCameraShakeAmplitude = 0.18f;
+
+        [SerializeField, Min(0f), Tooltip("発射の瞬間のカメラの揺れの長さ(秒)")]
+        private float _fireCameraShakeDurationSec = 0.25f;
+
         [Header("地面の痕")]
         [SerializeField, Tooltip("ビームが地面に残す痕(デカール)。未設定なら痕を残さない")]
         private AttackDecal _beamDecalPrefab;
@@ -74,6 +96,25 @@ namespace ProjectKMP.Player
 
         [SerializeField, Min(0.1f), Tooltip("痕の直径をビームの太さ(直径)の何倍にするか")]
         private float _decalWidthScale = 1.2f;
+
+        [Header("跳び上がり")]
+        [SerializeField, Min(0f), Tooltip("発射前に跳び上がる高さ(m)。0なら跳ばずにその場で撃つ")]
+        private float _riseHeight = 2.5f;
+
+        [SerializeField, Min(0.05f), Tooltip("跳び上がりにかける時間(秒)")]
+        private float _riseDurationSec = 0.45f;
+
+        [SerializeField, Min(0), Tooltip("跳び上がりながら何回転するか")]
+        private int _spinTurns = 1;
+
+        [SerializeField, Tooltip("回転軸(キャラのローカル軸)。(1,0,0)で前転、(-1,0,0)で後転、(0,1,0)でその場スピン")]
+        private Vector3 _spinAxisLocal = Vector3.right;
+
+        [SerializeField, Min(0.1f), Tooltip("照射後に降りてくる速さ(m/秒)")]
+        private float _descendSpeed = 8f;
+
+        [SerializeField, Tooltip("空中から撃つとき、狙いの表示と同じ地面の位置へ着弾するようビームを下向きに傾ける。切ると水平に撃つ")]
+        private bool _aimAtGroundEnd = true;
 
         [Header("アニメーション")]
         [SerializeField, Range(0f, 1f), Tooltip("頭突きモーションのどの位置(0〜1)で止めて照射ポーズにするか")]
@@ -139,6 +180,17 @@ namespace ProjectKMP.Player
         /// <summary>次に痕(デカール)を置く、ビームの根元からの距離</summary>
         private float _nextDecalDistance;
 
+        /// <summary>痕を落とす地面の高さ。口元は動くので、発射時の足元の高さを覚えておく</summary>
+        private float _beamGroundY;
+
+        private CharacterController _controller;
+        private bool _leapActive;
+        private bool _poseHeld;
+        private float _leapElapsedSec;
+        private float _leapStartYawDeg;
+        private float _risenHeight;
+        private float _descendElapsedSec;
+
         private GameObject _beamEffectInstance;
         private DestructionBeamVisual _beamVisual;
         private BeamAimIndicator _aimIndicatorInstance;
@@ -159,8 +211,12 @@ namespace ProjectKMP.Player
         /// <summary>ビーム照射中かどうか</summary>
         public bool IsFiring => _phase == Phase.Firing;
 
-        /// <summary>狙い中または照射中(この間は通常攻撃を出させない)</summary>
+        /// <summary>狙い中・跳び上がり中・照射中・降下中(この間は通常攻撃を出させない)</summary>
         public bool IsBusy => _phase != Phase.Ready;
+
+        /// <summary>跳び上がってから着地するまでの間。この間は吹き飛ばされたくない</summary>
+        public bool IsInBeamAction =>
+            _phase == Phase.Rising || _phase == Phase.Firing || _phase == Phase.Descending;
 
         /// <summary>クールタイムの残り具合(1=撃った直後、0=撃てる)</summary>
         public float CooldownRatio01 =>
@@ -173,6 +229,7 @@ namespace ProjectKMP.Player
 
         private void Awake()
         {
+            _controller = GetComponent<CharacterController>();
             _mover = GetComponent<LocalPlayerMover>();
             _animationDriver = GetComponent<DogAnimationDriver>();
             _health = GetComponent<PlayerHealth>();
@@ -199,8 +256,21 @@ namespace ProjectKMP.Player
         {
             if (IsOwner) UpdateOwnerInput();
 
-            // 照射の進行は全クライアントで動かす(見た目とアニメを揃えるため)
-            if (_phase == Phase.Firing) UpdateFiring();
+            // 跳び上がりと降下は座標を動かす処理なので、所有者だけが行う
+            // (他のクライアントへは PhotonTransformView の位置同期で伝わる)
+            if (_phase == Phase.Rising)
+            {
+                if (IsOwner) UpdateRising();
+            }
+            else if (_phase == Phase.Firing)
+            {
+                // 照射の進行は全クライアントで動かす(見た目とアニメを揃えるため)
+                UpdateFiring();
+            }
+            else if (_phase == Phase.Descending)
+            {
+                if (IsOwner) UpdateDescending();
+            }
         }
 
         // ---- 入力と状態遷移(本人のみ) ---------------------
@@ -296,17 +366,99 @@ namespace ProjectKMP.Player
             DestroyAimIndicator();
         }
 
-        /// <summary>指を離した瞬間。クールタイムを開始し、全クライアントで照射を始める</summary>
+        /// <summary>
+        /// 指を離した瞬間。クールタイムを開始し、跳び上がってから照射を始める。
+        /// 跳び上がりの高さが0のときは、その場ですぐ照射する。
+        /// </summary>
         private void Fire()
         {
             DestroyAimIndicator();
             _cooldownRemainSec = _cooldownSec;
 
-            Vector3 origin = transform.position
-                + Vector3.up * _originHeight
-                + transform.forward * _originForwardOffset;
+            // 痕を落とす地面の高さは、跳び上がる前のいまの足元で決める
+            _beamGroundY = transform.position.y;
 
-            photonView.RPC(nameof(RpcStartBeam), RpcTarget.All, origin, transform.forward);
+            if (_riseHeight > 0f)
+            {
+                StartRising();
+            }
+            else
+            {
+                StartBeam();
+            }
+        }
+
+        /// <summary>その場で1回転しながら跳び上がる。頂点でちょうど元の向きに戻る</summary>
+        private void StartRising()
+        {
+            _phase = Phase.Rising;
+            _leapActive = true;
+            _leapElapsedSec = 0f;
+            _leapStartYawDeg = transform.eulerAngles.y;
+            _risenHeight = 0f;
+
+            // 重力で落ちないよう、この間の座標はこちらで動かす
+            if (_mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.Frozen;
+
+            photonView.RPC(nameof(RpcBeginLeap), RpcTarget.All);
+        }
+
+        private void UpdateRising()
+        {
+            if (_health != null && _health.IsDead) { AbortLeap(); return; }
+
+            _leapElapsedSec += Time.deltaTime;
+            float t = Mathf.Clamp01(_leapElapsedSec / _riseDurationSec);
+
+            // 勢いよく上がってから頂点で止まるように減速させる
+            float eased = 1f - (1f - t) * (1f - t);
+            float targetHeight = _riseHeight * eased;
+            if (_controller != null) _controller.Move(Vector3.up * (targetHeight - _risenHeight));
+            _risenHeight = targetHeight;
+
+            // 上がりきったところで回転がちょうど1周ぶん終わるようにする。
+            // 元の向きに指定軸まわりの回転を掛けるので、軸はキャラのローカル軸になる
+            Quaternion baseRotation = Quaternion.Euler(0f, _leapStartYawDeg, 0f);
+            Vector3 axis = _spinAxisLocal.sqrMagnitude > 0.0001f ? _spinAxisLocal.normalized : Vector3.right;
+            transform.rotation = baseRotation * Quaternion.AngleAxis(360f * _spinTurns * t, axis);
+
+            if (t < 1f) return;
+
+            transform.rotation = Quaternion.Euler(0f, _leapStartYawDeg, 0f);
+            StartBeam();
+        }
+
+        /// <summary>照射を全クライアントで開始する。発射位置と向きは撃った本人が決めて配る</summary>
+        private void StartBeam()
+        {
+            Vector3 origin = ResolveBeamOrigin();
+            photonView.RPC(nameof(RpcStartBeam), RpcTarget.All, origin, ResolveBeamDirection(origin), _beamGroundY);
+        }
+
+        private void UpdateDescending()
+        {
+            if (_health != null && _health.IsDead) { AbortLeap(); return; }
+
+            _descendElapsedSec += Time.deltaTime;
+            if (_controller != null) _controller.Move(Vector3.down * (_descendSpeed * Time.deltaTime));
+
+            bool landed = _controller == null || _controller.isGrounded;
+            if (landed || _descendElapsedSec >= MAX_DESCEND_SEC) EndLeap();
+        }
+
+        /// <summary>着地して操作を戻す</summary>
+        private void EndLeap()
+        {
+            _phase = Phase.Ready;
+            _leapActive = false;
+            if (_mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.None;
+        }
+
+        /// <summary>照射前後に死んだときなど、空中で止まったままにならないよう後始末する</summary>
+        private void AbortLeap()
+        {
+            ReleasePose();
+            EndLeap();
         }
 
         private void DestroyAimIndicator()
@@ -318,9 +470,16 @@ namespace ProjectKMP.Player
 
         // ---- RPC -----------------------------------------
 
+        /// <summary>跳び上がりの開始。位置と回転は座標同期で伝わるので、ここではポーズだけ揃える</summary>
+        [PunRPC]
+        private void RpcBeginLeap()
+        {
+            HoldPose();
+        }
+
         /// <summary>照射の開始。全員のクライアントで呼ばれ、見た目とアニメを揃える</summary>
         [PunRPC]
-        private void RpcStartBeam(Vector3 origin, Vector3 direction)
+        private void RpcStartBeam(Vector3 origin, Vector3 direction, float groundY)
         {
             // 万一前回の照射が残っていたら片付けてから始める
             if (_phase == Phase.Firing) FinishFiring();
@@ -332,8 +491,12 @@ namespace ProjectKMP.Player
             _beamDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
             _targetStates.Clear();
 
-            // 最初の痕は根元から1間隔ぶん先に置く(根元はプレイヤーの足元なので避ける)
-            _nextDecalDistance = _decalIntervalMeters;
+            // 空中から撃つと自分の足元は地面ではないので、撃った本人が測った高さを使う
+            _beamGroundY = groundY;
+            if (_muzzleTransform != null) _beamOrigin = ResolveBeamOrigin();
+
+            // 発射口は体の前方に出ているので、根元(距離0)から痕を置いてよい
+            _nextDecalDistance = 0f;
 
             if (_beamEffectPrefab != null)
             {
@@ -355,10 +518,30 @@ namespace ProjectKMP.Player
             }
 
             // 頭突きモーションを頭を突き出した位置で止めて照射ポーズにする
-            if (_animationDriver != null) _animationDriver.HoldAttackPose(_poseFreezeNormalizedTime);
+            HoldPose();
 
-            // 照射中は移動も向き変えもできない(本人のみ)
-            if (IsOwner && _mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.Full;
+            // 口元で顎を開いて噛み閉じることで「がぶっと吐き出した」感じを付ける
+            PlayBiteVfx();
+
+            // 照射中は動けない。跳び上がっている間は重力も止めて空中に留める(本人のみ)
+            if (IsOwner && _mover != null)
+            {
+                _mover.MoveLock = _leapActive
+                    ? LocalPlayerMover.MovementLock.Frozen
+                    : LocalPlayerMover.MovementLock.Full;
+            }
+
+            // 撃った本人の画面だけを揺らす(他人の発射で画面が揺れると見づらいため)
+            if (IsOwner) PlayFireCameraShake();
+        }
+
+        /// <summary>発射の瞬間にカメラを短く揺らして「撃った感」を出す</summary>
+        private void PlayFireCameraShake()
+        {
+            if (_fireCameraShakeAmplitude <= 0f || _fireCameraShakeDurationSec <= 0f) return;
+
+            ThirdPersonCamera playerCamera = FindAnyObjectByType<ThirdPersonCamera>();
+            if (playerCamera != null) playerCamera.Shake(_fireCameraShakeAmplitude, _fireCameraShakeDurationSec);
         }
 
         /// <summary>ヒットの通知。全員のクライアントでエフェクトとダメージ処理を行う</summary>
@@ -395,6 +578,9 @@ namespace ProjectKMP.Player
         private void UpdateFiring()
         {
             _fireElapsedSec += Time.deltaTime;
+
+            // 口元は頭のモーションで動くので、照射中も毎フレーム追従させる
+            if (_muzzleTransform != null) _beamOrigin = ResolveBeamOrigin();
 
             UpdateBeamLength();
             SpawnBeamDecals();
@@ -433,8 +619,8 @@ namespace ProjectKMP.Player
         {
             if (_beamDecalPrefab == null) return;
 
-            // ビームは体の高さから出ているので、発射時の足元の高さに落とす
-            float groundY = _beamOrigin.y - _originHeight;
+            // ビームは体の高さから出ているので、発射時に覚えた足元の高さに落とす
+            float groundY = _beamGroundY;
 
             while (_nextDecalDistance <= _currentBeamLength)
             {
@@ -448,7 +634,6 @@ namespace ProjectKMP.Player
 
         private void FinishFiring()
         {
-            _phase = Phase.Ready;
             _targetStates.Clear();
 
             if (_beamEffectInstance != null)
@@ -461,8 +646,17 @@ namespace ProjectKMP.Player
             }
 
             // 止めていた頭突きモーションを再開し、最後まで再生してもらう
-            if (_animationDriver != null) _animationDriver.ReleaseAttackPose();
+            ReleasePose();
 
+            if (IsOwner && _leapActive)
+            {
+                // 空中にいるので、地面まで降りてから操作を返す
+                _phase = Phase.Descending;
+                _descendElapsedSec = 0f;
+                return;
+            }
+
+            _phase = Phase.Ready;
             if (IsOwner && _mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.None;
         }
 
@@ -555,6 +749,70 @@ namespace ProjectKMP.Player
         }
 
         // ---- 内部処理 ------------------------------------
+
+        /// <summary>
+        /// ビームの発射位置。口元の Transform が指定されていればそこ、無ければ足元からの高さ・前方オフセット。
+        /// 頭のボーンは向きが独特なので、微調整のオフセットはキャラ本体の向きを基準に足す。
+        /// </summary>
+        private Vector3 ResolveBeamOrigin()
+        {
+            if (_muzzleTransform != null)
+            {
+                return _muzzleTransform.position
+                    + transform.right * _muzzleLocalOffset.x
+                    + transform.up * _muzzleLocalOffset.y
+                    + transform.forward * _muzzleLocalOffset.z;
+            }
+
+            return transform.position
+                + Vector3.up * _originHeight
+                + transform.forward * _originForwardOffset;
+        }
+
+        /// <summary>
+        /// ビームの向き。空中から撃つときは、狙いの表示と同じ地面の位置(足元から前方 _beamLength)へ
+        /// 着弾するように下向きへ傾ける。傾けない設定なら、そのまま正面へ水平に撃つ。
+        /// </summary>
+        private Vector3 ResolveBeamDirection(Vector3 origin)
+        {
+            Vector3 forward = transform.forward;
+            if (!_aimAtGroundEnd) return forward;
+
+            Vector3 target = transform.position + forward * _beamLength;
+            target.y = _beamGroundY;
+
+            Vector3 toTarget = target - origin;
+            return toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : forward;
+        }
+
+        /// <summary>照射ポーズで固める。跳び上がり時と照射開始時の二重呼び出しを防ぐ</summary>
+        private void HoldPose()
+        {
+            if (_poseHeld) return;
+
+            _poseHeld = true;
+            if (_animationDriver != null) _animationDriver.HoldAttackPose(_poseFreezeNormalizedTime);
+        }
+
+        private void ReleasePose()
+        {
+            if (!_poseHeld) return;
+
+            _poseHeld = false;
+            if (_animationDriver != null) _animationDriver.ReleaseAttackPose();
+        }
+
+        /// <summary>発射の瞬間に口元で噛みつきエフェクトを再生する</summary>
+        private void PlayBiteVfx()
+        {
+            if (_biteVfxPrefab == null) return;
+
+            BiteVfx bite = BiteVfx.Spawn(_biteVfxPrefab, _beamOrigin);
+            if (bite != null && !Mathf.Approximately(_biteVfxScale, 1f))
+            {
+                bite.transform.localScale *= _biteVfxScale;
+            }
+        }
 
         /// <summary>このクライアントがこのキャラを操作しているか</summary>
         private bool IsOwner => photonView == null || photonView.IsMine;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Photon.Pun;
@@ -49,6 +49,9 @@ namespace ProjectKMP.Player
 
         [SerializeField, Min(0.01f), Tooltip("被弾時の吹き飛びにかける時間(秒)")]
         private float _knockbackDurationSec = 0.25f;
+
+        [SerializeField, Tooltip("ビーム照射中は吹き飛ばされないようにする(狙いがブレて演出が崩れるため)")]
+        private bool _blockKnockbackWhileBeam = true;
 
         [SerializeField, Min(0.0f), Tooltip("死亡時に吹き飛ぶ距離(メートル)。画面端まで飛ぶような大きめの値にする。0で吹き飛びなし")]
         private float _deathKnockbackDistance = 16.0f;
@@ -195,8 +198,12 @@ namespace ProjectKMP.Player
             }
             else
             {
-                // 生存中の被弾は小さく吹き飛ぶ。移動は自分のクライアントが行い、他クライアントへは位置同期で伝わる
-                StartKnockback(sourcePosition, _knockbackDistance, _knockbackDurationSec, 0.0f);
+                // 生存中の被弾は小さく吹き飛ぶ。移動は自分のクライアントが行い、他クライアントへは位置同期で伝わる。
+                // ただしビーム照射中だけは、押されると狙いがブレてしまうので吹き飛ばさない
+                if (!IsKnockbackBlocked())
+                {
+                    StartKnockback(sourcePosition, _knockbackDistance, _knockbackDurationSec, 0.0f);
+                }
             }
         }
 
@@ -262,6 +269,16 @@ namespace ProjectKMP.Player
         }
 
         // ---- 吹き飛び ------------------------------------
+
+        /// <summary>いま吹き飛ばしを止めたい状態か。死亡時の吹き飛びには使わない</summary>
+        private bool IsKnockbackBlocked()
+        {
+            if (!_blockKnockbackWhileBeam) return false;
+
+            // 被弾時にしか呼ばれないので、毎フレームの取得にはならない
+            PlayerBeamSkill beamSkill = GetComponent<PlayerBeamSkill>();
+            return beamSkill != null && beamSkill.IsInBeamAction;
+        }
 
         /// <summary>
         /// 発生源から離れる方向への吹き飛びを開始する。
