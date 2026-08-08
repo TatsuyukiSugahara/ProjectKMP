@@ -2562,6 +2562,61 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4938559794611775962, guid: 525197fe6ec2f4895a8009b36d5e388c, type: 3}
   m_PrefabInstance: {fileID: 222075749}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &229788799
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 229788801}
+  - component: {fileID: 229788800}
+  m_Layer: 0
+  m_Name: ComboBonus
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &229788800
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 229788799}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2fd4b513ce8ba4bb981dfb4421c26c54, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Battle.ComboBonus
+  _windowSec: 1.5
+  _multiplier: 1.5
+  _hitTarget: {fileID: 0}
+  _comboClip: {fileID: 8300000, guid: 97a4250404afc4aa580063a6ddbf3bb1, type: 3}
+  _comboVolume: 0.7
+  _popupPrefab: {fileID: 1279347425535344564, guid: 4398099d3472040e492df28fb13d2ef8, type: 3}
+  _popupLabel: 
+  _popupHeight: 1.4
+  _feedbackIntervalSec: 0.6
+  _logCombo: 1
+  _debugAlwaysCombo: 1
+--- !u!4 &229788801
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 229788799}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &232449201
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -22857,3 +22912,4 @@ SceneRoots:
   - {fileID: 431753653}
   - {fileID: 1036529875}
   - {fileID: 376355506}
+  - {fileID: 229788801}

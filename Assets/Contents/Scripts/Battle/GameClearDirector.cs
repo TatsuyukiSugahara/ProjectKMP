@@ -37,6 +37,7 @@ namespace ProjectKMP.Battle
         // ---- 内部状態 ------------------------------------
 
         private System.IDisposable _subscription;
+        private System.IDisposable _playableSubscription;
         private bool _isFinished;
 
         // ---- Unityイベント -------------------------------
@@ -54,11 +55,19 @@ namespace ProjectKMP.Battle
             }
 
             _subscription = boss.Defeated.Subscribe(_ => OnBossDefeated());
+
+            // 戦闘が始まった時刻を控える。カットシーンが明けて操作できるようになった瞬間が開始。
+            // 導入前に一度 true になっても、明けたときの呼び出しで正しい時刻に上書きされる
+            _playableSubscription = BattlePlayGate.OnChanged.Subscribe(playable =>
+            {
+                if (playable) ClearTime.Begin();
+            });
         }
 
         private void OnDestroy()
         {
             _subscription?.Dispose();
+            _playableSubscription?.Dispose();
         }
 
         // ---- 内部処理 ------------------------------------
@@ -72,6 +81,9 @@ namespace ProjectKMP.Battle
 
         private async UniTaskVoid FinishAsync(CancellationToken ct)
         {
+            // 倒した時点でタイムを確定する。操作を止めるより先に測る
+            ClearTime.Finish();
+
             // 操作を止めて戦闘UIを隠す(プレイヤーのHPバーは BattlePlayGate の購読で自動的に消える)
             BattlePlayGate.SetPlayable(false);
 

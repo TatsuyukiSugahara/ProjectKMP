@@ -23,6 +23,12 @@ namespace ProjectKMP.Attack
         [SerializeField, Tooltip("フェードに使う CanvasGroup。未設定なら自分から探す")]
         private CanvasGroup _group;
 
+        [SerializeField, Tooltip("連携(同時ヒットボーナス)のときに数字の右隣へ出す絵。普段は隠しておく")]
+        private RectTransform _comboIcon;
+
+        [SerializeField, Tooltip("数字と絵のあいだの余白")]
+        private float _comboIconGap = 10.0f;
+
         [Header("出る位置")]
         [SerializeField, Tooltip("画面の横方向・縦方向にランダムでずらす幅(メートル)。0にすると毎回同じ位置に出る")]
         private Vector2 _randomOffsetRange = new Vector2(0.35f, 0.25f);
@@ -74,10 +80,35 @@ namespace ProjectKMP.Attack
         /// <summary>数字を出して、上に浮きながら消えるまでを再生する</summary>
         public void Play(int damage)
         {
+            Play(damage.ToString(), false);
+        }
+
+        /// <summary>
+        /// 数字を出す。連携(同時ヒットボーナス)が乗った一撃なら、数字の右隣に握手の絵を並べる。
+        /// 別の表示として出すと数字と離れてしまうので、同じ表示の中に入れている。
+        /// </summary>
+        public void Play(int damage, bool showComboIcon)
+        {
+            Play(damage.ToString(), showComboIcon);
+        }
+
+        /// <summary>好きな文字で同じ動きを再生する</summary>
+        public void Play(string label)
+        {
+            Play(label, false);
+        }
+
+        /// <summary>
+        /// 好きな文字で再生する。浮かせ方・画面内への収め方はダメージ表示と同じ仕組みを使い回す。
+        /// </summary>
+        public void Play(string label, bool showComboIcon)
+        {
             if (_text == null) _text = GetComponentInChildren<TMP_Text>();
             if (_group == null) _group = GetComponent<CanvasGroup>();
 
-            if (_text != null) _text.text = damage.ToString();
+            if (_text != null) _text.text = label;
+
+            LayoutComboIcon(showComboIcon);
 
             _baseScale = transform.localScale;
             _camera = Camera.main;
@@ -107,6 +138,24 @@ namespace ProjectKMP.Attack
         }
 
         // ---- 内部処理 ------------------------------------
+
+        /// <summary>
+        /// 連携の絵を数字の右隣に置く。数字の幅は桁数で変わるので、
+        /// 文字を確定させてから実際の幅を測って位置を決める。
+        /// </summary>
+        private void LayoutComboIcon(bool show)
+        {
+            if (_comboIcon == null) return;
+
+            _comboIcon.gameObject.SetActive(show);
+            if (!show || _text == null) return;
+
+            _text.ForceMeshUpdate();
+
+            float textHalf = _text.preferredWidth * 0.5f;
+            float iconHalf = _comboIcon.sizeDelta.x * 0.5f;
+            _comboIcon.anchoredPosition = new Vector2(textHalf + iconHalf + _comboIconGap, 0.0f);
+        }
 
         /// <summary>上へ浮かせながら薄くしていき、終わったら自分を消す</summary>
         private async UniTaskVoid PlayAsync(CancellationToken ct)

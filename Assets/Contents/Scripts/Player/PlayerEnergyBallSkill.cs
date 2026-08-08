@@ -898,7 +898,7 @@ namespace ProjectKMP.Player
 
         /// <summary>ヒットの通知。全員のクライアントでエフェクトとダメージ処理を行う</summary>
         [PunRPC]
-        private void RpcEnergyBallHit(Vector3 hitPoint, int targetNetworkId, int damage, PhotonMessageInfo info)
+        private void RpcEnergyBallHit(Vector3 hitPoint, int targetNetworkId, int damage, bool combo, PhotonMessageInfo info)
         {
             HitTarget target = HitTarget.Find(targetNetworkId);
             if (target == null) return;
@@ -909,7 +909,7 @@ namespace ProjectKMP.Player
             {
                 GameObject popup = Instantiate(_damagePopupPrefab, hitPoint, Quaternion.identity);
                 DamagePopup component = popup.GetComponent<DamagePopup>();
-                if (component != null) component.Play(damage);
+                if (component != null) component.Play(damage, combo);
             }
 
             int attackerActorNumber = info.Sender != null ? info.Sender.ActorNumber : -1;
@@ -1574,10 +1574,14 @@ namespace ProjectKMP.Player
 
         private void SendHit(HitTarget target, Collider collider, Vector3 center, int damage)
         {
+            // 他のプレイヤーが直前に当てていれば、同時ヒットボーナスを掛けてから配る
+            bool combo = Battle.ComboBonus.IsActive;
+            damage = Battle.ComboBonus.Apply(damage);
+
             if (damage <= 0) return;
 
             Vector3 hitPoint = collider != null ? collider.ClosestPoint(center) : target.transform.position;
-            photonView.RPC(nameof(RpcEnergyBallHit), RpcTarget.All, hitPoint, target.NetworkId, damage);
+            photonView.RPC(nameof(RpcEnergyBallHit), RpcTarget.All, hitPoint, target.NetworkId, damage, combo);
         }
 
         // ---- 内部処理 ------------------------------------

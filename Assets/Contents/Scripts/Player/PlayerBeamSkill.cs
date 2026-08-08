@@ -613,7 +613,7 @@ namespace ProjectKMP.Player
 
         /// <summary>ヒットの通知。全員のクライアントでエフェクトとダメージ処理を行う</summary>
         [PunRPC]
-        private void RpcBeamHit(Vector3 hitPoint, int targetNetworkId, int damage, PhotonMessageInfo info)
+        private void RpcBeamHit(Vector3 hitPoint, int targetNetworkId, int damage, bool combo, PhotonMessageInfo info)
         {
             HitTarget target = HitTarget.Find(targetNetworkId);
             if (target == null) return;
@@ -633,7 +633,7 @@ namespace ProjectKMP.Player
             {
                 GameObject popup = Instantiate(_damagePopupPrefab, hitPoint, Quaternion.identity);
                 DamagePopup component = popup.GetComponent<DamagePopup>();
-                if (component != null) component.Play(damage);
+                if (component != null) component.Play(damage, combo);
             }
 
             int attackerActorNumber = info.Sender != null ? info.Sender.ActorNumber : -1;
@@ -847,6 +847,10 @@ namespace ProjectKMP.Player
 
         private void SendBeamHit(HitTarget target, Collider collider, int damage)
         {
+            // 他のプレイヤーが直前に当てていれば、同時ヒットボーナスを掛けてから配る
+            bool combo = Battle.ComboBonus.IsActive;
+            damage = Battle.ComboBonus.Apply(damage);
+
             if (damage <= 0) return;
 
             // ビームの軸上で相手に一番近い点を求め、そこから相手表面のヒット位置を出す
@@ -855,7 +859,7 @@ namespace ProjectKMP.Player
             Vector3 axisPoint = _beamOrigin + _beamDirection * along;
             Vector3 hitPoint = collider != null ? collider.ClosestPoint(axisPoint) : target.transform.position;
 
-            photonView.RPC(nameof(RpcBeamHit), RpcTarget.All, hitPoint, target.NetworkId, damage);
+            photonView.RPC(nameof(RpcBeamHit), RpcTarget.All, hitPoint, target.NetworkId, damage, combo);
         }
 
         // ---- 内部処理 ------------------------------------

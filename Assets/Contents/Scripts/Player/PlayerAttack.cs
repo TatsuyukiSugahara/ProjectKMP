@@ -189,7 +189,7 @@ namespace ProjectKMP.Player
 
         /// <summary>ヒットの通知。全員のクライアントでエフェクトを出す</summary>
         [PunRPC]
-        private void RpcOnHit(int attackIndex, Vector3 hitPoint, int targetNetworkId, PhotonMessageInfo info)
+        private void RpcOnHit(int attackIndex, Vector3 hitPoint, int targetNetworkId, int damage, bool combo, PhotonMessageInfo info)
         {
             AttackData data = GetAttack(attackIndex);
             if (data == null) return;
@@ -212,9 +212,9 @@ namespace ProjectKMP.Player
             AttackEffect.Spawn(prefab, position, rotation, data.HitEffectScale, data.HitEffectLifeSec);
 
             int attackerActorNumber = info.Sender != null ? info.Sender.ActorNumber : -1;
-            SpawnDamagePopup(data, hitPoint);
+            SpawnDamagePopup(data, hitPoint, damage, combo);
 
-            if (target != null) target.NotifyHit(position, attackerActorNumber, data.AttackPower);
+            if (target != null) target.NotifyHit(position, attackerActorNumber, damage);
 
             if (_logHit)
             {
@@ -226,13 +226,13 @@ namespace ProjectKMP.Player
         // ---- 内部処理 ------------------------------------
 
         /// <summary>当たった位置にダメージの数字を出す</summary>
-        private void SpawnDamagePopup(AttackData data, Vector3 hitPoint)
+        private void SpawnDamagePopup(AttackData data, Vector3 hitPoint, int damage, bool combo)
         {
             if (data.DamagePopupPrefab == null) return;
 
             GameObject popup = Instantiate(data.DamagePopupPrefab, hitPoint + data.DamagePopupOffset, Quaternion.identity);
             DamagePopup component = popup.GetComponent<DamagePopup>();
-            if (component != null) component.Play(data.AttackPower);
+            if (component != null) component.Play(damage, combo);
         }
 
         /// <summary>このクライアントがこのキャラを操作しているか</summary>
@@ -344,7 +344,12 @@ namespace ProjectKMP.Player
                 Vector3 hitPoint = collider.ClosestPoint(center);
                 int targetNetworkId = target != null ? target.NetworkId : 0;
 
-                photonView.RPC(nameof(RpcOnHit), RpcTarget.All, attackIndex, hitPoint, targetNetworkId);
+                // 他のプレイヤーが直前に当てていれば、同時ヒットボーナスを掛けてから配る。
+                // 掛けたあとの値と、乗ったかどうかを送るので、全員が同じ数字と表示になる
+                bool combo = Battle.ComboBonus.IsActive;
+                int damage = Battle.ComboBonus.Apply(data.AttackPower);
+
+                photonView.RPC(nameof(RpcOnHit), RpcTarget.All, attackIndex, hitPoint, targetNetworkId, damage, combo);
 
                 newHitCount++;
                 if (alreadyHitCount + newHitCount >= data.MaxHitCount) break;
