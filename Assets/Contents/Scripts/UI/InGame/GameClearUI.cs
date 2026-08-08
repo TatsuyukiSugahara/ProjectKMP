@@ -61,12 +61,28 @@ namespace ProjectKMP.UI.InGame
         [SerializeField, Min(0.01f), Tooltip("フェードアウトにかける時間(秒)")]
         private float _fadeOutSec = 0.6f;
 
+        [Header("音")]
+        [SerializeField, Tooltip("「ゲームクリア」が出た瞬間のファンファーレ")]
+        private AudioClip _clearClip;
+
+        [SerializeField, Range(0.0f, 1.0f), Tooltip("ファンファーレの音量")]
+        private float _clearVolume = 0.8f;
+
+        [SerializeField, Tooltip("牙が閉じきった瞬間の音")]
+        private AudioClip _biteClip;
+
+        [SerializeField, Range(0.0f, 1.0f), Tooltip("噛みつき音の音量")]
+        private float _biteVolume = 0.8f;
+
         // ---- 公開API -------------------------------------
 
         /// <summary>「ゲームクリア」を表示する。文字のポップ→牙の噛みつき→弾み、の順に進む</summary>
         public async UniTask ShowAsync(CancellationToken ct)
         {
             if (_group == null) return;
+
+            // 文字が出るのに合わせて鳴らす。撃破は全クライアントに届くので、各自の画面で鳴る
+            Play(_clearClip, _clearVolume);
 
             // 牙は噛みつく瞬間まで隠しておく
             if (_biteRoot != null) _biteRoot.gameObject.SetActive(false);
@@ -95,6 +111,9 @@ namespace ProjectKMP.UI.InGame
             {
                 SetFangOffset(Mathf.Lerp(_fangOpenOffset, _fangClosedOffset, t * t * t));
             }, ct);
+
+            // 閉じきった瞬間に鳴らす。弾みの演出と同時になる
+            Play(_biteClip, _biteVolume);
 
             // 4) 噛んだ瞬間、全体を弾ませて衝撃を出す
             await TweenAsync(_bitePunchSec, t =>
@@ -126,6 +145,14 @@ namespace ProjectKMP.UI.InGame
         }
 
         // ---- 内部処理 ------------------------------------
+
+        /// <summary>シーンの UiSoundPlayer から鳴らす。置かれていなければ何もしない</summary>
+        private static void Play(AudioClip clip, float volume)
+        {
+            if (clip == null || UiSoundPlayer.Instance == null) return;
+
+            UiSoundPlayer.Instance.PlayOneShot(clip, volume);
+        }
 
         /// <summary>上下の牙を中心から指定ぶんだけ離す</summary>
         private void SetFangOffset(float offset)

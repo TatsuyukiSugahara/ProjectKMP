@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using TMPro;
@@ -104,6 +104,10 @@ namespace ProjectKMP.UI.Title
             SetVisible(_loadingGroup, false);
 
             await UniTask.WaitUntil(IsAnyInputPressed, cancellationToken: ct);
+
+            // 最初の一押しにも手応えを返す。ここはボタンではないので自分で鳴らす
+            if (UiSoundPlayer.Instance != null) UiSoundPlayer.Instance.Play(UiSoundPlayer.SoundKind.Decide);
+
             SetVisible(_pressAnyKeyGroup, false);
 
             // 失敗したらメニューまで戻ってやり直せるようにループする

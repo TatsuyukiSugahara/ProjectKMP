@@ -190,7 +190,13 @@ namespace ProjectKMP.UI.Battle
                     float ratio = Mathf.Clamp01(held / Mathf.Max(0.01f, _skipHoldSeconds));
                     if (_skipFillImage != null) _skipFillImage.fillAmount = ratio;
 
-                    if (ratio >= 1.0f) return true;
+                    if (ratio >= 1.0f)
+                    {
+                        // 溜まりきった手応えを返す。長押しの受付は飛ばす権限を持つ側でしか回らないので、
+                        // 押していた本人の画面でだけ鳴る
+                        if (UiSoundPlayer.Instance != null) UiSoundPlayer.Instance.Play(UiSoundPlayer.SoundKind.Decide);
+                        return true;
+                    }
 
                     await UniTask.Yield(PlayerLoopTiming.Update, ct);
                 }
