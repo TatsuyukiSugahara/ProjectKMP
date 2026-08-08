@@ -191,6 +191,7 @@ GameObject:
   - component: {fileID: 5035089082932714152}
   - component: {fileID: 518616182715684186}
   - component: {fileID: 7312523397424392404}
+  - component: {fileID: 2098434888380925888}
   m_Layer: 0
   m_Name: PF_Player_Local
   m_TagString: Untagged
@@ -257,3 +258,22 @@ MonoBehaviour:
   _turnSpeedDeg: 720
   _gravity: -20
   _cameraTransform: {fileID: 0}
+--- !u!114 &2098434888380925888
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8696159137583525489}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 276a7a2adec8845f5997da9a3f6476fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.PlayerGroundGuard
+  _fallThresholdMeters: 3
+  _absoluteFloorY: -20
+  _groundLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _probeHeightMeters: 50
+  _recoverLiftMeters: 0.5

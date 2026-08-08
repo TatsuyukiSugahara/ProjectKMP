@@ -203,6 +203,7 @@ GameObject:
   - component: {fileID: 3856614268932323207}
   - component: {fileID: 4590471291921983139}
   - component: {fileID: 4087651730471892998}
+  - component: {fileID: 9112132388033168563}
   m_Layer: 0
   m_Name: PF_Player_Online
   m_TagString: Player
@@ -603,6 +604,25 @@ MonoBehaviour:
   _maxIntensity: 2.6
   _pulseSpeed: 8
   _blendSec: 0.15
+--- !u!114 &9112132388033168563
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3612530661535202673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 276a7a2adec8845f5997da9a3f6476fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.PlayerGroundGuard
+  _fallThresholdMeters: 3
+  _absoluteFloorY: -20
+  _groundLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _probeHeightMeters: 50
+  _recoverLiftMeters: 0.5
 --- !u!1001 &8618206059551019404
 PrefabInstance:
   m_ObjectHideFlags: 0

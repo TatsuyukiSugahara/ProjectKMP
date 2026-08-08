@@ -35,6 +35,8 @@ namespace ProjectKMP.Gorilla
         private bool _hasPlayedFallAnim;
         private bool _hasSpawnedCharge;
         private GameObject _chargeEffectInstance;
+        private Collider _bodyCollider;
+        private CharacterController _ignoredPlayerController;
 
         public void Enter(GorillaAI owner)
         {
@@ -43,6 +45,10 @@ namespace ProjectKMP.Gorilla
             _hasPlayedFallAnim = false;
             _hasSpawnedCharge = false;
             _groundPosition = owner.transform.position;
+
+            // 落下してくる体に押されると、真下にいたプレイヤーが床の下へ押し出されてしまう。
+            // スタンプの間だけ体どうしの当たり判定を切る(攻撃判定は着地点からの距離で取るので影響しない)
+            BeginIgnorePlayerCollision(owner);
 
             // 上昇開始（ジャンプモーション）
             owner.PlayAnimation(GorillaAI.ANIM_JUMP);
@@ -132,11 +138,47 @@ namespace ProjectKMP.Gorilla
             // 位置ズレが残らないよう、地面の高さに戻しておく
             SetHeight(owner, 0f);
 
+            EndIgnorePlayerCollision();
+
             if (_chargeEffectInstance != null)
             {
                 Object.Destroy(_chargeEffectInstance);
                 _chargeEffectInstance = null;
             }
+        }
+
+        /// <summary>
+        /// スタンプの間だけ、ボスの体とローカルプレイヤーの当たり判定を無視させる。
+        /// ボスは transform を直接動かしているため、真下にプレイヤーが居ると
+        /// CharacterController がめり込みを解消しようとして地面の下へ押し出されてしまう。
+        /// ビームなどの当たり判定は OverlapCapsule で取っており、この設定の影響を受けない。
+        /// </summary>
+        private void BeginIgnorePlayerCollision(GorillaAI owner)
+        {
+            _bodyCollider = owner.GetComponent<Collider>();
+            if (_bodyCollider == null || !_bodyCollider.enabled) return;
+
+            PlayerAttack localAttack = PlayerAttack.Local;
+            if (localAttack == null) return;
+
+            CharacterController controller = localAttack.GetComponent<CharacterController>();
+            if (controller == null || !controller.enabled) return;
+
+            _ignoredPlayerController = controller;
+            Physics.IgnoreCollision(_bodyCollider, _ignoredPlayerController, true);
+        }
+
+        /// <summary>無視したままだと以後ずっとすり抜けてしまうので、ステートを抜けるときに必ず戻す</summary>
+        private void EndIgnorePlayerCollision()
+        {
+            if (_bodyCollider != null && _ignoredPlayerController != null
+                && _bodyCollider.enabled && _ignoredPlayerController.enabled)
+            {
+                Physics.IgnoreCollision(_bodyCollider, _ignoredPlayerController, false);
+            }
+
+            _bodyCollider = null;
+            _ignoredPlayerController = null;
         }
 
         /// <summary>地面の位置を基準に高さと水平方向のズレ(震え用)を反映する</summary>

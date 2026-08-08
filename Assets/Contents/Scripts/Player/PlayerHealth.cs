@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Photon.Pun;
@@ -292,7 +292,16 @@ namespace ProjectKMP.Player
 
             Vector3 direction = transform.position - sourcePosition;
             direction.y = 0.0f;
-            if (direction.sqrMagnitude < 0.0001f) return;
+
+            // 真上・真下から受けた攻撃(ボスのスタンプを真下で受けた場合など)は水平方向が決まらない。
+            // そのまま吹き飛びを止めると発生源の真下に留まり続けてしまうので、向いている方向へ逃がす
+            if (direction.sqrMagnitude < 0.0001f)
+            {
+                direction = transform.forward;
+                direction.y = 0.0f;
+                if (direction.sqrMagnitude < 0.0001f) direction = Vector3.forward;
+            }
+
             direction.Normalize();
 
             CancelKnockback();

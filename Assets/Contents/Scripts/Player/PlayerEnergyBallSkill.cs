@@ -3,6 +3,7 @@ using Photon.Pun;
 using ProjectKMP.Attack;
 using ProjectKMP.Dog;
 using ProjectKMP.UI;
+using R3;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -388,6 +389,9 @@ namespace ProjectKMP.Player
         private PlayerHealth _health;
         private PlayerAttack _playerAttack;
         private PlayerBeamSkill _beamSkill;
+
+        /// <summary>死亡でスキルを中断するための購読</summary>
+        private System.IDisposable _deathSubscription;
         private Transform _cameraTransform;
 
         // ---- 公開API -------------------------------------
@@ -421,6 +425,9 @@ namespace ProjectKMP.Player
             _health = GetComponent<PlayerHealth>();
             _playerAttack = GetComponent<PlayerAttack>();
             _beamSkill = GetComponent<PlayerBeamSkill>();
+
+            // 死亡は被弾RPCから全クライアントで発火するので、各自の画面で同時に中断できる
+            if (_health != null) _deathSubscription = _health.Died.Subscribe(_ => InterruptOnDeath());
         }
 
         private void Start()
@@ -432,6 +439,9 @@ namespace ProjectKMP.Player
         private void OnDestroy()
         {
             if (Local == this) Local = null;
+
+            _deathSubscription?.Dispose();
+            _deathSubscription = null;
 
             // 演出の途中で消えても、空が夜のまま戻らなくならないようにする
             ReleaseNightMood();
@@ -729,6 +739,34 @@ namespace ProjectKMP.Player
             EndChargePresentation();
             ReleaseNightMood();
             EndLeap();
+        }
+
+        /// <summary>
+        /// 死亡した瞬間に必殺技を中断する。まだ玉を投げていない(溜め・跳び上がり・振りかぶり)なら
+        /// 玉ごと取り消し、投げたあとの玉は手を離れているのでそのまま飛ばして着弾させる。
+        /// どちらの場合も、空中で止まったままにならないよう跳び上がりと溜め演出は畳む。
+        /// 死亡は全クライアントで同時に流れてくるので、追加の通信なしで全員の画面が揃う。
+        /// </summary>
+        private void InterruptOnDeath()
+        {
+            bool beforeRelease =
+                _phase == Phase.Aiming || _phase == Phase.Rising || _phase == Phase.WindUp;
+
+            if (beforeRelease)
+            {
+                DestroyAimIndicator();
+                CleanUpThrow();
+                Debug.Log("[PlayerEnergyBallSkill] 死亡したため必殺技を中断しました");
+                return;
+            }
+
+            // 投げたあとの死亡。玉はそのまま飛ばし、本体の跳び上がりと演出だけ畳む
+            if (!_leapActive && !_descendActive) return;
+
+            EndChargePresentation();
+            ReleaseNightMood();
+            EndLeap();
+            Debug.Log("[PlayerEnergyBallSkill] 死亡したため投げ動作を中断しました");
         }
 
         private void DestroyAimIndicator()

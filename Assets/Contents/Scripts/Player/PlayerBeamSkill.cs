@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Photon.Pun;
 using ProjectKMP.Attack;
 using ProjectKMP.Dog;
 using ProjectKMP.Gorilla;
 using ProjectKMP.UI;
+using R3;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -213,6 +214,9 @@ namespace ProjectKMP.Player
         private PlayerHealth _health;
         private PlayerAttack _playerAttack;
 
+        /// <summary>死亡でスキルを中断するための購読</summary>
+        private System.IDisposable _deathSubscription;
+
         // ---- 公開API -------------------------------------
 
         /// <summary>いま操作しているプレイヤーのビームスキル。UI から参照する</summary>
@@ -247,6 +251,9 @@ namespace ProjectKMP.Player
             _animationDriver = GetComponent<DogAnimationDriver>();
             _health = GetComponent<PlayerHealth>();
             _playerAttack = GetComponent<PlayerAttack>();
+
+            // 死亡は被弾RPCから全クライアントで発火するので、各自の画面で同時に中断できる
+            if (_health != null) _deathSubscription = _health.Died.Subscribe(_ => InterruptOnDeath());
         }
 
         private void Start()
@@ -257,6 +264,9 @@ namespace ProjectKMP.Player
         private void OnDestroy()
         {
             if (Local == this) Local = null;
+
+            _deathSubscription?.Dispose();
+            _deathSubscription = null;
         }
 
         private void OnDisable()
@@ -472,6 +482,37 @@ namespace ProjectKMP.Player
         {
             ReleasePose();
             EndLeap();
+        }
+
+        /// <summary>
+        /// 死亡した瞬間にビームを中断する。狙い中・跳び上がり中・照射中のどこで死んでも、
+        /// エフェクトと当たり判定を止めて移動ロックを外す。
+        /// 死亡は全クライアントで同時に流れてくるので、追加の通信なしで全員の画面から消える。
+        /// クールタイムは戻さない(撃った扱いのままにする)。
+        /// </summary>
+        private void InterruptOnDeath()
+        {
+            if (_phase == Phase.Ready) return;
+
+            DestroyAimIndicator();
+
+            // 中断なので、通常終了時のようにフェードアウトはさせず即座に消す
+            _targetStates.Clear();
+            _grassWaveDistances.Clear();
+            if (_beamEffectInstance != null)
+            {
+                Destroy(_beamEffectInstance);
+                _beamEffectInstance = null;
+                _beamVisual = null;
+            }
+
+            ReleasePose();
+
+            // 空中で止まったままにならないよう、跳び上がりの状態も畳んで移動ロックを外す
+            _leapActive = false;
+            EndLeap();
+
+            Debug.Log("[PlayerBeamSkill] 死亡したためビームを中断しました");
         }
 
         private void DestroyAimIndicator()
