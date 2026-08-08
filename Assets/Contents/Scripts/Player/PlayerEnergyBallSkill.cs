@@ -19,13 +19,19 @@ namespace ProjectKMP.Player
     /// </summary>
     public class PlayerEnergyBallSkill : MonoBehaviourPun
     {
-        private enum Phase { Ready, Aiming, Throwing, Impact, Exploding }
+        private enum Phase { Ready, Aiming, Rising, WindUp, Throwing, Impact, Exploding, Descending }
 
         // ---- 定数 ----------------------------------------
 
         private const int OVERLAP_BUFFER_SIZE = 32;
         private const float TURN_SPEED_DEG = 540f;
         private const float STICK_DEAD_ZONE = 0.2f;
+
+        /// <summary>着地できないまま降下し続けるのを防ぐ保険の時間(秒)</summary>
+        private const float MAX_DESCEND_SEC = 3.0f;
+
+        /// <summary>RpcThrow が届かないまま固まらないよう、振りかぶりを打ち切るまでの余裕(秒)</summary>
+        private const float LEAP_VISUAL_TIMEOUT_SEC = 3.0f;
 
         // ---- インスペクタ設定 ------------------------------
 
@@ -115,6 +121,12 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("発動中は自分の画面だけ空を夜に落として、玉やエフェクトの光を際立たせる(シーンに SkyAtmosphere がある場合のみ)")]
         private bool _useNightAtmosphere = true;
 
+        [SerializeField, Tooltip("跳び上がりから投げるまでの間、自分の画面にカットインを出す(シーンに SkillCutin がある場合のみ)")]
+        private bool _useCutin = true;
+
+        [SerializeField, Min(0f), Tooltip("カットインを長めに出す時間(秒)。跳び上がり+振りかぶりの長さに足される")]
+        private float _cutinExtraSec = 0.1f;
+
         [SerializeField, Tooltip("チャージ中にカメラを寄せる量(m)。負の値で近づく")]
         private float _chargeCameraDistanceOffset = -2.5f;
 
@@ -169,6 +181,86 @@ namespace ProjectKMP.Player
 
         [SerializeField, Min(0f), Tooltip("衝撃波と衝撃波の間隔(秒)")]
         private float _shockwaveIntervalSec = 0.18f;
+
+        [Header("発動(跳び上がり・1回転)")]
+        [SerializeField, Min(0f), Tooltip("投げる前に跳び上がる高さ(m)。0なら跳ばずにその場で投げる")]
+        private float _riseHeight = 2.5f;
+
+        [SerializeField, Min(0.05f), Tooltip("跳び上がりにかける時間(秒)")]
+        private float _riseDurationSec = 0.45f;
+
+        [SerializeField, Min(0), Tooltip("跳び上がりながら何回転するか")]
+        private int _spinTurns = 1;
+
+        [SerializeField, Tooltip("回転軸(キャラのローカル軸)。(1,0,0)で前転、(-1,0,0)で後転、(0,1,0)でその場スピン")]
+        private Vector3 _spinAxisLocal = Vector3.right;
+
+        [SerializeField, Min(0.1f), Tooltip("投げ終わったあと降りてくる速さ(m/秒)")]
+        private float _descendSpeed = 8f;
+
+        [Header("振りかぶり")]
+        [SerializeField, Min(0f), Tooltip("投げる直前に玉を引きつける時間(秒)。この“タメ”が投げた感を作る")]
+        private float _windUpSec = 0.16f;
+
+        [SerializeField, Min(0f), Tooltip("振りかぶりで玉を後ろへ引く距離(m)")]
+        private float _windUpBackDistance = 1.0f;
+
+        [SerializeField, Tooltip("振りかぶりで玉を持ち上げる高さ(m)")]
+        private float _windUpUpDistance = 0.4f;
+
+        [SerializeField, Min(1f), Tooltip("振りかぶり中に玉が膨らむ倍率")]
+        private float _windUpBallScale = 1.12f;
+
+        [Header("射出の勢い")]
+        [SerializeField, Range(1f, 4f), Tooltip("射出の加速の鋭さ。1で等速、大きいほど最初に一気に飛び出す")]
+        private float _launchSharpness = 2.2f;
+
+        [SerializeField, Range(0f, 3f), Tooltip("山なりの頂点を手前へ寄せる量。大きいほど終わりぎわが急降下になる")]
+        private float _fallBoost = 1.2f;
+
+        [SerializeField, Range(0f, 1f), Tooltip("飛び出した瞬間、玉が進行方向へ伸びる量")]
+        private float _launchStretch = 0.5f;
+
+        [SerializeField, Min(0.01f), Tooltip("伸びが元に戻るまでの時間(秒)")]
+        private float _stretchRecoverSec = 0.25f;
+
+        [SerializeField, Min(0f), Tooltip("飛行中に玉が自転する速さ(度/秒)")]
+        private float _ballSpinSpeed = 320f;
+
+        [SerializeField, Range(0f, 0.5f), Tooltip("飛行中に玉が脈打つ大きさ")]
+        private float _ballPulseAmount = 0.06f;
+
+        [SerializeField, Min(0f), Tooltip("脈動の速さ(回/秒)")]
+        private float _ballPulseHz = 6f;
+
+        [Header("投げの反動")]
+        [SerializeField, Min(0f), Tooltip("投げた瞬間のカメラの揺れの強さ(m)。0で揺らさない")]
+        private float _throwShakeAmplitude = 0.22f;
+
+        [SerializeField, Min(0f), Tooltip("投げた瞬間のカメラの揺れの長さ(秒)")]
+        private float _throwShakeDurationSec = 0.22f;
+
+        [SerializeField, Tooltip("投げた瞬間に視野角を広げる量(度)。0で広げない")]
+        private float _throwFovKick = 7f;
+
+        [SerializeField, Min(0.01f), Tooltip("広げた視野角が戻るまでの時間(秒)")]
+        private float _throwFovKickSec = 0.3f;
+
+        [SerializeField, Min(0f), Tooltip("投げた瞬間のヒットストップの長さ(秒)。0で無効")]
+        private float _throwHitStopSec = 0.04f;
+
+        [SerializeField, Min(0f), Tooltip("投げた反動で後ろへ下がる速さ(m/秒)。降りながら後退する")]
+        private float _throwRecoilSpeed = 1.6f;
+
+        [Header("発射の余波・着弾予告")]
+        [SerializeField, Tooltip("投げた瞬間に足元へ衝撃波を出し、草をなぎ倒す")]
+        private bool _useLaunchShockwave = true;
+
+        [SerializeField, Min(0.5f), Tooltip("足元の衝撃波が広がる半径(m)")]
+        private float _launchShockwaveRadius = 5f;
+
+        [SerializeField, Tooltip("飛行中、着弾点に縮んでいく予告リングを出す")]
+        private bool _useImpactWarning = true;
 
         [Header("地面の痕")]
         [SerializeField, Tooltip("着弾点の地面に残す痕(デカール)。未設定なら痕を残さない")]
@@ -247,6 +339,36 @@ namespace ProjectKMP.Player
         private float _explodeElapsedSec;
         private float _explodeStartScale;
 
+        private CharacterController _controller;
+        private bool _leapActive;
+        private float _leapElapsedSec;
+        private float _leapStartYawDeg;
+        private float _risenHeight;
+        private float _windUpElapsedSec;
+        private float _descendElapsedSec;
+        private bool _descendActive;
+
+        /// <summary>全クライアントで玉の見た目を動かすための、跳び上がり開始からの経過時間</summary>
+        private float _leapVisualElapsedSec;
+
+        /// <summary>投げる先。指を離した時点で決まり、振りかぶりが終わってから配る</summary>
+        private Vector3 _pendingTarget;
+
+        /// <summary>足元の高さ。空中から投げるので、跳ぶ前の地面の高さを覚えておく</summary>
+        private float _groundY;
+
+        private float _stretchRemainSec;
+        private float _ballSpinAngleDeg;
+        private float _fovKickRemainSec;
+
+        /// <summary>玉の見た目の子。伸び縮みと脈動をここに掛ける(根本は軌跡の太さに影響するので触らない)</summary>
+        private readonly List<Transform> _ballVisuals = new List<Transform>();
+        private readonly List<Vector3> _ballVisualBaseScales = new List<Vector3>();
+
+        /// <summary>玉に付いているライト。夜の演出中に飛ぶので、周りを照らすと迫力が出る</summary>
+        private Light _ballLight;
+        private float _ballLightBaseIntensity;
+
         private static readonly int BASE_COLOR_ID = Shader.PropertyToID("_BaseColor");
         private readonly System.Collections.Generic.List<Renderer> _ballRenderers = new System.Collections.Generic.List<Renderer>();
         private readonly System.Collections.Generic.List<Color> _ballBaseColors = new System.Collections.Generic.List<Color>();
@@ -273,8 +395,14 @@ namespace ProjectKMP.Player
         /// <summary>いま操作しているプレイヤーの元気玉スキル。UI から参照する</summary>
         public static PlayerEnergyBallSkill Local { get; private set; }
 
-        /// <summary>狙い中または投擲中(この間は他の攻撃を出させない)。着弾後の爆発演出中は含まない</summary>
-        public bool IsBusy => _phase == Phase.Aiming || _phase == Phase.Throwing;
+        /// <summary>狙い中・跳び上がり中・投擲中・着地待ち(この間は他の攻撃を出させない)。着弾後の爆発演出中は含まない</summary>
+        public bool IsBusy =>
+            _phase == Phase.Aiming || _phase == Phase.Rising || _phase == Phase.WindUp
+            || _phase == Phase.Throwing || _descendActive;
+
+        /// <summary>跳び上がってから着地するまでの間。この間は吹き飛ばされたくない</summary>
+        public bool IsInThrowAction =>
+            _phase == Phase.Rising || _phase == Phase.WindUp || _descendActive;
 
         /// <summary>クールタイムの残り具合(1=使った直後、0=使える)</summary>
         public float CooldownRatio01 =>
@@ -287,6 +415,7 @@ namespace ProjectKMP.Player
 
         private void Awake()
         {
+            _controller = GetComponent<CharacterController>();
             _mover = GetComponent<LocalPlayerMover>();
             _animationDriver = GetComponent<DogAnimationDriver>();
             _health = GetComponent<PlayerHealth>();
@@ -322,8 +451,14 @@ namespace ProjectKMP.Player
 
             if (IsOwner) UpdateOwnerInput();
 
+            UpdateFovKick();
+
             // チャージと投擲の見た目は全クライアントで動かす
             if (_phase == Phase.Aiming) UpdateBallCharge();
+            if (_phase == Phase.Rising || _phase == Phase.WindUp) UpdateLeapVisual();
+            if (_phase == Phase.Rising && IsOwner) UpdateRising();
+            if (_phase == Phase.WindUp && IsOwner) UpdateWindUp();
+            if (_descendActive && IsOwner) UpdateDescending();
             if (_phase == Phase.Throwing) UpdateThrowing();
             if (_phase == Phase.Impact) UpdateImpact();
             if (_phase == Phase.Exploding) UpdateExploding();
@@ -465,13 +600,135 @@ namespace ProjectKMP.Player
             photonView.RPC(nameof(RpcCancelCharge), RpcTarget.All);
         }
 
+        /// <summary>
+        /// 指を離した瞬間。クールタイムを始め、前転しながら跳び上がる。
+        /// 頂点で振りかぶり、そこから投げる(跳び上がりの高さが0なら、その場で振りかぶって投げる)。
+        /// </summary>
         private void Throw()
         {
             DestroyAimIndicator();
             _cooldownRemainSec = _cooldownSec;
-            if (_mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.None;
 
-            photonView.RPC(nameof(RpcThrow), RpcTarget.All, _aimMarkerPosition);
+            _pendingTarget = _aimMarkerPosition;
+            _groundY = transform.position.y;
+
+            if (_riseHeight > 0f) StartRising();
+            else StartWindUp();
+        }
+
+        /// <summary>その場で1回転しながら跳び上がる。頂点でちょうど元の向きに戻る</summary>
+        private void StartRising()
+        {
+            _phase = Phase.Rising;
+            _leapActive = true;
+            _leapElapsedSec = 0f;
+            _leapStartYawDeg = transform.eulerAngles.y;
+            _risenHeight = 0f;
+
+            // 重力で落ちないよう、この間の座標はこちらで動かす
+            if (_mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.Frozen;
+
+            photonView.RPC(nameof(RpcBeginLeap), RpcTarget.All, _leapStartYawDeg);
+        }
+
+        private void UpdateRising()
+        {
+            if (_health != null && _health.IsDead) { AbortThrow(); return; }
+
+            _leapElapsedSec += Time.deltaTime;
+            float t = Mathf.Clamp01(_leapElapsedSec / _riseDurationSec);
+
+            // 勢いよく上がってから頂点で止まるように減速させる
+            float eased = 1f - (1f - t) * (1f - t);
+            float targetHeight = _riseHeight * eased;
+            if (_controller != null) _controller.Move(Vector3.up * (targetHeight - _risenHeight));
+            _risenHeight = targetHeight;
+
+            // 上がりきったところで回転がちょうど1周ぶん終わるようにする。
+            // 元の向きに指定軸まわりの回転を掛けるので、軸はキャラのローカル軸になる
+            Quaternion baseRotation = Quaternion.Euler(0f, _leapStartYawDeg, 0f);
+            Vector3 axis = _spinAxisLocal.sqrMagnitude > 0.0001f ? _spinAxisLocal.normalized : Vector3.right;
+            transform.rotation = baseRotation * Quaternion.AngleAxis(360f * _spinTurns * t, axis);
+
+            if (t < 1f) return;
+
+            transform.rotation = Quaternion.Euler(0f, _leapStartYawDeg, 0f);
+            StartWindUp();
+        }
+
+        /// <summary>頂点で玉を後ろへ引く“タメ”。ここで一拍おくことで、投げた瞬間の勢いが際立つ</summary>
+        private void StartWindUp()
+        {
+            _phase = Phase.WindUp;
+            _windUpElapsedSec = 0f;
+
+            // 跳ばずに投げる設定のときは、ここが全クライアントへの合図になる
+            if (!_leapActive)
+            {
+                _leapStartYawDeg = transform.eulerAngles.y;
+                photonView.RPC(nameof(RpcBeginLeap), RpcTarget.All, _leapStartYawDeg);
+            }
+        }
+
+        private void UpdateWindUp()
+        {
+            if (_health != null && _health.IsDead) { AbortThrow(); return; }
+
+            _windUpElapsedSec += Time.deltaTime;
+            if (_windUpElapsedSec < _windUpSec) return;
+
+            photonView.RPC(nameof(RpcThrow), RpcTarget.All, _pendingTarget, _groundY);
+        }
+
+        /// <summary>投げ終わり。空中にいるなら地面まで降りてから操作を返す</summary>
+        private void StartDescend()
+        {
+            if (!_leapActive) { EndLeap(); return; }
+
+            _descendActive = true;
+            _descendElapsedSec = 0f;
+        }
+
+        private void UpdateDescending()
+        {
+            _descendElapsedSec += Time.deltaTime;
+
+            if (_controller != null)
+            {
+                // 投げた反動で少し後ろへ下がりながら降りる
+                Vector3 back = Quaternion.Euler(0f, _leapStartYawDeg, 0f) * Vector3.back;
+                _controller.Move(
+                    Vector3.down * (_descendSpeed * Time.deltaTime) + back * (_throwRecoilSpeed * Time.deltaTime));
+            }
+
+            bool landed = _controller == null || _controller.isGrounded;
+            if (landed || _descendElapsedSec >= MAX_DESCEND_SEC) EndLeap();
+        }
+
+        /// <summary>着地して操作を戻す</summary>
+        private void EndLeap()
+        {
+            _descendActive = false;
+            _leapActive = false;
+            if (IsOwner && _mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.None;
+        }
+
+        /// <summary>投げきる前に死んだときなど、空中で止まったままにならないよう全員で後始末する</summary>
+        private void AbortThrow()
+        {
+            photonView.RPC(nameof(RpcAbortThrow), RpcTarget.All);
+        }
+
+        /// <summary>投げの途中経過をすべて片付けて、待機状態に戻す</summary>
+        private void CleanUpThrow()
+        {
+            _phase = Phase.Ready;
+            if (IsOwner) SkillCutin.Cancel();
+            DestroyBall();
+            DestroyChargeEffect();
+            EndChargePresentation();
+            ReleaseNightMood();
+            EndLeap();
         }
 
         private void DestroyAimIndicator()
@@ -535,12 +792,48 @@ namespace ProjectKMP.Player
             ReleaseNightMood();
         }
 
-        /// <summary>投擲の開始。全員のクライアントで玉を飛ばし、投げるモーションを再生する</summary>
+        /// <summary>
+        /// 跳び上がりの開始。全員のクライアントで玉を体から切り離し、頭上に浮かせたままにする。
+        /// 体の位置と回転は座標同期で伝わるので、ここでは玉の扱いだけ揃える。
+        /// </summary>
         [PunRPC]
-        private void RpcThrow(Vector3 target)
+        private void RpcBeginLeap(float startYawDeg)
+        {
+            // 跳ばない設定のときは跳び上がりを飛ばして、いきなり振りかぶりから始める
+            _phase = _riseHeight > 0f ? Phase.Rising : Phase.WindUp;
+            _leapStartYawDeg = startYawDeg;
+            _leapVisualElapsedSec = 0f;
+
+            // 体と一緒に玉まで回ってしまわないよう、玉は切り離して位置だけ追わせる
+            if (_ballInstance != null)
+            {
+                _ballInstance.transform.SetParent(null);
+                _ballInstance.transform.rotation = Quaternion.identity;
+                _ballInstance.transform.localScale = Vector3.one * _ballMaxScale;
+            }
+
+            // 収束エフェクトは体に付いていて一緒に回ってしまうので、ここで畳む
+            DestroyChargeEffect();
+
+            // カットインは発動した本人の画面にだけ。跳び上がり〜振りかぶりのちょうど裏で流す
+            if (_useCutin && IsOwner) SkillCutin.Play(RiseVisualSec + _windUpSec + _cutinExtraSec);
+        }
+
+        /// <summary>投げきれなかったときの後始末を全員で行う</summary>
+        [PunRPC]
+        private void RpcAbortThrow()
+        {
+            CleanUpThrow();
+        }
+
+        /// <summary>投擲の開始。全員のクライアントで玉を飛ばし、投げるモーションと反動を再生する</summary>
+        [PunRPC]
+        private void RpcThrow(Vector3 target, float groundY)
         {
             DestroyChargeEffect();
             EndChargePresentation();
+
+            _groundY = groundY;
 
             if (_ballInstance == null)
             {
@@ -561,8 +854,17 @@ namespace ProjectKMP.Player
             float distance = Vector3.Distance(_throwStart, target);
             _throwTravelSec = Mathf.Max(0.2f, distance / _throwSpeed);
 
+            // 飛び出した瞬間だけ玉を進行方向へ引き伸ばす
+            _stretchRemainSec = _stretchRecoverSec;
+            _ballSpinAngleDeg = 0f;
+
             // 投げる動作として頭突きモーションを流用する
             if (_animationDriver != null) _animationDriver.PlayAttack();
+
+            PlayThrowImpact();
+
+            // 空中から投げているので、ここから降りて着地する
+            if (IsOwner) StartDescend();
         }
 
         /// <summary>ヒットの通知。全員のクライアントでエフェクトとダメージ処理を行う</summary>
@@ -603,20 +905,167 @@ namespace ProjectKMP.Player
             _ballInstance.transform.localScale = Vector3.one * (_ballMaxScale * eased);
         }
 
-        /// <summary>投げた玉を山なりに飛ばし、着弾したら爆発させる</summary>
+        /// <summary>
+        /// 投げた玉を飛ばす。等速で動かすと「置きに行った」動きになるので、
+        /// 最初に一気に加速し、山なりの頂点を手前へ寄せて終わりぎわに落とす。
+        /// </summary>
         private void UpdateThrowing()
         {
             _throwElapsedSec += Time.deltaTime;
             float t = Mathf.Clamp01(_throwElapsedSec / _throwTravelSec);
 
+            // 立ち上がりを鋭くした進み具合。_launchSharpness が1なら等速になる
+            float progress = 1f - Mathf.Pow(1f - t, _launchSharpness);
+
+            // 山なりの頂点を手前へ寄せると、後半が急降下になって落ちてくる感じが出る
+            float arc = Mathf.Sin(Mathf.Pow(progress, 1f / (1f + _fallBoost)) * Mathf.PI) * _arcHeight;
+
+            Vector3 position = Vector3.Lerp(_throwStart, _throwTarget, progress) + Vector3.up * arc;
+
             if (_ballInstance != null)
             {
-                Vector3 position = Vector3.Lerp(_throwStart, _throwTarget, t);
-                position += Vector3.up * (Mathf.Sin(t * Mathf.PI) * _arcHeight);
+                Vector3 delta = position - _ballInstance.transform.position;
                 _ballInstance.transform.position = position;
+                UpdateBallFlightLook(delta);
             }
 
             if (t >= 1f) StartImpact();
+        }
+
+        /// <summary>
+        /// 飛行中の玉の向き・伸び・脈動。根本を進行方向へ向けておくと、
+        /// 子に掛けた伸縮がそのまま流線形になる(根本の大きさは軌跡の太さに響くので触らない)。
+        /// </summary>
+        private void UpdateBallFlightLook(Vector3 delta)
+        {
+            if (_ballInstance == null) return;
+
+            if (delta.sqrMagnitude > 0.000001f)
+            {
+                _ballSpinAngleDeg += _ballSpinSpeed * Time.deltaTime;
+                _ballInstance.transform.rotation =
+                    Quaternion.LookRotation(delta.normalized) * Quaternion.Euler(0f, 0f, _ballSpinAngleDeg);
+            }
+
+            if (_stretchRemainSec > 0f) _stretchRemainSec -= Time.deltaTime;
+
+            float stretch01 = _stretchRecoverSec <= 0f ? 0f : Mathf.Clamp01(_stretchRemainSec / _stretchRecoverSec);
+            float stretch = _launchStretch * stretch01;
+            float pulse = 1f + Mathf.Sin(_throwElapsedSec * _ballPulseHz * Mathf.PI * 2f) * _ballPulseAmount;
+
+            // 進行方向(ローカルZ)へ伸ばし、そのぶん横をすぼめる
+            ApplyBallVisualScale(
+                new Vector3(1f - stretch * 0.35f, 1f - stretch * 0.35f, 1f + stretch) * pulse);
+        }
+
+        /// <summary>玉の見た目の子に倍率を掛ける</summary>
+        private void ApplyBallVisualScale(Vector3 factor)
+        {
+            for (int i = 0; i < _ballVisuals.Count; i++)
+            {
+                Transform visual = _ballVisuals[i];
+                if (visual == null) continue;
+
+                Vector3 baseScale = _ballVisualBaseScales[i];
+                visual.localScale = new Vector3(
+                    baseScale.x * factor.x, baseScale.y * factor.y, baseScale.z * factor.z);
+            }
+        }
+
+        /// <summary>
+        /// 跳び上がり中と振りかぶり中、玉を頭上に浮かせておく。
+        /// 全クライアントが同じ時間で同じ動きをするので、通信は跳び上がりの合図だけで足りる。
+        /// </summary>
+        private void UpdateLeapVisual()
+        {
+            _leapVisualElapsedSec += Time.deltaTime;
+
+            // 合図だけ届いて投擲が届かなかったときに、固まったままにならないための保険
+            if (_leapVisualElapsedSec > RiseVisualSec + _windUpSec + LEAP_VISUAL_TIMEOUT_SEC)
+            {
+                CleanUpThrow();
+                return;
+            }
+
+            if (_ballInstance == null) return;
+
+            float windUp01 = _windUpSec <= 0f
+                ? 1f
+                : Mathf.Clamp01((_leapVisualElapsedSec - RiseVisualSec) / _windUpSec);
+
+            // 引き始めは速く、引ききる手前でためる
+            float pull = 1f - (1f - windUp01) * (1f - windUp01);
+            Vector3 forward = Quaternion.Euler(0f, _leapStartYawDeg, 0f) * Vector3.forward;
+
+            _ballInstance.transform.position = transform.position + Vector3.up * _ballHeight
+                - forward * (_windUpBackDistance * pull)
+                + Vector3.up * (_windUpUpDistance * pull);
+
+            _ballInstance.transform.localScale =
+                Vector3.one * (_ballMaxScale * Mathf.Lerp(1f, _windUpBallScale, pull));
+        }
+
+        /// <summary>跳び上がりに使う時間。跳ばない設定なら0</summary>
+        private float RiseVisualSec => _riseHeight > 0f ? _riseDurationSec : 0f;
+
+        /// <summary>投げた瞬間の手ごたえ。足元の余波・着弾予告・カメラの反応をまとめて出す</summary>
+        private void PlayThrowImpact()
+        {
+            // 足元の余波は全員に見せる。飛び出した勢いで草がなぎ倒される
+            if (_useLaunchShockwave && _shockwavePrefab != null)
+            {
+                Vector3 feet = new Vector3(transform.position.x, _groundY + 0.1f, transform.position.z);
+                EnergyShockwave.Spawn(
+                    _shockwavePrefab, feet, 0.5f, _launchShockwaveRadius, 0.45f, 0.6f, _flattenGrass);
+            }
+
+            // 着弾点に縮んでいくリングを出して、どこへ落ちてくるかを見せる
+            if (_useImpactWarning && _shockwavePrefab != null)
+            {
+                Vector3 warning = new Vector3(_throwTarget.x, _groundY + 0.05f, _throwTarget.z);
+                EnergyShockwave.Spawn(
+                    _shockwavePrefab, warning, _explosionRadius * 2.2f, _explosionRadius * 0.4f,
+                    _throwTravelSec + _impactLingerSec, 0.35f, false);
+            }
+
+            // ここから先は投げた本人の画面だけ(他人の投擲で画面が揺れると見づらい)
+            if (!IsOwner) return;
+
+            if (_throwShakeAmplitude > 0f && _throwShakeDurationSec > 0f)
+            {
+                ThirdPersonCamera playerCamera = ResolveCamera();
+                if (playerCamera != null) playerCamera.Shake(_throwShakeAmplitude, _throwShakeDurationSec);
+            }
+
+            if (!Mathf.Approximately(_throwFovKick, 0f) && _throwFovKickSec > 0f)
+            {
+                _fovKickRemainSec = _throwFovKickSec;
+                ApplyFovKick();
+            }
+
+            if (_throwHitStopSec > 0f)
+            {
+                _hitStopRemainSec = _throwHitStopSec;
+                ApplyTimeScale();
+            }
+        }
+
+        /// <summary>広げた視野角をなめらかに戻す。時間が止まっている間も進むよう実時間で数える</summary>
+        private void UpdateFovKick()
+        {
+            if (_fovKickRemainSec <= 0f) return;
+
+            _fovKickRemainSec -= Time.unscaledDeltaTime;
+            ApplyFovKick();
+        }
+
+        private void ApplyFovKick()
+        {
+            ThirdPersonCamera playerCamera = ResolveCamera();
+            if (playerCamera == null) return;
+
+            float t = _throwFovKickSec <= 0f ? 0f : Mathf.Clamp01(_fovKickRemainSec / _throwFovKickSec);
+            playerCamera.SetFovOffset(_throwFovKick * t);
         }
 
         /// <summary>着弾。玉を着地したその場に残し、時間が来たら爆発させる</summary>
@@ -625,6 +1074,9 @@ namespace ProjectKMP.Player
             _phase = Phase.Impact;
             _impactElapsedSec = 0f;
             _impactStartScale = _ballInstance != null ? _ballInstance.transform.localScale.x : _ballMaxScale;
+
+            // 伸びと脈動を元に戻してから破裂の演出に入る
+            ApplyBallVisualScale(Vector3.one);
         }
 
         /// <summary>
@@ -732,7 +1184,21 @@ namespace ProjectKMP.Player
 
             _ballRenderers.Clear();
             _ballBaseColors.Clear();
+            _ballVisuals.Clear();
+            _ballVisualBaseScales.Clear();
             if (_ballInstance == null) return;
+
+            _ballLight = _ballInstance.GetComponentInChildren<Light>(true);
+            _ballLightBaseIntensity = _ballLight != null ? _ballLight.intensity : 0f;
+
+            // 伸縮を掛ける対象。粒(パーティクル)は伸ばすと不自然なので外す
+            foreach (Transform child in _ballInstance.transform)
+            {
+                if (child.GetComponent<ParticleSystem>() != null) continue;
+
+                _ballVisuals.Add(child);
+                _ballVisualBaseScales.Add(child.localScale);
+            }
 
             foreach (var ballRenderer in _ballInstance.GetComponentsInChildren<Renderer>(true))
             {
@@ -752,6 +1218,8 @@ namespace ProjectKMP.Player
         /// <summary>マテリアルを複製せず、プロパティブロックで玉の透明度だけ変える</summary>
         private void SetBallAlpha(float alpha01)
         {
+            if (_ballLight != null) _ballLight.intensity = _ballLightBaseIntensity * alpha01;
+
             if (_ballPropertyBlock == null) return;
 
             for (int i = 0; i < _ballRenderers.Count; i++)

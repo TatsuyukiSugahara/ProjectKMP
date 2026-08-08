@@ -498,7 +498,7 @@ MonoBehaviour:
   _zoneTickDamage: 3
   _zoneTickIntervalSec: 0.5
   _zoneDurationSec: 4
-  _cooldownSec: 15
+  _cooldownSec: 1
   _maxRange: 8
   _markerMoveSpeed: 8
   _chargeDurationSec: 1
@@ -508,7 +508,7 @@ MonoBehaviour:
   _arcHeight: 1
   _explosionRadius: 3
   _zoneRadius: 4.5
-  _impactLingerSec: 0.35
+  _impactLingerSec: 0.01
   _explodeExpandSec: 0.25
   _explodeScaleMul: 2.6
   _chargeConvergeEffectPrefab: {fileID: 3526373135642884375, guid: fcb7b236968f5445d83d6b2063efa1ac, type: 3}
@@ -520,6 +520,8 @@ MonoBehaviour:
   _hitStopTimeScale: 0.05
   _chargeTimeScale: 0.75
   _useNightAtmosphere: 1
+  _useCutin: 1
+  _cutinExtraSec: 0.1
   _chargeCameraDistanceOffset: -2.5
   _chargeCameraFovOffset: -8
   _chargeRingIntervalSec: 0.3
@@ -540,6 +542,31 @@ MonoBehaviour:
   _flattenGrass: 1
   _shockwaveCount: 4
   _shockwaveIntervalSec: 0.18
+  _riseHeight: 2.5
+  _riseDurationSec: 0.45
+  _spinTurns: 1
+  _spinAxisLocal: {x: 1, y: 0, z: 0}
+  _descendSpeed: 8
+  _windUpSec: 0.16
+  _windUpBackDistance: 1
+  _windUpUpDistance: 0.4
+  _windUpBallScale: 1.12
+  _launchSharpness: 2.2
+  _fallBoost: 1.2
+  _launchStretch: 0.5
+  _stretchRecoverSec: 0.25
+  _ballSpinSpeed: 320
+  _ballPulseAmount: 0.06
+  _ballPulseHz: 6
+  _throwShakeAmplitude: 0.22
+  _throwShakeDurationSec: 0.22
+  _throwFovKick: 7
+  _throwFovKickSec: 0.3
+  _throwHitStopSec: 0.04
+  _throwRecoilSpeed: 1.6
+  _useLaunchShockwave: 1
+  _launchShockwaveRadius: 5
+  _useImpactWarning: 1
   _impactDecalPrefab: {fileID: 1426292960322628520, guid: 4ad4ac40bc9c04de382334e67c31f4f5, type: 3}
   _decalWidthScale: 1.65
   _ballPrefab: {fileID: 143401169253108070, guid: 3a075985537a9473b8b847f40c6238a2, type: 3}
