@@ -124,6 +124,9 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("跳び上がりから投げるまでの間、自分の画面にカットインを出す(シーンに SkillCutin がある場合のみ)")]
         private bool _useCutin = true;
 
+        [SerializeField, Min(0f), Tooltip("カットインを長めに出す時間(秒)。跳び上がり+振りかぶりの長さに足される")]
+        private float _cutinExtraSec = 0.1f;
+
         [SerializeField, Tooltip("チャージ中にカメラを寄せる量(m)。負の値で近づく")]
         private float _chargeCameraDistanceOffset = -2.5f;
 
@@ -813,7 +816,7 @@ namespace ProjectKMP.Player
             DestroyChargeEffect();
 
             // カットインは発動した本人の画面にだけ。跳び上がり〜振りかぶりのちょうど裏で流す
-            if (_useCutin && IsOwner) SkillCutin.Play(RiseVisualSec + _windUpSec);
+            if (_useCutin && IsOwner) SkillCutin.Play(RiseVisualSec + _windUpSec + _cutinExtraSec);
         }
 
         /// <summary>投げきれなかったときの後始末を全員で行う</summary>

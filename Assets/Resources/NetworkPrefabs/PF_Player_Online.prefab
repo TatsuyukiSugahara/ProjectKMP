@@ -498,7 +498,7 @@ MonoBehaviour:
   _zoneTickDamage: 3
   _zoneTickIntervalSec: 0.5
   _zoneDurationSec: 4
-  _cooldownSec: 15
+  _cooldownSec: 1
   _maxRange: 8
   _markerMoveSpeed: 8
   _chargeDurationSec: 1
@@ -508,7 +508,7 @@ MonoBehaviour:
   _arcHeight: 1
   _explosionRadius: 3
   _zoneRadius: 4.5
-  _impactLingerSec: 0.35
+  _impactLingerSec: 0.01
   _explodeExpandSec: 0.25
   _explodeScaleMul: 2.6
   _chargeConvergeEffectPrefab: {fileID: 3526373135642884375, guid: fcb7b236968f5445d83d6b2063efa1ac, type: 3}
@@ -521,6 +521,7 @@ MonoBehaviour:
   _chargeTimeScale: 0.75
   _useNightAtmosphere: 1
   _useCutin: 1
+  _cutinExtraSec: 0.1
   _chargeCameraDistanceOffset: -2.5
   _chargeCameraFovOffset: -8
   _chargeRingIntervalSec: 0.3
