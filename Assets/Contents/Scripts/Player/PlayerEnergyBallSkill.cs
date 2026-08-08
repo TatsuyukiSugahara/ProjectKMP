@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Photon.Pun;
 using ProjectKMP.Attack;
 using ProjectKMP.Dog;
@@ -111,6 +111,9 @@ namespace ProjectKMP.Player
         [Header("発動時の演出")]
         [SerializeField, Range(0.1f, 1f), Tooltip("チャージ中の時間の速さ(1=通常)。溜めの間だけ世界がゆっくりになる")]
         private float _chargeTimeScale = 0.75f;
+
+        [SerializeField, Tooltip("発動中は自分の画面だけ空を夜に落として、玉やエフェクトの光を際立たせる(シーンに SkyAtmosphere がある場合のみ)")]
+        private bool _useNightAtmosphere = true;
 
         [SerializeField, Tooltip("チャージ中にカメラを寄せる量(m)。負の値で近づく")]
         private float _chargeCameraDistanceOffset = -2.5f;
@@ -255,6 +258,7 @@ namespace ProjectKMP.Player
         private bool _chargeSlowActive;
         private float _chargeRingTimerSec;
         private bool _chargeCompleteFlashed;
+        private bool _nightMoodActive;
         private ThirdPersonCamera _cameraController;
 
         private LocalPlayerMover _mover;
@@ -299,6 +303,9 @@ namespace ProjectKMP.Player
         private void OnDestroy()
         {
             if (Local == this) Local = null;
+
+            // 演出の途中で消えても、空が夜のまま戻らなくならないようにする
+            ReleaseNightMood();
 
             // 演出で時間をいじったまま破棄されても、止まったままにしない
             if (_hitStopRemainSec > 0f || _hitStopRecoverRemainSec > 0f || _chargeSlowActive) Time.timeScale = 1f;
@@ -504,6 +511,9 @@ namespace ProjectKMP.Player
             _chargeRingTimerSec = 0f;
             _chargeCompleteFlashed = false;
 
+            // 空を夜に落として光を際立たせる(暗転するのは発動した本人の画面だけ)
+            RequestNightMood();
+
             // キャラ本体の発光は全員の画面で見せる(誰が溜めているかが分かる)
             if (_skillGlow != null) _skillGlow.SetGlow(true);
 
@@ -522,6 +532,7 @@ namespace ProjectKMP.Player
             DestroyBall();
             DestroyChargeEffect();
             EndChargePresentation();
+            ReleaseNightMood();
         }
 
         /// <summary>投擲の開始。全員のクライアントで玉を飛ばし、投げるモーションを再生する</summary>
@@ -708,6 +719,9 @@ namespace ProjectKMP.Player
             {
                 _phase = Phase.Ready;
                 DestroyBall();
+
+                // 爆発の光が消えきってから昼へ戻す(戻りはゆっくりで余韻を残す)
+                ReleaseNightMood();
             }
         }
 
@@ -851,6 +865,27 @@ namespace ProjectKMP.Player
 
             SetChargeSlow(false);
             ApplyChargeCamera(false);
+        }
+
+        /// <summary>空を夜に落とすよう申請する(発動した本人の画面のみ)。二重に申請しないよう自分の申請状態を持つ</summary>
+        private void RequestNightMood()
+        {
+            if (!_useNightAtmosphere || _nightMoodActive) return;
+
+            // 他人の必殺技で自分の画面まで暗くなると見づらいので、暗転するのは発動した本人の画面だけ
+            if (!IsOwner) return;
+
+            _nightMoodActive = true;
+            Field.SkyAtmosphere.RequestNight();
+        }
+
+        /// <summary>夜の申請を取り下げる。申請していなければ何もしない</summary>
+        private void ReleaseNightMood()
+        {
+            if (!_nightMoodActive) return;
+
+            _nightMoodActive = false;
+            Field.SkyAtmosphere.ReleaseNight();
         }
 
         private void ApplyChargeCamera(bool enabled)
