@@ -519,6 +519,7 @@ MonoBehaviour:
   _hitStopDurationSec: 0.14
   _hitStopTimeScale: 0.05
   _chargeTimeScale: 0.75
+  _useNightAtmosphere: 1
   _chargeCameraDistanceOffset: -2.5
   _chargeCameraFovOffset: -8
   _chargeRingIntervalSec: 0.3
