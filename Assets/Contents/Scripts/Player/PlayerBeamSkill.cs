@@ -107,6 +107,9 @@ namespace ProjectKMP.Player
         [SerializeField, Min(0.1f), Tooltip("なぎ倒しの波がビームに沿って進む速さ(m/秒)")]
         private float _grassWaveSpeed = 20f;
 
+        [SerializeField, Tooltip("照射が当たった木を倒す")]
+        private bool _breakTrees = true;
+
         [Header("跳び上がり")]
         [SerializeField, Min(0f), Tooltip("発射前に跳び上がる高さ(m)。0なら跳ばずにその場で撃つ")]
         private float _riseHeight = 2.5f;
@@ -649,6 +652,13 @@ namespace ProjectKMP.Player
             UpdateBeamLength();
             SpawnBeamDecals();
             UpdateGrassWaves();
+
+            // 木はシーンに置かれていて全クライアントに同じものがあり、この処理も全員で走る。
+            // そのため追加の通信なしで全員の画面の同じ木が倒れる(デカールや草と同じ方式)
+            if (_breakTrees)
+            {
+                Field.BreakableTree.BreakAlongBeam(_beamOrigin, _beamDirection, _currentBeamLength, _beamWidth);
+            }
 
             // 当たり判定は操作している本人だけが取る(二重ダメージを防ぐ)
             if (IsOwner) UpdateBeamHit();

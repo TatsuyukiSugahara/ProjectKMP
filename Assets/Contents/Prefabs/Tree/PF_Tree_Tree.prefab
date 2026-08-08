@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4938559794611775962}
+  - component: {fileID: 1291912350583919278}
   m_Layer: 0
   m_Name: PF_Tree_Tree
   m_TagString: Untagged
@@ -32,6 +33,27 @@ Transform:
   - {fileID: 4465300224214340423}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1291912350583919278
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6912782584008246076}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f4c3fd154d8c41a88ff40216fec4d57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Field.BreakableTree
+  _trunkRadius: 0.6
+  _trunkHeight: 6
+  _fallDurationSec: 1.1
+  _fallAngleDeg: 92
+  _lingerSec: 1.5
+  _sinkDurationSec: 1.2
+  _sinkDepth: 4
+  _regrowDelaySec: 0
+  _flattenGrassOnFall: 1
 --- !u!1001 &4214621137465373868
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -162,17 +162,8 @@ namespace ProjectKMP.Player
         [SerializeField, Min(0.05f), Tooltip("ひび割れ1枚の大きさを爆発の直径の何倍にするか")]
         private float _crackDecalScale = 0.45f;
 
-        [SerializeField, Tooltip("爆発で揺らす背景オブジェクトのレイヤー")]
-        private LayerMask _sceneryShakeLayers = 1;
-
-        [SerializeField, Min(0f), Tooltip("背景を揺らす範囲の半径(m)。0で揺らさない")]
-        private float _sceneryShakeRadius = 9f;
-
-        [SerializeField, Min(0f), Tooltip("背景オブジェクトの揺れの角度(度)")]
-        private float _sceneryShakeAngleDeg = 6f;
-
-        [SerializeField, Min(0.05f), Tooltip("背景オブジェクトの揺れの長さ(秒)")]
-        private float _sceneryShakeDurationSec = 0.6f;
+        [SerializeField, Min(0.0f), Tooltip("爆心からこの範囲にある木を倒す(メートル)。0で倒さない")]
+        private float _treeBreakRadius = 5.0f;
 
         [SerializeField, Tooltip("衝撃波が通ったところの草をなぎ倒す")]
         private bool _flattenGrass = true;
@@ -1154,6 +1145,10 @@ namespace ProjectKMP.Player
 
             PlayExplosionImpact();
 
+            // 木はシーンに置かれていて全クライアントに同じものがあり、この処理も全員で走る。
+            // そのため追加の通信なしで全員の画面の同じ木が倒れる(デカールや草と同じ方式)
+            Field.BreakableTree.BreakInSphere(_throwTarget, _treeBreakRadius);
+
             if (_explosionEffectPrefab != null)
             {
                 AttackEffect.Spawn(
@@ -1320,14 +1315,6 @@ namespace ProjectKMP.Player
             {
                 _hitStopRemainSec = _hitStopDurationSec;
                 ApplyTimeScale();
-            }
-
-            // 周りの木などが反応すると、爆発の規模が伝わる
-            if (_sceneryShakeRadius > 0f)
-            {
-                ImpactShake.ShakeAround(
-                    _throwTarget, _sceneryShakeRadius, _sceneryShakeLayers,
-                    _sceneryShakeAngleDeg, _sceneryShakeDurationSec, 12);
             }
         }
 
