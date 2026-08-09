@@ -88,6 +88,18 @@ namespace ProjectKMP.Player
         [SerializeField, Min(0f), Tooltip("発射の瞬間のカメラの揺れの長さ(秒)")]
         private float _fireCameraShakeDurationSec = 0.25f;
 
+        [SerializeField, Min(0.0f), Tooltip("当たり始めに時間を止める長さ(秒)。0で止めない")]
+        private float _initialHitStopSec = 0.06f;
+
+        [SerializeField, Min(0.0f), Tooltip("照射中の継続ヒットで止める長さ(秒)。連続で当たるので短くする")]
+        private float _tickHitStopSec = 0.02f;
+
+        [SerializeField, Range(0.0f, 1.0f), Tooltip("止めている間の時間の速さ")]
+        private float _hitStopTimeScale = 0.08f;
+
+        [SerializeField, Min(0.0f), Tooltip("止めたあと通常の速さへ戻すのにかける秒数")]
+        private float _hitStopRecoverSec = 0.08f;
+
         [Header("地面の痕")]
         [SerializeField, Tooltip("ビームが地面に残す痕(デカール)。未設定なら痕を残さない")]
         private AttackDecal _beamDecalPrefab;
@@ -816,6 +828,9 @@ namespace ProjectKMP.Player
                         JustEntered = true,
                     };
                     SendBeamHit(target, collider, _initialDamage);
+
+                    // 焼き始めの手応え。照射中はここが一番強く感じる場面
+                    if (IsOwner) Battle.HitStop.Play(_initialHitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
                 }
             }
 
@@ -839,6 +854,9 @@ namespace ProjectKMP.Player
                 {
                     state.TickTimer -= _tickIntervalSec;
                     SendBeamHit(state.Target, state.Collider, _tickDamage);
+
+                    // 継続はごく短く。長く止めるとカクついて照射が途切れて見える
+                    if (IsOwner) Battle.HitStop.Play(_tickHitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
                 }
             }
 

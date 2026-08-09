@@ -26,8 +26,11 @@ namespace ProjectKMP.Battle
         [SerializeField, Min(0.05f), Tooltip("他の人のヒットからこの秒数以内に当てるとボーナス")]
         private float _windowSec = 1.5f;
 
-        [SerializeField, Min(1.0f), Tooltip("ボーナス中のダメージ倍率")]
-        private float _multiplier = 1.5f;
+        [SerializeField, Tooltip("連携が続くほど上がる倍率。左から順に上がり、いちばん右で頭打ち")]
+        private float[] _chainMultipliers = new float[] { 1.5f, 2.0f, 2.5f };
+
+        [SerializeField, Min(0.0f), Tooltip("連鎖が1段上がるまでの最短間隔(秒)。持続ダメージで一気に上がるのを防ぐ")]
+        private float _chainStepIntervalSec = 0.3f;
 
         [SerializeField, Tooltip("見張るボスの HitTarget。未設定ならシーンの BossHealth から探す")]
         private HitTarget _hitTarget;
@@ -59,12 +62,21 @@ namespace ProjectKMP.Battle
 
         private IDisposable _hitSubscription;
         private float _nextFeedbackTime;
+        private int _chainStep;
+        private int _lastChainActor = int.MinValue;
+        private float _lastChainTime;
 
         // ---- 公開API -------------------------------------
 
-        /// <summary>いまボーナスが乗る状態か(UIの表示などに使える)</summary>
+        /// <summary>いまボーナスが乗る状態か(合図の表示などに使える)</summary>
         public static bool IsActive =>
             INSTANCE != null && INSTANCE.HasRecentHitFromOthers(LocalActorNumber);
+
+        /// <summary>いま乗る倍率。表示に使う</summary>
+        public static float CurrentMultiplier => INSTANCE != null ? INSTANCE.ResolveMultiplier() : 1.0f;
+
+        /// <summary>連鎖の段数。0が1段目</summary>
+        public static int ChainStep => INSTANCE != null ? INSTANCE._chainStep : 0;
 
         /// <summary>
         /// 攻撃を送り出す直前に通す。他の人が直前に当てていれば倍率を掛けたダメージを返す。
@@ -75,7 +87,7 @@ namespace ProjectKMP.Battle
             if (damage <= 0 || INSTANCE == null) return damage;
             if (!INSTANCE.HasRecentHitFromOthers(LocalActorNumber)) return damage;
 
-            return Mathf.Max(damage, Mathf.RoundToInt(damage * INSTANCE._multiplier));
+            return Mathf.Max(damage, Mathf.RoundToInt(damage * INSTANCE.ResolveMultiplier()));
         }
 
         // ---- Unityイベント -------------------------------
@@ -108,6 +120,16 @@ namespace ProjectKMP.Battle
             }
         }
 
+        /// <summary>誰も当てない時間が続いたら連鎖を切る</summary>
+        private void Update()
+        {
+            if (_chainStep <= 0) return;
+            if (HasAnyRecentHit()) return;
+
+            _chainStep = 0;
+            _lastChainActor = int.MinValue;
+        }
+
         private void OnDestroy()
         {
             _hitSubscription?.Dispose();
@@ -129,6 +151,8 @@ namespace ProjectKMP.Battle
             _lastHitTime[info.AttackerActorNumber] = Time.unscaledTime;
 
             if (!isCombo) return;
+
+            AdvanceChain(info.AttackerActorNumber);
             if (Time.unscaledTime < _nextFeedbackTime) return;
 
             _nextFeedbackTime = Time.unscaledTime + _feedbackIntervalSec;
@@ -140,6 +164,42 @@ namespace ProjectKMP.Battle
 
 
             if (_logCombo) Debug.Log("[Battle] 同時ヒットボーナス", this);
+        }
+
+        /// <summary>
+        /// 連携が続くほど倍率を上げる。ビームや元気玉は短い間隔で当たり続けるため、
+        /// 「直前とは別の人が当てた」かつ「一定の間隔が空いた」ときだけ上げる。
+        /// そうしないと2人が撃ち合った瞬間に頭打ちまで到達してしまう。
+        /// </summary>
+        private void AdvanceChain(int actorNumber)
+        {
+            if (_chainMultipliers == null || _chainMultipliers.Length == 0) return;
+            if (_chainStep >= _chainMultipliers.Length - 1) return;
+            if (actorNumber == _lastChainActor) return;
+            if (Time.unscaledTime - _lastChainTime < _chainStepIntervalSec) return;
+
+            _chainStep++;
+            _lastChainActor = actorNumber;
+            _lastChainTime = Time.unscaledTime;
+        }
+
+        private float ResolveMultiplier()
+        {
+            if (_chainMultipliers == null || _chainMultipliers.Length == 0) return 1.0f;
+
+            return _chainMultipliers[Mathf.Clamp(_chainStep, 0, _chainMultipliers.Length - 1)];
+        }
+
+        /// <summary>誰かが直近に当てているか。連鎖を切るかどうかの判定に使う</summary>
+        private bool HasAnyRecentHit()
+        {
+            float now = Time.unscaledTime;
+            foreach (KeyValuePair<int, float> pair in _lastHitTime)
+            {
+                if (now - pair.Value <= _windowSec) return true;
+            }
+
+            return false;
         }
 
         /// <summary>自分以外の誰かが、直近この秒数のうちに当てているか</summary>

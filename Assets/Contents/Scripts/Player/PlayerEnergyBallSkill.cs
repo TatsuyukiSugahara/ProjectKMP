@@ -367,8 +367,6 @@ namespace ProjectKMP.Player
         private MaterialPropertyBlock _ballPropertyBlock;
 
         private GameObject _chargeEffectInstance;
-        private float _hitStopRemainSec;
-        private float _hitStopRecoverRemainSec;
         private bool _chargeSlowActive;
         private float _chargeRingTimerSec;
         private bool _chargeCompleteFlashed;
@@ -437,8 +435,8 @@ namespace ProjectKMP.Player
             // 演出の途中で消えても、空が夜のまま戻らなくならないようにする
             ReleaseNightMood();
 
-            // 演出で時間をいじったまま破棄されても、止まったままにしない
-            if (_hitStopRemainSec > 0f || _hitStopRecoverRemainSec > 0f || _chargeSlowActive) Time.timeScale = 1f;
+            // 演出で時間をいじったまま破棄されても、遅いままにしない
+            Battle.HitStop.ClearSlow(this);
         }
 
         private void OnDisable()
@@ -448,8 +446,6 @@ namespace ProjectKMP.Player
 
         private void Update()
         {
-            UpdateTimeScale();
-
             if (IsOwner) UpdateOwnerInput();
 
             UpdateFovKick();
@@ -1072,11 +1068,7 @@ namespace ProjectKMP.Player
                 ApplyFovKick();
             }
 
-            if (_throwHitStopSec > 0f)
-            {
-                _hitStopRemainSec = _throwHitStopSec;
-                ApplyTimeScale();
-            }
+            Battle.HitStop.Play(_throwHitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
         }
 
         /// <summary>広げた視野角をなめらかに戻す。時間が止まっている間も進むよう実時間で数える</summary>
@@ -1311,11 +1303,7 @@ namespace ProjectKMP.Player
                 if (playerCamera != null) playerCamera.Shake(_cameraShakeAmplitude, _cameraShakeDurationSec);
             }
 
-            if (_hitStopDurationSec > 0f)
-            {
-                _hitStopRemainSec = _hitStopDurationSec;
-                ApplyTimeScale();
-            }
+            Battle.HitStop.Play(_hitStopDurationSec, _hitStopTimeScale, _hitStopRecoverSec);
         }
 
         // ---- 発動時の演出 ----------------------------------
@@ -1398,55 +1386,17 @@ namespace ProjectKMP.Player
 
         // ---- 時間の速さ ------------------------------------
 
+        /// <summary>溜め中のスロー。掛けっぱなしにならないよう、必ず対で取り下げる</summary>
         private void SetChargeSlow(bool enabled)
         {
             if (_chargeSlowActive == enabled) return;
 
             _chargeSlowActive = enabled;
-            ApplyTimeScale();
+
+            if (enabled) Battle.HitStop.SetSlow(this, _chargeTimeScale);
+            else Battle.HitStop.ClearSlow(this);
         }
 
-        /// <summary>ヒットストップの残り時間を実時間で減らし、明けたら少しずつ通常へ戻す</summary>
-        private void UpdateTimeScale()
-        {
-            if (_hitStopRemainSec > 0f)
-            {
-                _hitStopRemainSec -= Time.unscaledDeltaTime;
-                if (_hitStopRemainSec <= 0f) _hitStopRecoverRemainSec = _hitStopRecoverSec;
-                ApplyTimeScale();
-                return;
-            }
-
-            if (_hitStopRecoverRemainSec > 0f)
-            {
-                _hitStopRecoverRemainSec -= Time.unscaledDeltaTime;
-                ApplyTimeScale();
-            }
-        }
-
-        /// <summary>
-        /// 溜めのスローとヒットストップをまとめて時間の速さに反映する。
-        /// ヒットストップ明けは一気に戻さず、戻る時間をかけることで衝撃を長く感じさせる。
-        /// </summary>
-        private void ApplyTimeScale()
-        {
-            float baseScale = _chargeSlowActive ? _chargeTimeScale : 1f;
-
-            if (_hitStopRemainSec > 0f)
-            {
-                Time.timeScale = _hitStopTimeScale;
-                return;
-            }
-
-            if (_hitStopRecoverRemainSec > 0f && _hitStopRecoverSec > 0f)
-            {
-                float t = 1f - Mathf.Clamp01(_hitStopRecoverRemainSec / _hitStopRecoverSec);
-                Time.timeScale = Mathf.Lerp(_hitStopTimeScale, baseScale, t);
-                return;
-            }
-
-            Time.timeScale = baseScale;
-        }
 
         // ---- 発動後の演出 ----------------------------------
 

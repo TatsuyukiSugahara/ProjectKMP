@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c388d23e63bb748638ee1d030342d2e8, type: 3}
+  m_Name: SO_Attack_Spin
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Attack.AttackData
+  _displayName: "\u304B\u3044\u3066\u3093"
+  _attackPower: 24
+  _hitEffectPrefab: {fileID: 5441942405708919810, guid: e1418f9337a2c445ba88d2f4199f497b, type: 3}
+  _hitEffectScale: 1.6
+  _hitEffectOffset: {x: 0, y: 0, z: 0}
+  _hitEffectLifeSec: 2
+  _swingEffectPrefab: {fileID: 0}
+  _swingEffectOffset: {x: 0, y: 0.45, z: 0.5}
+  _damagePopupPrefab: {fileID: 334619725715907676, guid: dc738a3d7ee4b430aab1e466091f1be0, type: 3}
+  _damagePopupOffset: {x: 0, y: 0.3, z: 0}
+  _hitRadius: 1.5
+  _hitOffset: {x: 0, y: 0.6, z: 0.4}
+  _hitStartSec: 0.14
+  _hitDurationSec: 0.3
+  _cooldownSec: 0.95
+  _targetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  _requireHitTarget: 1
+  _targetTags: []
+  _targetIds: []
+  _maxHitCount: 8
+  _drawGizmo: 1
+  _gizmoColor: {r: 1, g: 0.35, b: 0.2, a: 0.35}

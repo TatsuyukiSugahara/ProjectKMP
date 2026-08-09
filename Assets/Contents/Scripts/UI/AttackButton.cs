@@ -60,6 +60,9 @@ namespace ProjectKMP.UI
         [SerializeField, Tooltip("操作中のプレイヤーのクールタイムを自動で拾う")]
         private bool _followLocalPlayer = true;
 
+        [SerializeField, Tooltip("ジャスト入力の受付中にゲージを塗る色。押しどきを見せる")]
+        private Color _justWindowColor = new Color(1f, 0.9f, 0.35f);
+
         [Header("その他")]
         [SerializeField, Tooltip("タッチ非対応の環境(PCなど)では隠す")]
         private bool _hideOnNonTouchPlatform;
@@ -75,6 +78,8 @@ namespace ProjectKMP.UI
         private bool _pressPending;
         private float _pressAmount;
         private float _cooldownRatio;
+        private bool _isJustWindow;
+        private Color _cooldownFillHomeColor = Color.white;
 
         // ---- 公開API -------------------------------------
 
@@ -118,6 +123,7 @@ namespace ProjectKMP.UI
             _visualHomeScale = _visual.localScale;
             if (_fangTop != null) _fangTopHome = _fangTop.anchoredPosition;
             if (_fangBottom != null) _fangBottomHome = _fangBottom.anchoredPosition;
+            if (_cooldownFill != null) _cooldownFillHomeColor = _cooldownFill.color;
         }
 
         private void OnDisable()
@@ -156,6 +162,7 @@ namespace ProjectKMP.UI
             {
                 PlayerAttack local = PlayerAttack.Local;
                 _cooldownRatio = local != null ? local.CooldownRatio01 : 0f;
+                _isJustWindow = local != null && local.IsInJustWindow;
             }
 
             bool isCooling = _cooldownRatio > 0f;
@@ -165,6 +172,9 @@ namespace ProjectKMP.UI
                 _cooldownFill.enabled = isCooling;
                 // 撃った直後は空、撃てるようになる瞬間に一周し終わる
                 _cooldownFill.fillAmount = 1f - _cooldownRatio;
+
+                // 一周し終わる直前だけ色を変えて、押しどきを見せる
+                _cooldownFill.color = _isJustWindow ? _justWindowColor : _cooldownFillHomeColor;
             }
 
             if (_cooldownTrack != null) _cooldownTrack.enabled = isCooling;
