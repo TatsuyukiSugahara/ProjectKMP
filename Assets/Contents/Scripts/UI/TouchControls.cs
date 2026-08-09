@@ -25,6 +25,9 @@ namespace ProjectKMP.UI
         [SerializeField, Tooltip("スキル(元気玉)ボタン")]
         private SkillButton _energyBallButton;
 
+        [SerializeField, Tooltip("とびこみボタン")]
+        private SkillButton _diveButton;
+
         // ---- 公開API -------------------------------------
 
         /// <summary>シーン内で唯一のタッチ操作。無い環境では null になる</summary>
@@ -45,6 +48,9 @@ namespace ProjectKMP.UI
         /// <summary>スキル(元気玉)ボタンが押されているか。長押し判定に使う</summary>
         public bool EnergyBallHeld => _energyBallButton != null && _energyBallButton.IsHeld;
 
+        /// <summary>とびこみボタンが押されているか。押している間だけ予測を出す</summary>
+        public bool DiveHeld => _diveButton != null && _diveButton.IsHeld;
+
         /// <summary>スティックと攻撃ボタンの表示を切り替える。カットシーン中に隠すのに使う</summary>
         public void SetControlsVisible(bool visible)
         {
@@ -52,6 +58,7 @@ namespace ProjectKMP.UI
             if (_attackButton != null) _attackButton.SetVisible(visible);
             if (_skillButton != null) _skillButton.SetVisible(visible);
             if (_energyBallButton != null) _energyBallButton.SetVisible(visible);
+            if (_diveButton != null) _diveButton.SetVisible(visible);
         }
 
         /// <summary>攻撃ボタンを押した瞬間を1回だけ取り出す</summary>
@@ -75,6 +82,7 @@ namespace ProjectKMP.UI
             if (_attackButton != null) _attackButton.SetVisible(true);
             if (_skillButton != null) _skillButton.SetVisible(true);
             if (_energyBallButton != null) _energyBallButton.SetVisible(true);
+            if (_diveButton != null) _diveButton.SetVisible(true);
         }
 
         private void OnDestroy()

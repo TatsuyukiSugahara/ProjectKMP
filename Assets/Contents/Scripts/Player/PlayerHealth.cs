@@ -81,6 +81,7 @@ namespace ProjectKMP.Player
         private CharacterController _controller;
         private Behaviour _mover;
         private bool _isDead;
+        private bool _isInvincible;
         private Quaternion _bodyDefaultLocalRotation;
         private CancellationTokenSource _knockbackCts;
 
@@ -121,6 +122,19 @@ namespace ProjectKMP.Player
         /// <summary>このプレイヤーを操作しているクライアントの ActorNumber</summary>
         public int OwnerActorNumber => photonView.Owner != null ? photonView.Owner.ActorNumber : -1;
 
+        /// <summary>いま攻撃を受け付けない状態か</summary>
+        public bool IsInvincible => _isInvincible;
+
+        /// <summary>
+        /// 無敵の入り切り。とびこみの上昇中など、避けている最中に使う。
+        /// ダメージは与える側のクライアントから呼ばれるが、ゴリラの攻撃は当たった本人の
+        /// クライアントで判定しているので、ここで弾けば通信を増やさずに済む。
+        /// </summary>
+        public void SetInvincible(bool value)
+        {
+            _isInvincible = value;
+        }
+
         /// <summary>撃った側のクライアントから呼ぶ。HPに関わらず即座に全員に死亡を伝える(弾など)。吹き飛びなし</summary>
         public void ApplyKill(int killerActorNumber)
         {
@@ -130,7 +144,7 @@ namespace ProjectKMP.Player
         /// <summary>発生源の座標つきの即死。発生源から離れる方向へ死亡時の大きな吹き飛びが入る</summary>
         public void ApplyKill(int killerActorNumber, Vector3 sourcePosition)
         {
-            if (_isDead) return;
+            if (_isDead || _isInvincible) return;
             photonView.RPC(nameof(RpcOnKilled), RpcTarget.All, killerActorNumber, sourcePosition);
         }
 
@@ -147,7 +161,7 @@ namespace ProjectKMP.Player
         /// <summary>発生源の座標つきのダメージ。発生源から離れる方向へ吹き飛ぶ(死亡した場合は大きな吹き飛びになる)</summary>
         public void ApplyDamage(int damage, int attackerActorNumber, Vector3 sourcePosition)
         {
-            if (_isDead) return;
+            if (_isDead || _isInvincible) return;
             if (damage <= 0) return;
             photonView.RPC(nameof(RpcOnDamaged), RpcTarget.All, damage, attackerActorNumber, sourcePosition);
         }
@@ -170,6 +184,7 @@ namespace ProjectKMP.Player
                 _bodyRoot = found != null ? found : transform;
             }
             _bodyDefaultLocalRotation = _bodyRoot.localRotation;
+            _isInvincible = false;
         }
 
         private void OnDestroy()

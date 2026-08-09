@@ -53,6 +53,8 @@ MonoBehaviour:
   - RpcThrow
   - RpcBeginLeap
   - RpcAbortThrow
+  - RpcDive
+  - RpcDiveHit
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

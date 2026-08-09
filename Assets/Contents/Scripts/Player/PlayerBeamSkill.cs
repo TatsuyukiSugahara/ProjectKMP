@@ -53,6 +53,19 @@ namespace ProjectKMP.Player
         [SerializeField, Min(0.05f), Tooltip("ビームの太さ(半径・m)。当たり判定と見た目の両方に使う")]
         private float _beamWidth = 0.8f;
 
+        [Header("とびこみからの強化")]
+        [SerializeField, Tooltip("とびこみで跳び上がっている最中に撃つと強くなる")]
+        private bool _enableDiveBoost = true;
+
+        [SerializeField, Min(1.0f), Tooltip("強化時のダメージ倍率")]
+        private float _boostDamageScale = 3.0f;
+
+        [SerializeField, Min(1.0f), Tooltip("強化時の太さの倍率")]
+        private float _boostWidthScale = 2.0f;
+
+        [SerializeField, Min(1.0f), Tooltip("強化時の射程の倍率")]
+        private float _boostLengthScale = 1.5f;
+
         [SerializeField, Tooltip("発射位置の高さ(足元からのオフセット・m)")]
         private float _originHeight = 1.3f;
 
@@ -246,6 +259,19 @@ namespace ProjectKMP.Player
         /// <summary>痕を落とす地面の高さ。口元は動くので、発射時の足元の高さを覚えておく</summary>
         private float _beamGroundY;
 
+        private float _lengthScale = 1f;
+        private float _widthScale = 1f;
+        private float _damageScale = 1f;
+
+        /// <summary>いま撃っているビームの長さ。強化中は伸びる</summary>
+        private float CurrentBeamLength => _beamLength * _lengthScale;
+
+        /// <summary>いま撃っているビームの太さ。強化中は太くなる</summary>
+        private float CurrentBeamWidth => _beamWidth * _widthScale;
+
+        /// <summary>地面を探すときの当たり一覧。自分やボスを飛ばすので複数受け取る</summary>
+        private readonly RaycastHit[] _groundBuffer = new RaycastHit[8];
+
         /// <summary>いま流れている、なぎ倒しの波それぞれの根元からの距離</summary>
         private readonly List<float> _grassWaveDistances = new List<float>();
         private float _grassWaveTimerSec;
@@ -266,6 +292,7 @@ namespace ProjectKMP.Player
         private DogAnimationDriver _animationDriver;
         private PlayerHealth _health;
         private PlayerAttack _playerAttack;
+        private PlayerDiveSkill _diveSkill;
 
         /// <summary>死亡でスキルを中断するための購読</summary>
         private System.IDisposable _deathSubscription;
@@ -278,11 +305,29 @@ namespace ProjectKMP.Player
         /// <summary>狙い中(長押し中)かどうか</summary>
         public bool IsAiming => _phase == Phase.Aiming;
 
+
         /// <summary>ビーム照射中かどうか</summary>
         public bool IsFiring => _phase == Phase.Firing;
 
         /// <summary>狙い中・跳び上がり中・照射中・降下中(この間は通常攻撃を出させない)</summary>
         public bool IsBusy => _phase != Phase.Ready;
+
+        /// <summary>
+        /// 照射を終えて降りている最中か。ここまで来れば撃ち終わっているので、
+        /// 次の技へ繋いでも演出は破綻しない。
+        /// </summary>
+        public bool IsFinishing => _phase == Phase.Descending;
+
+        /// <summary>
+        /// 降下を切り上げて待機に戻す。次の技へ繋ぐときに使う。
+        /// 両方が同時に体を動かすと暴れるので、譲る側をここで畳む。
+        /// </summary>
+        public void EndLeapNow()
+        {
+            if (_phase != Phase.Descending) return;
+
+            EndLeap();
+        }
 
         /// <summary>跳び上がってから着地するまでの間。この間は吹き飛ばされたくない</summary>
         public bool IsInBeamAction =>
@@ -304,6 +349,7 @@ namespace ProjectKMP.Player
             _animationDriver = GetComponent<DogAnimationDriver>();
             _health = GetComponent<PlayerHealth>();
             _playerAttack = GetComponent<PlayerAttack>();
+            _diveSkill = GetComponent<PlayerDiveSkill>();
 
             // 死亡は被弾RPCから全クライアントで発火するので、各自の画面で同時に中断できる
             if (_health != null) _deathSubscription = _health.Died.Subscribe(_ => InterruptOnDeath());
@@ -435,7 +481,7 @@ namespace ProjectKMP.Player
                 _aimIndicatorInstance = Instantiate(_aimIndicatorPrefab, transform);
                 _aimIndicatorInstance.transform.localPosition = Vector3.zero;
                 _aimIndicatorInstance.transform.localRotation = Quaternion.identity;
-                _aimIndicatorInstance.Configure(_beamLength, _beamWidth);
+                _aimIndicatorInstance.Configure(CurrentBeamLength, CurrentBeamWidth);
             }
         }
 
@@ -455,8 +501,9 @@ namespace ProjectKMP.Player
             DestroyAimIndicator();
             _cooldownRemainSec = _cooldownSec;
 
-            // 痕を落とす地面の高さは、跳び上がる前のいまの足元で決める
-            _beamGroundY = transform.position.y;
+            // 痕を落とす地面の高さは、真下を測って決める。
+            // とびこみの最中など空中で撃つこともあるので、足元の高さをそのまま使うと痕が浮く
+            _beamGroundY = ResolveGroundY();
 
             if (_riseHeight > 0f)
             {
@@ -512,7 +559,13 @@ namespace ProjectKMP.Player
         private void StartBeam()
         {
             Vector3 origin = ResolveBeamOrigin();
-            photonView.RPC(nameof(RpcStartBeam), RpcTarget.All, origin, ResolveBeamDirection(origin), _beamGroundY);
+            // とびこみで叩きつけた直後の受付時間に撃てたら強化する。
+            // 跳び上がりの一瞬に合わせるのは難しすぎたので、音も揺れもある着地を合図にした
+            bool boosted = _enableDiveBoost && _diveSkill != null && _diveSkill.IsBoostWindowOpen;
+
+            // 見た目も当たり判定も全員で揃える必要があるので、強化したかどうかも配る
+            photonView.RPC(nameof(RpcStartBeam), RpcTarget.All,
+                origin, ResolveBeamDirection(origin), _beamGroundY, boosted);
         }
 
         private void UpdateDescending()
@@ -582,10 +635,10 @@ namespace ProjectKMP.Player
 
             Vector3 origin = ResolveBeamOrigin();
             Vector3 direction = ResolveBeamDirection(origin);
-            Vector3 endPoint = origin + direction * _beamLength;
+            Vector3 endPoint = origin + direction * CurrentBeamLength;
 
             int count = Physics.OverlapCapsuleNonAlloc(
-                origin, endPoint, _beamWidth, _overlapBuffer, _targetLayers, QueryTriggerInteraction.Collide);
+                origin, endPoint, CurrentBeamWidth, _overlapBuffer, _targetLayers, QueryTriggerInteraction.Collide);
 
             bool willHit = false;
             for (int i = 0; i < count; i++)
@@ -625,7 +678,7 @@ namespace ProjectKMP.Player
 
         /// <summary>照射の開始。全員のクライアントで呼ばれ、見た目とアニメを揃える</summary>
         [PunRPC]
-        private void RpcStartBeam(Vector3 origin, Vector3 direction, float groundY)
+        private void RpcStartBeam(Vector3 origin, Vector3 direction, float groundY, bool boosted)
         {
             // 万一前回の照射が残っていたら片付けてから始める
             if (_phase == Phase.Firing) FinishFiring();
@@ -639,6 +692,11 @@ namespace ProjectKMP.Player
 
             _grassWaveDistances.Clear();
             _grassWaveTimerSec = 0f;
+
+            // 強化の倍率は撃つたびに決まる。撃った本人の判定を全員がそのまま使う
+            _lengthScale = boosted ? _boostLengthScale : 1f;
+            _widthScale = boosted ? _boostWidthScale : 1f;
+            _damageScale = boosted ? _boostDamageScale : 1f;
 
             // 空中から撃つと自分の足元は地面ではないので、撃った本人が測った高さを使う
             _beamGroundY = groundY;
@@ -655,7 +713,7 @@ namespace ProjectKMP.Player
                 _beamVisual = _beamEffectInstance.GetComponent<DestructionBeamVisual>();
                 if (_beamVisual != null)
                 {
-                    _beamVisual.Configure(_beamOrigin, _beamDirection, _currentBeamLength, _beamWidth);
+                    _beamVisual.Configure(_beamOrigin, _beamDirection, _currentBeamLength, CurrentBeamWidth);
                 }
 
                 // パーティクルが混ざっていた場合に備えて Hierarchy スケーリングにしておく
@@ -676,7 +734,7 @@ namespace ProjectKMP.Player
             if (_grassFlattenScale > 0f)
             {
                 var feet = new Vector3(transform.position.x, _beamGroundY, transform.position.z);
-                Field.GrassField.FlattenAt(feet, _beamWidth * _grassFlattenScale);
+                Field.GrassField.FlattenAt(feet, CurrentBeamWidth * _grassFlattenScale);
             }
 
             // 照射中は動けない。跳び上がっている間は重力も止めて空中に留める(本人のみ)
@@ -748,7 +806,7 @@ namespace ProjectKMP.Player
             // そのため追加の通信なしで全員の画面の同じ木が倒れる(デカールや草と同じ方式)
             if (_breakTrees)
             {
-                Field.BreakableTree.BreakAlongBeam(_beamOrigin, _beamDirection, _currentBeamLength, _beamWidth);
+                Field.BreakableTree.BreakAlongBeam(_beamOrigin, _beamDirection, _currentBeamLength, CurrentBeamWidth);
             }
 
             // 当たり判定は操作している本人だけが取る(二重ダメージを防ぐ)
@@ -762,17 +820,17 @@ namespace ProjectKMP.Player
         {
             if (_growDurationSec <= 0f)
             {
-                _currentBeamLength = _beamLength;
+                _currentBeamLength = CurrentBeamLength;
             }
             else
             {
                 float t = Mathf.Clamp01(_fireElapsedSec / _growDurationSec);
-                _currentBeamLength = Mathf.Lerp(0f, _beamLength, t);
+                _currentBeamLength = Mathf.Lerp(0f, CurrentBeamLength, t);
             }
 
             if (_beamVisual != null)
             {
-                _beamVisual.Configure(_beamOrigin, _beamDirection, _currentBeamLength, _beamWidth);
+                _beamVisual.Configure(_beamOrigin, _beamDirection, _currentBeamLength, CurrentBeamWidth);
             }
         }
 
@@ -792,7 +850,7 @@ namespace ProjectKMP.Player
             if (_impactRingPrefab == null || _impactRingIntervalSec <= 0f) return;
 
             // 伸びきる前は先端が根元と重なるので、ある程度伸びてから出す
-            if (_currentBeamLength < _beamWidth) return;
+            if (_currentBeamLength < CurrentBeamWidth) return;
 
             if (!CrossedInterval(_impactRingIntervalSec)) return;
 
@@ -847,7 +905,7 @@ namespace ProjectKMP.Player
                 Vector3 point = _beamOrigin + _beamDirection * _nextDecalDistance;
                 point.y = groundY;
 
-                AttackDecal.Spawn(_beamDecalPrefab, point, _beamWidth * 2f * _decalWidthScale);
+                AttackDecal.Spawn(_beamDecalPrefab, point, CurrentBeamWidth * 2f * _decalWidthScale);
                 _nextDecalDistance += _decalIntervalMeters;
             }
         }
@@ -867,7 +925,7 @@ namespace ProjectKMP.Player
                 _grassWaveDistances.Add(0f);
             }
 
-            float radius = _beamWidth * _grassFlattenScale;
+            float radius = CurrentBeamWidth * _grassFlattenScale;
 
             // 進めながら、先端を追い越した波は消す
             for (int i = _grassWaveDistances.Count - 1; i >= 0; i--)
@@ -928,7 +986,7 @@ namespace ProjectKMP.Player
 
             Vector3 endPoint = _beamOrigin + _beamDirection * _currentBeamLength;
             int count = Physics.OverlapCapsuleNonAlloc(
-                _beamOrigin, endPoint, _beamWidth, _overlapBuffer, _targetLayers, QueryTriggerInteraction.Collide);
+                _beamOrigin, endPoint, CurrentBeamWidth, _overlapBuffer, _targetLayers, QueryTriggerInteraction.Collide);
 
             for (int i = 0; i < count; i++)
             {
@@ -998,6 +1056,9 @@ namespace ProjectKMP.Player
 
         private void SendBeamHit(HitTarget target, Collider collider, int damage)
         {
+            // 強化ぶんを先に掛けてから、そのうえに同時ヒットボーナスを掛ける
+            damage = Mathf.RoundToInt(damage * _damageScale);
+
             // 他のプレイヤーが直前に当てていれば、同時ヒットボーナスを掛けてから配る
             bool combo = Battle.ComboBonus.IsActive;
             damage = Battle.ComboBonus.Apply(damage);
@@ -1019,6 +1080,35 @@ namespace ProjectKMP.Player
         /// ビームの発射位置。口元の Transform が指定されていればそこ、無ければ足元からの高さ・前方オフセット。
         /// 頭のボーンは向きが独特なので、微調整のオフセットはキャラ本体の向きを基準に足す。
         /// </summary>
+        /// <summary>
+        /// 真下を調べて地面の高さを返す。自分の体とボスは足場として数えない。
+        /// ボスの上を地面と見なすと、痕が相手の頭の高さに並んでしまう。
+        /// 見つからなければ、いまの足元の高さで妥協する。
+        /// </summary>
+        private float ResolveGroundY()
+        {
+            Vector3 origin = transform.position + Vector3.up * 0.5f;
+
+            int count = Physics.RaycastNonAlloc(
+                origin, Vector3.down, _groundBuffer, 40f, _targetLayers, QueryTriggerInteraction.Ignore);
+
+            float best = float.NegativeInfinity;
+            for (int i = 0; i < count; i++)
+            {
+                Collider collider = _groundBuffer[i].collider;
+                if (collider == null) continue;
+                if (collider.transform == transform || collider.transform.IsChildOf(transform)) continue;
+
+                // 当てられる相手(ボスなど)の上は地面ではない
+                if (collider.GetComponentInParent<HitTarget>() != null) continue;
+
+                // いちばん高い足場を採る。低いところを拾うと痕が地面に埋まる
+                if (_groundBuffer[i].point.y > best) best = _groundBuffer[i].point.y;
+            }
+
+            return float.IsNegativeInfinity(best) ? transform.position.y : best;
+        }
+
         private Vector3 ResolveBeamOrigin()
         {
             if (_muzzleTransform != null)
@@ -1035,7 +1125,7 @@ namespace ProjectKMP.Player
         }
 
         /// <summary>
-        /// ビームの向き。空中から撃つときは、狙いの表示と同じ地面の位置(足元から前方 _beamLength)へ
+        /// ビームの向き。空中から撃つときは、狙いの表示と同じ地面の位置(足元から前方 CurrentBeamLength)へ
         /// 着弾するように下向きへ傾ける。傾けない設定なら、そのまま正面へ水平に撃つ。
         /// </summary>
         private Vector3 ResolveBeamDirection(Vector3 origin)
@@ -1043,7 +1133,7 @@ namespace ProjectKMP.Player
             Vector3 forward = transform.forward;
             if (!_aimAtGroundEnd) return forward;
 
-            Vector3 target = transform.position + forward * _beamLength;
+            Vector3 target = transform.position + forward * CurrentBeamLength;
             target.y = _beamGroundY;
 
             Vector3 toTarget = target - origin;

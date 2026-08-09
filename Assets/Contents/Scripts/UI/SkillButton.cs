@@ -25,6 +25,9 @@ namespace ProjectKMP.UI
 
             /// <summary>元気玉スキル(PlayerEnergyBallSkill)</summary>
             EnergyBall,
+
+            /// <summary>とびこみ(PlayerDiveSkill)</summary>
+            Dive,
         }
 
         // ---- インスペクタ設定 ------------------------------
@@ -77,8 +80,18 @@ namespace ProjectKMP.UI
         private int _activePointerId = INVALID_POINTER_ID;
         private float _pressAmount;
         private float _cooldownRatio;
+        private bool _pressQueued;
 
         // ---- 公開API -------------------------------------
+
+        /// <summary>押した瞬間を1回だけ取り出す。長押しではない技(とびこみなど)で使う</summary>
+        public bool ConsumePress()
+        {
+            if (!_pressQueued) return false;
+
+            _pressQueued = false;
+            return true;
+        }
 
         /// <summary>押されている間 true。ビームスキルの長押し判定に使う</summary>
         public bool IsHeld => _activePointerId != INVALID_POINTER_ID;
@@ -127,7 +140,9 @@ namespace ProjectKMP.UI
         public void OnPointerDown(PointerEventData eventData)
         {
             if (_activePointerId != INVALID_POINTER_ID) return;
+
             _activePointerId = eventData.pointerId;
+            _pressQueued = true;
         }
 
         /// <summary>離した瞬間(=発射のタイミング)</summary>
@@ -191,6 +206,10 @@ namespace ProjectKMP.UI
                 case CooldownSource.EnergyBall:
                     PlayerEnergyBallSkill energyBall = PlayerEnergyBallSkill.Local;
                     return energyBall != null ? energyBall.CooldownRatio01 : 0f;
+
+                case CooldownSource.Dive:
+                    PlayerDiveSkill dive = PlayerDiveSkill.Local;
+                    return dive != null ? dive.CooldownRatio01 : 0f;
 
                 default:
                     PlayerBeamSkill beam = PlayerBeamSkill.Local;
