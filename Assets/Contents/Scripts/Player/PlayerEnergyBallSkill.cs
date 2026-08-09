@@ -10,7 +10,7 @@ using UnityEngine.InputSystem;
 namespace ProjectKMP.Player
 {
     /// <summary>
-    /// 元気玉スキル。長押し(Eキー / ゲームパッドY / 画面の元気玉ボタン)で照準しながら
+    /// 元気玉スキル。長押し(Qキー / ゲームパッドY / 画面の元気玉ボタン)で照準しながら
     /// 頭上にエネルギー玉をチャージし、離すと狙った場所へ振り下ろす。
     /// 照準は射程の上限(円)の中で移動入力を使って自由に選べる。
     /// チャージが完了する前に離すとキャンセル(クールタイムなし)。
@@ -281,8 +281,8 @@ namespace ProjectKMP.Player
         private GameObject _damagePopupPrefab;
 
         [Header("入力")]
-        [SerializeField, Tooltip("Eキーの長押しで狙う")]
-        private bool _useEKey = true;
+        [SerializeField, Tooltip("Qキーの長押しで狙う")]
+        private bool _useQKey = true;
 
         [SerializeField, Tooltip("ゲームパッドのYボタン(上ボタン)の長押しで狙う")]
         private bool _useGamepadNorth = true;
@@ -513,15 +513,15 @@ namespace ProjectKMP.Player
             return true;
         }
 
-        /// <summary>Eキー / ゲームパッドY / 画面の元気玉ボタンのいずれかが押されているか</summary>
+        /// <summary>Qキー / ゲームパッドY / 画面の元気玉ボタンのいずれかが押されているか</summary>
         private bool ReadHoldInput()
         {
             bool held = false;
 
-            if (_useEKey)
+            if (_useQKey)
             {
                 Keyboard keyboard = Keyboard.current;
-                if (keyboard != null && keyboard.eKey.isPressed) held = true;
+                if (keyboard != null && keyboard.qKey.isPressed) held = true;
             }
 
             if (_useGamepadNorth)

@@ -481,6 +481,18 @@ MonoBehaviour:
   _tickHitStopSec: 0.02
   _hitStopTimeScale: 0.08
   _hitStopRecoverSec: 0.08
+  _impactRingPrefab: {fileID: 2420929887232605178, guid: 7cd176b9bf1bc4912a4f95e52d3eddf9, type: 3}
+  _impactRingIntervalSec: 0.3
+  _impactRingStartRadius: 0.3
+  _impactRingEndRadius: 2.2
+  _impactRingDurationSec: 0.45
+  _impactRingThickness: 0.45
+  _muzzleRingPrefab: {fileID: 2420929887232605178, guid: 7cd176b9bf1bc4912a4f95e52d3eddf9, type: 3}
+  _muzzleRingIntervalSec: 0.35
+  _muzzleRingStartRadius: 0.35
+  _muzzleRingEndRadius: 1.7
+  _muzzleRingDurationSec: 0.4
+  _muzzleRingThickness: 0.3
   _beamDecalPrefab: {fileID: 3723947236444742271, guid: f847b4c4183974e25aa3a4547d6059c6, type: 3}
   _decalIntervalMeters: 2.5
   _decalWidthScale: 1.5
@@ -595,7 +607,7 @@ MonoBehaviour:
   _zoneVisualPrefab: {fileID: 3169192961628982556, guid: f12e166f4833f42cda9f9a98cebd268c, type: 3}
   _aimIndicatorPrefab: {fileID: 3762744561026247363, guid: c00a353ffc58341cab6a76cc5ee4ab38, type: 3}
   _damagePopupPrefab: {fileID: 334619725715907676, guid: dc738a3d7ee4b430aab1e466091f1be0, type: 3}
-  _useEKey: 1
+  _useQKey: 1
   _useGamepadNorth: 1
   _useTouchButton: 1
   _targetLayers:

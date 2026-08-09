@@ -2602,7 +2602,7 @@ MonoBehaviour:
   _comboVolume: 0.7
   _feedbackIntervalSec: 0.6
   _logCombo: 1
-  _debugAlwaysCombo: 1
+  _debugAlwaysCombo: 0
 --- !u!4 &229788801
 Transform:
   m_ObjectHideFlags: 0
@@ -16547,9 +16547,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5452e5b0f6e824bb79e05f690f949359, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Monster.BossHealth
-  _baseMaxHp: 100
-  _hpPerExtraPlayer: 50
-  _playerCountLimit: 8
+  _baseMaxHp: 1000
+  _hpPerExtraPlayer: 200
+  _playerCountLimit: 15
   _hitTarget: {fileID: 1472372943}
   _sync: {fileID: 1472372950}
   _gauge: {fileID: 854204500}
@@ -17491,6 +17491,55 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4938559794611775962, guid: 525197fe6ec2f4895a8009b36d5e388c, type: 3}
   m_PrefabInstance: {fileID: 1654596453}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1661748144
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1661748146}
+  - component: {fileID: 1661748145}
+  m_Layer: 0
+  m_Name: PostProcessVolume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1661748145
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1661748144}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: df8464668e7e14106af6f8916f99edab, type: 2}
+--- !u!4 &1661748146
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1661748144}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1663527669
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18519,6 +18568,7 @@ MonoBehaviour:
   _dimOverlay: {fileID: 756930586}
   _dimAlpha: 0.45
   _followLocalPlayer: 1
+  _justWindowColor: {r: 1, g: 0.9, b: 0.35, a: 1}
   _hideOnNonTouchPlatform: 0
 --- !u!224 &1717424797
 RectTransform:
@@ -23108,3 +23158,4 @@ SceneRoots:
   - {fileID: 229788801}
   - {fileID: 1634594353}
   - {fileID: 496505628}
+  - {fileID: 1661748146}

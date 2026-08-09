@@ -132,10 +132,10 @@ LineRenderer:
       m_ColorSpace: -1
       m_NumColorKeys: 2
       m_NumAlphaKeys: 2
-    numCornerVertices: 2
+    numCornerVertices: 4
     numCapVertices: 4
     alignment: 0
-    textureMode: 1
+    textureMode: 0
     textureScale: {x: 1, y: 1}
     shadowBias: 0.5
     generateLightingData: 0
@@ -193,20 +193,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Gorilla.DestructionBeamVisual
   _glowLine: {fileID: 5752300863084937724}
   _coreLine: {fileID: 7222924504766540970}
-  _coreWidthRatio: 0.4
+  _coreWidthRatio: 0.5
   _visualWidthScale: 0.6
   _scrollSpeed: 3
   _coreScrollMultiplier: 2.6
-  _coreWhiteHot: 0.55
-  _coreIntensityBoost: 1.6
+  _coreWhiteHot: 0.5
+  _coreIntensityBoost: 2.2
   _pulseSpeed: 14
   _pulseAmount: 0.12
+  _startWidthRatio: 1
+  _midWidthRatio: 1
+  _endWidthRatio: 1
+  _segmentCount: 2
+  _wobbleAmount: 0
+  _wobbleSpeed: 7
+  _wobbleFrequency: 0.7
   _alongBeamParticles:
   - {fileID: 2810754034030973432}
   _sparkleRatePerMeter: 40
   _tipParticles:
   - {fileID: 9114739161981649737}
-  _tipParticleSizeRatio: 1.2
+  _tipParticleSizeRatio: 2.2
   _muzzleParticles:
   - {fileID: 3265287699830323211}
   _helixStrandCount: 2
@@ -217,15 +224,15 @@ MonoBehaviour:
   _helixScrollSpeed: 7
   _helixWidthRatio: 0.05
   _helixEmergeMeters: 1.2
-  _beamLightCount: 3
+  _beamLightCount: 4
   _beamLightColor: {r: 0.25, g: 0.75, b: 0.95, a: 1}
-  _beamLightIntensity: 5
-  _beamLightRangeRatio: 4.5
+  _beamLightIntensity: 8
+  _beamLightRangeRatio: 6
   _lightFlickerAmount: 0.22
   _lightFlickerSpeed: 24
-  _tipLightIntensity: 10
+  _tipLightIntensity: 16
   _tipLightColor: {r: 0.625, g: 0.875, b: 0.975, a: 1}
-  _tipLightRangeRatio: 6
+  _tipLightRangeRatio: 9
   _muzzleLightIntensity: 7
   _muzzleLightColor: {r: 0.55, g: 0.85, b: 0.96999997, a: 1}
   _muzzleLightRangeRatio: 4.5
@@ -363,10 +370,10 @@ LineRenderer:
       m_ColorSpace: -1
       m_NumColorKeys: 2
       m_NumAlphaKeys: 2
-    numCornerVertices: 2
+    numCornerVertices: 4
     numCapVertices: 4
     alignment: 0
-    textureMode: 1
+    textureMode: 0
     textureScale: {x: 1, y: 1}
     shadowBias: 0.5
     generateLightingData: 0

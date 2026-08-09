@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace ProjectKMP.Gorilla
 {
@@ -48,6 +48,29 @@ namespace ProjectKMP.Gorilla
 
         [SerializeField, Tooltip("光線の太さの揺れ幅(太さに対する割合)")]
         private float _pulseAmount = 0.12f;
+
+        [Header("太さの形")]
+        [SerializeField, Min(0.05f), Tooltip("発射口の太さ倍率")]
+        private float _startWidthRatio = 1.0f;
+
+        [SerializeField, Min(0.05f), Tooltip("中央の太さ倍率。1より小さくするとくびれる")]
+        private float _midWidthRatio = 0.85f;
+
+        [SerializeField, Min(0.05f), Tooltip("着弾点の太さ倍率。1より大きくすると先が広がる")]
+        private float _endWidthRatio = 0.7f;
+
+        [Header("輪郭のゆらぎ")]
+        [SerializeField, Range(2, 64), Tooltip("光線を分ける点の数。増やすほど細かく揺らせる。2だと直線のまま")]
+        private int _segmentCount = 2;
+
+        [SerializeField, Min(0.0f), Tooltip("横に揺れる幅を見た目の半径の何倍にするか。0で揺れない")]
+        private float _wobbleAmount = 0.0f;
+
+        [SerializeField, Tooltip("揺れが流れる速さ")]
+        private float _wobbleSpeed = 6.0f;
+
+        [SerializeField, Min(0.05f), Tooltip("揺れの細かさ(1mあたりの波の数)")]
+        private float _wobbleFrequency = 0.8f;
 
         [Header("パーティクル(任意)")]
         [SerializeField, Tooltip("光線に沿ってきらきら飛び散るパーティクル。発生範囲と量が光線の長さに合わせて自動で伸びる。未設定でもよい")]
@@ -166,6 +189,7 @@ namespace ProjectKMP.Gorilla
         private float _currentPulse = 1f;
         private float _visibilityMul = 1f;
 
+        private AnimationCurve _widthCurve;
         private LineRenderer[] _helixLines;
         private float _helixPhase;
 
@@ -178,6 +202,8 @@ namespace ProjectKMP.Gorilla
 
         private void Awake()
         {
+            _widthCurve = BuildWidthCurve();
+
             if (_glowLine != null)
             {
                 _glowMaterialInstance = _glowLine.material;
@@ -282,17 +308,16 @@ namespace ProjectKMP.Gorilla
             {
                 _glowLine.startColor = MultiplyAlpha(_glowStartColor, alphaMul);
                 _glowLine.endColor = MultiplyAlpha(_glowEndColor, alphaMul);
-                _glowLine.startWidth = _baseGlowWidth * widthMul;
-                _glowLine.endWidth = _baseGlowWidth * 0.7f * widthMul;
             }
 
             if (_coreLine != null)
             {
                 _coreLine.startColor = MultiplyAlpha(_coreStartColor, alphaMul);
                 _coreLine.endColor = MultiplyAlpha(_coreEndColor, alphaMul);
-                _coreLine.startWidth = _baseCoreWidth * widthMul;
-                _coreLine.endWidth = _baseCoreWidth * 0.7f * widthMul;
             }
+
+            // 太さは形を保ったまま細らせたいので、配置ごと作り直す
+            ApplyGeometry(widthMul);
 
             // マテリアル側の不透明度も一緒に下げる(頂点カラーが効かないシェーダー対策)
             FadeMaterialAlpha(_glowMaterialInstance, _glowBaseMaterialColor, alphaMul);
@@ -317,24 +342,72 @@ namespace ProjectKMP.Gorilla
 
             Vector3 end = _origin + _direction * _length;
 
-            SetLine(_glowLine, _origin, end, _baseGlowWidth * widthMul, _baseGlowWidth * 0.7f * widthMul);
-            SetLine(_coreLine, _origin, end, _baseCoreWidth * widthMul, _baseCoreWidth * 0.7f * widthMul);
+            SetLine(_glowLine, _baseGlowWidth * widthMul);
+            SetLine(_coreLine, _baseCoreWidth * widthMul);
 
             UpdateParticles(end);
             UpdateHelix(widthMul);
             UpdateLightPosition(end);
         }
 
-        private void SetLine(LineRenderer line, Vector3 start, Vector3 end, float startWidth, float endWidth)
+        /// <summary>
+        /// 光線を分割して並べ、太さはカーブで決める。
+        /// カーブにすることで「発射口も着弾点も太く、中央がくびれる」形が作れる。
+        /// 分割した点を横へ振ると輪郭がゆらぐが、根元と先端は動かさない
+        /// (発射口と着弾点がぶれると、狙いがずれて見えてしまうため)。
+        /// </summary>
+        private void SetLine(LineRenderer line, float width)
         {
             if (line == null) return;
 
+            int count = Mathf.Clamp(_segmentCount, 2, 64);
+
             line.useWorldSpace = true;
-            line.positionCount = 2;
-            line.SetPosition(0, start);
-            line.SetPosition(1, end);
-            line.startWidth = startWidth;
-            line.endWidth = endWidth;
+            line.positionCount = count;
+            line.widthCurve = _widthCurve;
+            line.widthMultiplier = width;
+
+            bool wobble = _wobbleAmount > 0.0f && count > 2;
+
+            Vector3 side = Vector3.zero;
+            Vector3 up = Vector3.zero;
+            if (wobble)
+            {
+                side = Vector3.Cross(_direction, Vector3.up);
+                if (side.sqrMagnitude < 0.0001f) side = Vector3.Cross(_direction, Vector3.right);
+                side.Normalize();
+                up = Vector3.Cross(side, _direction).normalized;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                float t = count <= 1 ? 0.0f : (float)i / (count - 1);
+                float distance = t * _length;
+                Vector3 point = _origin + _direction * distance;
+
+                if (wobble)
+                {
+                    // 両端で0、中央で最大になるように振幅を絞る
+                    float taper = Mathf.Sin(t * Mathf.PI);
+                    float amplitude = _visualRadius * _wobbleAmount * taper;
+                    float phase = distance * _wobbleFrequency * Mathf.PI * 2.0f - Time.time * _wobbleSpeed;
+
+                    // 縦横で周期をずらすと、平面的な蛇行ではなく乱れた流れに見える
+                    point += side * (Mathf.Sin(phase) * amplitude);
+                    point += up * (Mathf.Cos(phase * 0.7f) * amplitude * 0.6f);
+                }
+
+                line.SetPosition(i, point);
+            }
+        }
+
+        /// <summary>発射口・中央・着弾点の3点から太さのカーブを作る</summary>
+        private AnimationCurve BuildWidthCurve()
+        {
+            return new AnimationCurve(
+                new Keyframe(0.0f, _startWidthRatio),
+                new Keyframe(0.5f, _midWidthRatio),
+                new Keyframe(1.0f, _endWidthRatio));
         }
 
         /// <summary>

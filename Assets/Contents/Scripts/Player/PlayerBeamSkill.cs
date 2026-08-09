@@ -100,6 +100,44 @@ namespace ProjectKMP.Player
         [SerializeField, Min(0.0f), Tooltip("止めたあと通常の速さへ戻すのにかける秒数")]
         private float _hitStopRecoverSec = 0.08f;
 
+        [Header("着弾点の押し広げ")]
+        [SerializeField, Tooltip("着弾点から広がる輪。未設定なら出さない")]
+        private EnergyShockwave _impactRingPrefab;
+
+        [SerializeField, Min(0.0f), Tooltip("輪を出す間隔(秒)。0で出さない")]
+        private float _impactRingIntervalSec = 0.3f;
+
+        [SerializeField, Min(0.05f), Tooltip("輪の広がり始めの半径(メートル)")]
+        private float _impactRingStartRadius = 0.3f;
+
+        [SerializeField, Min(0.1f), Tooltip("輪が広がりきる半径(メートル)")]
+        private float _impactRingEndRadius = 2.2f;
+
+        [SerializeField, Min(0.05f), Tooltip("輪が広がりきるまでの時間(秒)")]
+        private float _impactRingDurationSec = 0.45f;
+
+        [SerializeField, Min(0.0f), Tooltip("輪の線の太さ(メートル)。0でプレハブの値のまま")]
+        private float _impactRingThickness = 0.45f;
+
+        [Header("足元の踏ん張り")]
+        [SerializeField, Tooltip("撃っている本人の足元から広がる輪。未設定なら出さない")]
+        private EnergyShockwave _muzzleRingPrefab;
+
+        [SerializeField, Min(0.0f), Tooltip("輪を出す間隔(秒)。0で出さない。着弾点とずらすと重なって見えにくい")]
+        private float _muzzleRingIntervalSec = 0.35f;
+
+        [SerializeField, Min(0.05f), Tooltip("輪の広がり始めの半径(メートル)")]
+        private float _muzzleRingStartRadius = 0.35f;
+
+        [SerializeField, Min(0.1f), Tooltip("輪が広がりきる半径(メートル)")]
+        private float _muzzleRingEndRadius = 1.7f;
+
+        [SerializeField, Min(0.05f), Tooltip("輪が広がりきるまでの時間(秒)")]
+        private float _muzzleRingDurationSec = 0.4f;
+
+        [SerializeField, Min(0.0f), Tooltip("輪の線の太さ(メートル)。0でプレハブの値のまま")]
+        private float _muzzleRingThickness = 0.3f;
+
         [Header("地面の痕")]
         [SerializeField, Tooltip("ビームが地面に残す痕(デカール)。未設定なら痕を残さない")]
         private AttackDecal _beamDecalPrefab;
@@ -664,6 +702,8 @@ namespace ProjectKMP.Player
             UpdateBeamLength();
             SpawnBeamDecals();
             UpdateGrassWaves();
+            SpawnImpactRings();
+            SpawnMuzzleRings();
 
             // 木はシーンに置かれていて全クライアントに同じものがあり、この処理も全員で走る。
             // そのため追加の通信なしで全員の画面の同じ木が倒れる(デカールや草と同じ方式)
@@ -702,6 +742,60 @@ namespace ProjectKMP.Player
         /// 見た目だけの演出なので、エフェクトと同じく全クライアントで動くこの処理から呼べば
         /// 追加の通信なしで全員の画面に痕が出る(ゴリラのビームと同じ方式)。
         /// </summary>
+        /// <summary>
+        /// 着弾点から輪を繰り返し広げて、削って押し広げている感じを出す。
+        /// 輪は地面に平らに広がる作りなので、先端をそのまま使わず足元の高さへ落とす
+        /// (胴体の高さに浮かせると、横から見たときに板が浮いて見えてしまう)。
+        /// 照射開始からの経過時間が間隔をまたいだ瞬間に出すので、別途タイマーを持たなくてよい。
+        /// </summary>
+        private void SpawnImpactRings()
+        {
+            if (_impactRingPrefab == null || _impactRingIntervalSec <= 0f) return;
+
+            // 伸びきる前は先端が根元と重なるので、ある程度伸びてから出す
+            if (_currentBeamLength < _beamWidth) return;
+
+            if (!CrossedInterval(_impactRingIntervalSec)) return;
+
+            Vector3 point = _beamOrigin + _beamDirection * _currentBeamLength;
+            point.y = _beamGroundY;
+
+            // 草は照射の波が別に倒しているので、ここでは倒さない
+            EnergyShockwave.Spawn(
+                _impactRingPrefab, point, _impactRingStartRadius, _impactRingEndRadius,
+                _impactRingDurationSec, _impactRingThickness, false, 1, 0f);
+        }
+
+        /// <summary>
+        /// 撃っている本人の足元からも輪を広げる。反動を地面で踏ん張って受け止めている感じが出て、
+        /// ビームの根元が地面から浮いて見えるのを抑えられる。
+        /// </summary>
+        private void SpawnMuzzleRings()
+        {
+            if (_muzzleRingPrefab == null) return;
+            if (!CrossedInterval(_muzzleRingIntervalSec)) return;
+
+            Vector3 point = transform.position;
+            point.y = _beamGroundY;
+
+            EnergyShockwave.Spawn(
+                _muzzleRingPrefab, point, _muzzleRingStartRadius, _muzzleRingEndRadius,
+                _muzzleRingDurationSec, _muzzleRingThickness, false, 1, 0f);
+        }
+
+        /// <summary>
+        /// 照射開始からの経過時間が、指定した間隔をこのフレームでまたいだか。
+        /// 撃つたびに経過時間が0から始まるので、タイマーを持たなくてもリセット漏れが起きない。
+        /// </summary>
+        private bool CrossedInterval(float intervalSec)
+        {
+            if (intervalSec <= 0f) return false;
+
+            float previous = _fireElapsedSec - Time.deltaTime;
+            return Mathf.FloorToInt(_fireElapsedSec / intervalSec)
+                != Mathf.FloorToInt(previous / intervalSec);
+        }
+
         private void SpawnBeamDecals()
         {
             if (_beamDecalPrefab == null) return;
