@@ -29,6 +29,12 @@ namespace ProjectKMP.Player
         [SerializeField, Range(0f, 1f), Tooltip("明滅で透明度をどれだけ揺らすか")]
         private float _pulseAmount = 0.35f;
 
+        [SerializeField, Tooltip("着弾範囲に相手がいるときのマーカーの色")]
+        private Color _hitColor = new Color(1f, 0.35f, 0.3f, 0.75f);
+
+        [SerializeField, Min(0f), Tooltip("相手がいるときの明滅の速さ")]
+        private float _hitPulseSpeed = 10f;
+
         // ---- 内部状態 ------------------------------------
 
         private const int SEGMENTS = 48;
@@ -39,8 +45,15 @@ namespace ProjectKMP.Player
         private Renderer _markerRenderer;
         private MaterialPropertyBlock _propertyBlock;
         private Color _markerBaseColor = Color.white;
+        private bool _willHit;
 
         // ---- 公開API -------------------------------------
+
+        /// <summary>着弾範囲に相手がいるかを伝える。マーカーの色と明滅の速さが切り替わる</summary>
+        public void SetWillHit(bool willHit)
+        {
+            _willHit = willHit;
+        }
 
         /// <summary>射程の上限(半径)と着弾範囲(半径)に合わせて表示を作り直す</summary>
         public void Configure(float maxRange, float markerRadius)
@@ -76,10 +89,14 @@ namespace ProjectKMP.Player
 
         private void Update()
         {
-            if (_pulseSpeed <= 0f || _pulseAmount <= 0f || _markerRenderer == null) return;
+            if (_pulseAmount <= 0f || _markerRenderer == null) return;
 
-            float wave = (Mathf.Sin(Time.time * _pulseSpeed) + 1f) * 0.5f;
-            Color color = _markerBaseColor;
+            // 相手がいるときは色を変え、明滅も速くする
+            float speed = _willHit ? _hitPulseSpeed : _pulseSpeed;
+            if (speed <= 0f) return;
+
+            float wave = (Mathf.Sin(Time.time * speed) + 1f) * 0.5f;
+            Color color = _willHit ? _hitColor : _markerBaseColor;
             color.a *= 1f - _pulseAmount * wave;
 
             _markerRenderer.GetPropertyBlock(_propertyBlock);

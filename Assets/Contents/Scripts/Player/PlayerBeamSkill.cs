@@ -375,6 +375,10 @@ namespace ProjectKMP.Player
                     {
                         Fire();
                     }
+                    else
+                    {
+                        UpdateAimHitState();
+                    }
                     break;
             }
         }
@@ -566,6 +570,41 @@ namespace ProjectKMP.Player
             EndLeap();
 
             Debug.Log("[PlayerBeamSkill] 死亡したためビームを中断しました");
+        }
+
+        /// <summary>
+        /// 狙っている範囲に相手がいるかを調べて、照準の色を切り替える。
+        /// 実際に照射したときと同じ形・同じ判定で調べるので、色が変わったら必ず当たる。
+        /// </summary>
+        private void UpdateAimHitState()
+        {
+            if (_aimIndicatorInstance == null) return;
+
+            Vector3 origin = ResolveBeamOrigin();
+            Vector3 direction = ResolveBeamDirection(origin);
+            Vector3 endPoint = origin + direction * _beamLength;
+
+            int count = Physics.OverlapCapsuleNonAlloc(
+                origin, endPoint, _beamWidth, _overlapBuffer, _targetLayers, QueryTriggerInteraction.Collide);
+
+            bool willHit = false;
+            for (int i = 0; i < count; i++)
+            {
+                Collider collider = _overlapBuffer[i];
+                if (collider == null) continue;
+                if (collider.transform == transform || collider.transform.IsChildOf(transform)) continue;
+
+                HitTarget target = collider.GetComponentInParent<HitTarget>();
+                if (target == null || !target.CanBeHit) continue;
+
+                // ダメージを届けられない相手は当たった扱いにしない
+                if (target.NetworkId == 0) continue;
+
+                willHit = true;
+                break;
+            }
+
+            _aimIndicatorInstance.SetWillHit(willHit);
         }
 
         private void DestroyAimIndicator()

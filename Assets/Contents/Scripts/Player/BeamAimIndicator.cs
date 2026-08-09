@@ -27,6 +27,12 @@ namespace ProjectKMP.Player
         [SerializeField, Range(0f, 1f), Tooltip("明滅で透明度をどれだけ揺らすか")]
         private float _pulseAmount = 0.3f;
 
+        [SerializeField, Tooltip("この範囲に相手がいるときの色。当たると分かるようにする")]
+        private Color _hitColor = new Color(1f, 0.35f, 0.3f, 0.75f);
+
+        [SerializeField, Min(0f), Tooltip("相手がいるときの明滅の速さ。速いほど急かされる")]
+        private float _hitPulseSpeed = 9f;
+
         // ---- 内部状態 ------------------------------------
 
         private static readonly int BASE_COLOR_ID = Shader.PropertyToID("_BaseColor");
@@ -36,8 +42,15 @@ namespace ProjectKMP.Player
         private Mesh _mesh;
         private MaterialPropertyBlock _propertyBlock;
         private Color _baseColor = Color.white;
+        private bool _willHit;
 
         // ---- 公開API -------------------------------------
+
+        /// <summary>この範囲に相手がいるかを伝える。色と明滅の速さが切り替わる</summary>
+        public void SetWillHit(bool willHit)
+        {
+            _willHit = willHit;
+        }
 
         /// <summary>ビームの長さと太さ(半径)に合わせて表示を作り直す</summary>
         public void Configure(float beamLength, float beamRadius)
@@ -92,13 +105,17 @@ namespace ProjectKMP.Player
 
         private void Update()
         {
-            if (_pulseSpeed <= 0f || _pulseAmount <= 0f) return;
+            if (_pulseAmount <= 0f) return;
+
+            // 相手がいるときは色を変え、明滅も速くする
+            float speed = _willHit ? _hitPulseSpeed : _pulseSpeed;
+            if (speed <= 0f) return;
 
             // sin波で透明度を揺らし、狙い中であることを目立たせる
-            float wave = (Mathf.Sin(Time.time * _pulseSpeed) + 1f) * 0.5f;
+            float wave = (Mathf.Sin(Time.time * speed) + 1f) * 0.5f;
             float alphaMul = 1f - _pulseAmount * wave;
 
-            Color color = _baseColor;
+            Color color = _willHit ? _hitColor : _baseColor;
             color.a *= alphaMul;
 
             _meshRenderer.GetPropertyBlock(_propertyBlock);

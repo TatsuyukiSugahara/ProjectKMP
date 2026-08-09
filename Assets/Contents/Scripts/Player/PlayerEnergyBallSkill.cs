@@ -587,6 +587,7 @@ namespace ProjectKMP.Player
             {
                 _aimIndicatorInstance.transform.position = transform.position;
                 _aimIndicatorInstance.SetMarkerPosition(_aimMarkerPosition);
+                _aimIndicatorInstance.SetWillHit(HasTargetInBlastRange());
             }
         }
 
@@ -754,6 +755,31 @@ namespace ProjectKMP.Player
             ReleaseNightMood();
             EndLeap();
             Debug.Log("[PlayerEnergyBallSkill] 死亡したため投げ動作を中断しました");
+        }
+
+        /// <summary>
+        /// 着弾範囲に相手がいるか。爆発と同じ半径で調べるので、色が変わったら必ず巻き込める。
+        /// 玉は山なりに飛ぶが、当たるかどうかを決めるのは着弾点の周りだけ。
+        /// </summary>
+        private bool HasTargetInBlastRange()
+        {
+            int count = Physics.OverlapSphereNonAlloc(
+                _aimMarkerPosition, _explosionRadius, _overlapBuffer, _targetLayers, QueryTriggerInteraction.Collide);
+
+            for (int i = 0; i < count; i++)
+            {
+                Collider collider = _overlapBuffer[i];
+                if (collider == null) continue;
+                if (collider.transform == transform || collider.transform.IsChildOf(transform)) continue;
+
+                HitTarget target = collider.GetComponentInParent<HitTarget>();
+                if (target == null || !target.CanBeHit) continue;
+                if (target.NetworkId == 0) continue;
+
+                return true;
+            }
+
+            return false;
         }
 
         private void DestroyAimIndicator()
