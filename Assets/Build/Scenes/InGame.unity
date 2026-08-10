@@ -15752,7 +15752,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamWidth
-      value: 0.3264
+      value: 1.8
       objectReference: {fileID: 0}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamDecalPrefab
@@ -15760,11 +15760,11 @@ PrefabInstance:
       objectReference: {fileID: 3723947236444742271, guid: f847b4c4183974e25aa3a4547d6059c6, type: 3}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamEffectPrefab
-      value: 
-      objectReference: {fileID: 4788525346617179989, guid: d9add86ad7f984ce985fdb585c43a954, type: 3}
+      value:
+      objectReference: {fileID: 3475012728955560632, guid: 3a708620c79cc78ef87f93cb8b5b495b, type: 3}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamGrowDuration
-      value: 4.8
+      value: 2.4
       objectReference: {fileID: 0}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamOriginHeight
@@ -15784,7 +15784,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamDecalWidthScale
-      value: 8
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _beamDecalIntervalMeters
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamFadeOutDuration

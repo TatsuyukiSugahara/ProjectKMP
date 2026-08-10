@@ -1,3 +1,5 @@
+using ProjectKMP.Attack;
+using R3;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -21,6 +23,9 @@ namespace ProjectKMP.Gorilla
         public const string ANIM_HIT           = "Hit";
         public const string ANIM_DEATH         = "Death";
         private const float ANIM_CROSSFADE = 0.15f;
+
+        // @todo 動作確認用デバッグ入力を許可するシーン名。モデル確認用のサンドボックスシーンでのみ有効にする
+        private const string DEBUG_INPUT_SCENE_NAME = "ModelCheck";
 
         // ---- 索敵 ----
         [Header("索敵")]
@@ -79,6 +84,14 @@ namespace ProjectKMP.Gorilla
         private float _targetSearchIntervalSec = 0.5f;
 
         private float _targetSearchTimer;
+
+        // ---- 未発見時の被弾リアクション ----
+        [Header("未発見時の被弾リアクション")]
+        [SerializeField, Tooltip("待機中・徘徊中(未発見)に攻撃を受けたとき、犬の方へ振り向く速さ(度/秒)。通常の旋回速度より遅くして、じわっと振り向く演出にする")]
+        private float _hitReactionTurnSpeedDeg = 240.0f;
+
+        /// <summary>未発見時に被弾し、犬の方へ振り向いている最中かどうか</summary>
+        private bool _isTurningToAttacker;
 
         // ---- スタンプ攻撃 ----
         [Header("スタンプ攻撃")]
@@ -165,6 +178,10 @@ namespace ProjectKMP.Gorilla
         private IGorillaState _currentState;
         private Vector3 _homePosition;
 
+        // ---- 未発見時の被弾リアクション ----
+        private HitTarget _hitTarget;
+        private System.IDisposable _hitSubscription;
+
         // ---- 死亡・復活(デバッグ用) ----
         private bool _isDead;
         private Vector3 _preDeathPosition;
@@ -243,6 +260,73 @@ namespace ProjectKMP.Gorilla
         {
             _animator = GetComponent<Animator>();
             _animator.speed = _animationSpeed;
+
+            // 気づいていない(待機中・徘徊中)ときに攻撃を受けたら、攻撃してきた犬の方へ振り向く
+            _hitTarget = GetComponent<HitTarget>();
+            if (_hitTarget != null)
+            {
+                _hitSubscription = _hitTarget.Hit.Subscribe(_ => OnHitWhileUnaware());
+            }
+        }
+
+        private void OnDestroy()
+        {
+            _hitSubscription?.Dispose();
+            _hitSubscription = null;
+        }
+
+        /// <summary>
+        /// 被弾したときの通知。待機中・徘徊中(＝まだ犬に気づいていない)であれば、
+        /// その場で即座に「気づいた」扱いにして追跡ステートへ移行し、あわせて
+        /// 攻撃してきた犬の方へ振り向くフラグを立てる。実際の回頭は Update() で毎フレーム
+        /// 少しずつ行う(即座に向き直すと不自然なので、素早いがゆっくり振り向く演出にする)。
+        /// </summary>
+        private void OnHitWhileUnaware()
+        {
+            if (_isDead) return;
+            if (_target == null) return;
+            if (!(_currentState is GorillaStateIdle || _currentState is GorillaStatePatrol)) return;
+
+            _isTurningToAttacker = true;
+
+            // 「気づいていない」を今の被弾で終わらせ、即座に追跡へ移行する。
+            // (振り向き自体はここではなく UpdateHitReactionTurn が毎フレーム進める)
+            ChangeState(new GorillaStateChase());
+        }
+
+        /// <summary>
+        /// 未発見時の被弾リアクションで振り向いている最中なら、毎フレーム少しずつ犬の方へ回頭する。
+        /// OnHitWhileUnaware で追跡ステートへ切り替えた直後の1瞬だけ、通常の旋回速度より
+        /// 速く・ヒットストップの影響を受けずに向き直すための演出なので、対象を見失うか
+        /// ほぼ向き終えたら自動的に終了する。
+        /// </summary>
+        private void UpdateHitReactionTurn()
+        {
+            if (!_isTurningToAttacker) return;
+
+            if (_isDead || _target == null)
+            {
+                _isTurningToAttacker = false;
+                return;
+            }
+
+            Vector3 direction = _target.position - transform.position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude < 0.0001f)
+            {
+                _isTurningToAttacker = false;
+                return;
+            }
+
+            Quaternion look = Quaternion.LookRotation(direction.normalized);
+            // ヒットストップ(Time.timeScaleを一瞬落とす演出)に巻き込まれて振り向きが遅く見えないよう、
+            // スケールされない実時間で回頭させる
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, look, _hitReactionTurnSpeedDeg * Time.unscaledDeltaTime);
+
+            if (Quaternion.Angle(transform.rotation, look) < 1.0f)
+            {
+                _isTurningToAttacker = false;
+            }
         }
 
         private void Start()
@@ -297,9 +381,16 @@ namespace ProjectKMP.Gorilla
             }
 
             _currentState?.Update(this);
+            UpdateHitReactionTurn();
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            // @todo 動作確認用デバッグ入力。Iキーで死亡⇔復活をトグルする
+            // @todo 動作確認用デバッグ入力。ModelCheckシーン(モデル確認用のサンドボックス)でのみ有効にする。
+            // 他のシーン(InGameなど)では誤操作でモーションが暴発しないようにする
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != DEBUG_INPUT_SCENE_NAME)
+            {
+                return;
+            }
+
             // (このプロジェクトはInput System Packageを使用しているため、
             //  legacyのInput.GetKeyDownではなくKeyboard.currentを使う)
             Keyboard keyboard = Keyboard.current;
@@ -440,14 +531,38 @@ namespace ProjectKMP.Gorilla
             return _target != null && GetDistanceToTarget() <= _beamAttackRange;
         }
 
-        /// <summary>攻撃タイプ判定(近距離 or 確率でスタンプ攻撃か通常攻撃かを決める)</summary>
+        /// <summary>
+        /// 攻撃タイプ判定(近距離 or 確率でスタンプ攻撃か通常攻撃かを決める)。
+        /// 通常攻撃(頭突き)は正面の扇形にしか当たらないため、対象が背後など扇形の外にいるときは
+        /// 振り向いても間に合わない(=不発になる)ことを避けるため、向き不問のスタンプ攻撃を強制する。
+        /// これにより「背後に回り込めば一方的に殴れる」抜け道を塞ぐ。
+        /// </summary>
         public bool ShouldUseStampAttack()
         {
             if (GetDistanceToTarget() < _stampAttackNearDistance)
             {
                 return true;
             }
+
+            if (IsTargetOutsideNormalAttackCone())
+            {
+                return true;
+            }
+
             return Random.value < _stampAttackProbability;
+        }
+
+        /// <summary>対象が通常攻撃の命中扇形(正面 ±NormalAttackHitAngle/2)の外にいるか</summary>
+        private bool IsTargetOutsideNormalAttackCone()
+        {
+            if (_target == null) return false;
+
+            Vector3 toTarget = _target.position - transform.position;
+            toTarget.y = 0f;
+            if (toTarget.sqrMagnitude < 0.0001f) return false;
+
+            float angle = Vector3.Angle(transform.forward, toTarget.normalized);
+            return angle > _normalAttackHitAngle * 0.5f;
         }
 
         /// <summary>破壊光線を使うかどうかの確率判定(射程・クールタイムは呼び出し側で確認済みの前提)</summary>

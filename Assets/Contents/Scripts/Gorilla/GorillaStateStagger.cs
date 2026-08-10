@@ -27,6 +27,13 @@ namespace ProjectKMP.Gorilla
 
         public void Update(GorillaAI owner)
         {
+            // 硬直中も突っ立ったまま背中を向け続けないよう、対象の方へ振り向き続ける
+            // (移動はしない。攻撃後の隙に回り込まれて反撃できなくなるのを防ぐため)
+            if (owner.Target != null)
+            {
+                owner.TurnTowards(owner.Target.position);
+            }
+
             _elapsedTime += Time.deltaTime;
             if (_elapsedTime < _staggerTime)
             {

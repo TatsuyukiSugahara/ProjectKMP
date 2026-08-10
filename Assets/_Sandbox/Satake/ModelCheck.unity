@@ -201,20 +201,20 @@ MonoBehaviour:
   _beamDuration: 3
   _beamStaggerTime: 1
   _beamLength: 10
-  _beamGrowDuration: 0.2
-  _beamWidth: 1.2
+  _beamGrowDuration: 0.1
+  _beamWidth: 1.8
   _beamOriginHeight: 1.2
   _beamOriginForwardOffset: 1.2
   _beamInitialDamage: 3
   _beamContinuousDamage: 1
   _beamTickIntervalSec: 0.5
   _beamChargeEffectPrefab: {fileID: 3526373135642884375, guid: 9c3c4cf28e1304cc199ca4022dcc1ecc, type: 3}
-  _beamEffectPrefab: {fileID: 4788525346617179989, guid: d9add86ad7f984ce985fdb585c43a954, type: 3}
+  _beamEffectPrefab: {fileID: 3475012728955560632, guid: 3a708620c79cc78ef87f93cb8b5b495b, type: 3}
   _beamFiringShakeAmount: 0.06
   _beamFadeOutDuration: 0.8
   _beamDecalPrefab: {fileID: 0}
-  _beamDecalIntervalMeters: 2
-  _beamDecalWidthScale: 1.2
+  _beamDecalIntervalMeters: 3
+  _beamDecalWidthScale: 1.8
 --- !u!1 &460156470 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 399bd93a31143ac40b6b02b55d31d423, type: 3}
