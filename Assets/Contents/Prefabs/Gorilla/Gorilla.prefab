@@ -158,6 +158,7 @@ MonoBehaviour:
   _normalAttackHitEffectForwardOffset: 2
   _stampAttackChargeEffectPrefab: {fileID: 3526373135642884375, guid: 9c3c4cf28e1304cc199ca4022dcc1ecc, type: 3}
   _stampAttackChargeEffectHeight: 1.2
+  _beamEffectPrefab: {fileID: 3475012728955560632, guid: 3a708620c79cc78ef87f93cb8b5b495b, type: 3}
 --- !u!114 &3114836833867332793
 MonoBehaviour:
   m_ObjectHideFlags: 0
