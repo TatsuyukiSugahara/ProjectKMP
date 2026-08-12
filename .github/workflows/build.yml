@@ -1,0 +1,41 @@
+name: Build
+
+on:
+  workflow_dispatch:        # Actions タブから手動で実行
+  # push:                   # 慣れてきたら開放する
+  #   branches: [ main ]
+
+jobs:
+  build:
+    name: Build WebGL
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # versioning で必要
+          lfs: true
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-WebGL-${{ hashFiles('Assets/**','Packages/**','ProjectSettings/**') }}
+          restore-keys: |
+            Library-WebGL-
+            Library-
+
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+          # projectPath: UnityProject   # サブフォルダ構成のときだけ
+          # unityVersion: auto          # 既定。ProjectVersion.txt から自動判定
+          versioning: Semantic
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Build-WebGL
+          path: build/WebGL
+          retention-days: 7
