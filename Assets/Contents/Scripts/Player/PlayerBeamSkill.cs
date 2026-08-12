@@ -196,6 +196,31 @@ namespace ProjectKMP.Player
         [SerializeField, Range(0f, 1f), Tooltip("頭突きモーションのどの位置(0〜1)で止めて照射ポーズにするか")]
         private float _poseFreezeNormalizedTime = 0.5f;
 
+        [Header("音")]
+        [SerializeField, Tooltip("跳び上がって溜めている間の音")]
+        private AudioClip _windupClip;
+
+        [SerializeField, Tooltip("ビームを撃った瞬間の音")]
+        private AudioClip _fireClip;
+
+        [SerializeField, Tooltip("照射している間ずっと鳴らす音(ループ)")]
+        private AudioClip _loopClip;
+
+        [SerializeField, Range(0.0f, 1.0f), Tooltip("発射など一発ものの音量")]
+        private float _fireVolume = 0.85f;
+
+        [SerializeField, Range(0.0f, 1.0f), Tooltip("照射中の音量。鳴り続けるので一発ものより控えめにする")]
+        private float _loopVolume = 0.55f;
+
+        [SerializeField, Range(0.5f, 1.0f), Tooltip("強化ビームのときの音の低さ。低いほど太く聞こえる")]
+        private float _boostPitch = 0.82f;
+
+        [SerializeField, Range(0.0f, 1.0f), Tooltip("他人のビームの立体感。1に近いほど距離で小さくなる")]
+        private float _othersSpatialBlend = 0.85f;
+
+        [SerializeField, Tooltip("他人のビームが聞こえなくなる距離(m)")]
+        private float _othersMaxDistance = 35f;
+
         [Header("参照")]
         [SerializeField, Tooltip("ビームの見た目のプレハブ(DestructionBeamVisual 付き)")]
         private GameObject _beamEffectPrefab;
@@ -285,6 +310,16 @@ namespace ProjectKMP.Player
         private float _descendElapsedSec;
 
         private GameObject _beamEffectInstance;
+
+        /// <summary>照射中のループ音。途中で止める必要があるので専用の口を持つ</summary>
+        private AudioSource _loopAudio;
+
+        /// <summary>溜め・発射など一発ものをまとめて鳴らす口</summary>
+        private AudioSource _oneShotAudio;
+
+        private float _loopFadeRemainSec;
+        private float _loopFadeDurationSec;
+        private float _loopFadeStartVolume;
         private DestructionBeamVisual _beamVisual;
         private BeamAimIndicator _aimIndicatorInstance;
 
@@ -372,10 +407,16 @@ namespace ProjectKMP.Player
         {
             // 無効化されたら狙いを解除し、移動ロックを残さない
             if (_phase == Phase.Aiming) CancelAiming();
+
+            // 鳴りっぱなしで残らないよう、ここでも確実に止める
+            StopLoopSound();
         }
 
         private void Update()
         {
+            // 照射が終わったあともループ音を絞り切るまで進める必要がある
+            UpdateLoopFade();
+
             if (IsOwner) UpdateOwnerInput();
 
             // 跳び上がりと降下は座標を動かす処理なので、所有者だけが行う
@@ -606,6 +647,9 @@ namespace ProjectKMP.Player
 
             DestroyAimIndicator();
 
+            // 中断なので音も即座に切る。エフェクトだけ消えて音が残ると不自然になる
+            StopLoopSound();
+
             // 中断なので、通常終了時のようにフェードアウトはさせず即座に消す
             _targetStates.Clear();
             _grassWaveDistances.Clear();
@@ -674,6 +718,9 @@ namespace ProjectKMP.Player
         private void RpcBeginLeap()
         {
             HoldPose();
+
+            // 跳び上がりは全員の画面で見えているので、ここで鳴らせば全員に聞こえる
+            PlayOneShotClip(_windupClip, 1f);
         }
 
         /// <summary>照射の開始。全員のクライアントで呼ばれ、見た目とアニメを揃える</summary>
@@ -747,6 +794,102 @@ namespace ProjectKMP.Player
 
             // 撃った本人の画面だけを揺らす(他人の発射で画面が揺れると見づらいため)
             if (IsOwner) PlayFireCameraShake();
+
+            // 発射の一撃と、照射中のループを同時に始める。
+            // 強化ビームは音を低くする。太さも威力も上がっているので、耳でも大きく感じさせたい
+            float pitch = boosted ? _boostPitch : 1f;
+            PlayOneShotClip(_fireClip, pitch);
+            StartLoopSound(pitch);
+        }
+
+        /// <summary>
+        /// 音の口を必要になった時点で用意する。
+        /// 自分のビームは距離で小さくならない2Dで鳴らし、他人のビームは3Dで鳴らす。
+        /// 全員が2Dだと4人分の照射音が同じ音量で重なって、自分が撃っているのか分からなくなるため。
+        /// </summary>
+        private AudioSource EnsureAudioSource(ref AudioSource source, bool loop)
+        {
+            if (source != null) return source;
+
+            source = gameObject.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            source.loop = loop;
+
+            source.spatialBlend = IsOwner ? 0f : _othersSpatialBlend;
+            source.rolloffMode = AudioRolloffMode.Linear;
+            source.minDistance = 5f;
+            source.maxDistance = _othersMaxDistance;
+
+            return source;
+        }
+
+        /// <summary>溜め・発射など、鳴らしっぱなしにしない音を重ねて鳴らす</summary>
+        private void PlayOneShotClip(AudioClip clip, float pitch)
+        {
+            if (clip == null) return;
+
+            EnsureAudioSource(ref _oneShotAudio, false);
+            _oneShotAudio.pitch = pitch;
+            _oneShotAudio.PlayOneShot(clip, _fireVolume);
+        }
+
+        /// <summary>照射中のループを鳴らし始める</summary>
+        private void StartLoopSound(float pitch)
+        {
+            if (_loopClip == null) return;
+
+            EnsureAudioSource(ref _loopAudio, true);
+
+            _loopFadeRemainSec = 0f;
+            _loopAudio.clip = _loopClip;
+
+            // 撃つたびに同じ聞こえ方だと作り物っぽくなるので、少しだけ散らす
+            _loopAudio.pitch = pitch * Random.Range(0.96f, 1.04f);
+            _loopAudio.volume = _loopVolume;
+            _loopAudio.Play();
+
+            // 毎回違う位置から流す。同じ場所から始めると耳が繰り返しを覚えてしまう
+            _loopAudio.time = Random.Range(0f, Mathf.Max(0.01f, _loopClip.length - 0.05f));
+        }
+
+        /// <summary>照射が終わったので、指定の秒数でループを絞っていく</summary>
+        private void FadeOutLoopSound(float durationSec)
+        {
+            if (_loopAudio == null || !_loopAudio.isPlaying) return;
+
+            if (durationSec <= 0f) { StopLoopSound(); return; }
+
+            _loopFadeDurationSec = durationSec;
+            _loopFadeRemainSec = durationSec;
+            _loopFadeStartVolume = _loopAudio.volume;
+        }
+
+        /// <summary>ループを即座に止める</summary>
+        private void StopLoopSound()
+        {
+            _loopFadeRemainSec = 0f;
+
+            if (_loopAudio == null || !_loopAudio.isPlaying) return;
+
+            _loopAudio.Stop();
+        }
+
+        /// <summary>
+        /// ループ音のフェードを進める。
+        /// ヒットストップで時間が止まっても音だけは進めたいので、実時間で数える。
+        /// </summary>
+        private void UpdateLoopFade()
+        {
+            if (_loopFadeRemainSec <= 0f) return;
+
+            _loopFadeRemainSec -= Time.unscaledDeltaTime;
+
+            if (_loopFadeRemainSec <= 0f) { StopLoopSound(); return; }
+
+            if (_loopAudio != null)
+            {
+                _loopAudio.volume = _loopFadeStartVolume * (_loopFadeRemainSec / _loopFadeDurationSec);
+            }
         }
 
         /// <summary>発射の瞬間にカメラを短く揺らして「撃った感」を出す</summary>
@@ -948,6 +1091,9 @@ namespace ProjectKMP.Player
         private void FinishFiring()
         {
             _targetStates.Clear();
+
+            // 見た目のフェードと同じ時間で音も絞る。絵と音の消え方を揃える
+            FadeOutLoopSound(_fadeOutDurationSec);
 
             if (_beamEffectInstance != null)
             {

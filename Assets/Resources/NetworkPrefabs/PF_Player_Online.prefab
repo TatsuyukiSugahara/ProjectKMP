@@ -512,6 +512,14 @@ MonoBehaviour:
   _descendSpeed: 8
   _aimAtGroundEnd: 0
   _poseFreezeNormalizedTime: 0.5
+  _windupClip: {fileID: 8300000, guid: 92672c5f3dae14183aa4e14ce10b1550, type: 3}
+  _fireClip: {fileID: 8300000, guid: 1188a35ca763e4916bf85685d274f564, type: 3}
+  _loopClip: {fileID: 8300000, guid: b85baa43f0750457985fdbed5e8c87ce, type: 3}
+  _fireVolume: 0.85
+  _loopVolume: 0.55
+  _boostPitch: 0.82
+  _othersSpatialBlend: 0.85
+  _othersMaxDistance: 35
   _beamEffectPrefab: {fileID: 4788525346617179989, guid: 2551396ed736a4a88bd840813aba3445, type: 3}
   _aimIndicatorPrefab: {fileID: 1381237403910770338, guid: 0f4c2ded39bed4510be73d8b926cec07, type: 3}
   _damagePopupPrefab: {fileID: 334619725715907676, guid: dc738a3d7ee4b430aab1e466091f1be0, type: 3}
@@ -606,6 +614,12 @@ MonoBehaviour:
   _useImpactWarning: 1
   _impactDecalPrefab: {fileID: 1426292960322628520, guid: 4ad4ac40bc9c04de382334e67c31f4f5, type: 3}
   _decalWidthScale: 1.65
+  _chargeClip: {fileID: 8300000, guid: 445f2c3833b8144aeba267e106715d99, type: 3}
+  _chargeCompleteClip: {fileID: 8300000, guid: ac155ea8992e947e4b33ae9700df1901, type: 3}
+  _throwClip: {fileID: 8300000, guid: e4023292b501548de81ff1abf5b54a61, type: 3}
+  _explosionClip: {fileID: 8300000, guid: ab95e063c0b1d47d5bfa5fbe387e02c9, type: 3}
+  _cutinClip: {fileID: 8300000, guid: 4ee0f247e95cf46dc8a50d4c45eab9dc, type: 3}
+  _skillVolume: 0.85
   _ballPrefab: {fileID: 143401169253108070, guid: 3a075985537a9473b8b847f40c6238a2, type: 3}
   _explosionEffectPrefab: {fileID: 1330026566090244725, guid: 963957b6b02764ab79ba97a5bd658fe6, type: 3}
   _explosionEffectLifeSec: 2
@@ -695,8 +709,9 @@ MonoBehaviour:
   _damagePopupPrefab: {fileID: 334619725715907676, guid: dc738a3d7ee4b430aab1e466091f1be0, type: 3}
   _landDecalPrefab: {fileID: 3723947236444742271, guid: f847b4c4183974e25aa3a4547d6059c6, type: 3}
   _landDecalScale: 1.4
-  _jumpClip: {fileID: 0}
-  _landClip: {fileID: 0}
+  _jumpClip: {fileID: 8300000, guid: e0b430df7fa494e64baab279b7294bd9, type: 3}
+  _landClip: {fileID: 8300000, guid: d90495aec68684c1cbff68614c2eed9a, type: 3}
+  _impactClip: {fileID: 8300000, guid: d7d35b24c7fe34d7e8e6a81eedf7f62b, type: 3}
   _volume: 0.7
   _useEKey: 1
   _useGamepadShoulder: 1

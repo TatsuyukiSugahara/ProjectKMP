@@ -100,6 +100,9 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("着地の音")]
         private AudioClip _landClip;
 
+        [SerializeField, Tooltip("相手にぶつかったときの音。未設定なら着地の音で代用する")]
+        private AudioClip _impactClip;
+
         [SerializeField, Range(0.0f, 1.0f), Tooltip("音量")]
         private float _volume = 0.7f;
 
@@ -417,7 +420,7 @@ namespace ProjectKMP.Player
                 if (blocked)
                 {
                     // ぶつかった位置で当ててから跳ね返る。着地まで待つと、当たった手応えが遅れる
-                    ApplyLandingHit();
+                    ApplyLandingHit(true);
                     hitApplied = true;
 
                     await BounceAsync(direction, token);
@@ -498,12 +501,16 @@ namespace ProjectKMP.Player
 
         // ---- 内部処理: 着地の攻撃 -------------------------
 
-        private void ApplyLandingHit()
+        /// <param name="blocked">相手にぶつかって止まったか。鳴らす音を変えるのに使う</param>
+        private void ApplyLandingHit(bool blocked = false)
         {
             // 叩きつけた瞬間から受付が開く
             _boostWindowEndTime = Time.unscaledTime + _boostWindowSec;
 
-            PlayClip(_landClip);
+            // 着地の合図を全員へ送る。ここは本人でしか通らないので、
+            // 送らないと他の人の画面ではとびこみが無音のまま終わってしまう
+            photonView.RPC(nameof(RpcLanded), RpcTarget.All, blocked);
+
             PlayLandingFeedback();
             SpawnLandDecal();
 
@@ -527,6 +534,17 @@ namespace ProjectKMP.Player
 
                 photonView.RPC(nameof(RpcDiveHit), RpcTarget.All, point, target.NetworkId, damage, combo);
             }
+        }
+
+        /// <summary>
+        /// 着地(またはぶつかった瞬間)の音を全員の画面で鳴らす。
+        /// 相手に当たったときは地面とは違う詰まった音にして、当てたかどうかを耳でも分かるようにする。
+        /// </summary>
+        [PunRPC]
+        private void RpcLanded(bool blocked)
+        {
+            AudioClip clip = blocked && _impactClip != null ? _impactClip : _landClip;
+            PlayClip(clip);
         }
 
         [PunRPC]

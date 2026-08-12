@@ -261,6 +261,25 @@ namespace ProjectKMP.Player
         [SerializeField, Min(0.1f), Tooltip("痕の直径を爆発の直径の何倍にするか")]
         private float _decalWidthScale = 1.1f;
 
+        [Header("音")]
+        [SerializeField, Tooltip("溜めている間ずっと鳴らす音。完成かキャンセルで止まる")]
+        private AudioClip _chargeClip;
+
+        [SerializeField, Tooltip("溜めが完成した瞬間の音")]
+        private AudioClip _chargeCompleteClip;
+
+        [SerializeField, Tooltip("投げた瞬間の音")]
+        private AudioClip _throwClip;
+
+        [SerializeField, Tooltip("爆発の音")]
+        private AudioClip _explosionClip;
+
+        [SerializeField, Tooltip("カットインが出る瞬間の音。カットインと同じく自分の画面だけで鳴る")]
+        private AudioClip _cutinClip;
+
+        [SerializeField, Range(0.0f, 1.0f), Tooltip("必殺技の音の大きさ")]
+        private float _skillVolume = 0.85f;
+
         [Header("参照")]
         [SerializeField, Tooltip("チャージ中に頭上へ出す玉のプレハブ")]
         private GameObject _ballPrefab;
@@ -367,6 +386,12 @@ namespace ProjectKMP.Player
         private MaterialPropertyBlock _ballPropertyBlock;
 
         private GameObject _chargeEffectInstance;
+
+        /// <summary>溜め音は途中で止める必要があるので、専用の口を持つ</summary>
+        private AudioSource _chargeAudio;
+
+        /// <summary>一発ものの音をまとめて鳴らす口</summary>
+        private AudioSource _skillAudio;
         private bool _chargeSlowActive;
         private float _chargeRingTimerSec;
         private bool _chargeCompleteFlashed;
@@ -829,6 +854,9 @@ namespace ProjectKMP.Player
             if (!IsOwner) return;
 
             SetChargeSlow(true);
+
+            // 溜めは全クライアントで進むので、ここで鳴らせば全員に聞こえる
+            StartChargeSound();
             ApplyChargeCamera(true);
         }
 
@@ -837,6 +865,8 @@ namespace ProjectKMP.Player
         private void RpcCancelCharge()
         {
             _phase = Phase.Ready;
+
+            StopChargeSound();
             DestroyBall();
             DestroyChargeEffect();
             EndChargePresentation();
@@ -867,7 +897,17 @@ namespace ProjectKMP.Player
             DestroyChargeEffect();
 
             // カットインは発動した本人の画面にだけ。跳び上がり〜振りかぶりのちょうど裏で流す
-            if (_useCutin && IsOwner) SkillCutin.Play(RiseVisualSec + _windUpSec + _cutinExtraSec);
+            if (_useCutin && IsOwner)
+            {
+                SkillCutin.Play(RiseVisualSec + _windUpSec + _cutinExtraSec);
+
+                // 指を離した瞬間に発動するので、完成音の余韻がまだ残っている。
+                // 重ねたままだと二つの音が混ざって両方とも弱くなるため、先に畳む
+                StopSkillClips();
+
+                // 絵と音は同時でないと切れ味が出ない。鳴らす相手も画面と揃えて本人だけにする
+                PlaySkillClip(_cutinClip);
+            }
         }
 
         /// <summary>投げきれなかったときの後始末を全員で行う</summary>
@@ -881,6 +921,9 @@ namespace ProjectKMP.Player
         [PunRPC]
         private void RpcThrow(Vector3 target, float groundY)
         {
+            StopChargeSound();
+            PlaySkillClip(_throwClip);
+
             DestroyChargeEffect();
             EndChargePresentation();
 
@@ -1161,6 +1204,7 @@ namespace ProjectKMP.Player
                 }
             }
 
+            PlaySkillClip(_explosionClip);
             PlayExplosionImpact();
 
             // 木はシーンに置かれていて全クライアントに同じものがあり、この処理も全員で走る。
@@ -1356,6 +1400,10 @@ namespace ProjectKMP.Player
 
             _chargeCompleteFlashed = true;
 
+            // 唸りを断ち切って澄んだ一撃を鳴らす。切り替わりが「完成した」の合図になる
+            StopChargeSound();
+            PlaySkillClip(_chargeCompleteClip);
+
             // 他人の溜め完了で画面が光ると見づらいので、自分のときだけ光らせる
             if (IsOwner && _chargeCompleteFlashSec > 0f)
             {
@@ -1413,6 +1461,66 @@ namespace ProjectKMP.Player
         // ---- 時間の速さ ------------------------------------
 
         /// <summary>溜め中のスロー。掛けっぱなしにならないよう、必ず対で取り下げる</summary>
+        /// <summary>
+        /// 音の口を必要になった時点で用意する。
+        /// 距離で小さくならない2Dで鳴らす。狭い戦場なので、誰の必殺技も同じ迫力で聞かせたい。
+        /// </summary>
+        private AudioSource EnsureAudioSource(ref AudioSource source, bool loop)
+        {
+            if (source != null) return source;
+
+            source = gameObject.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            source.loop = loop;
+            source.spatialBlend = 0f;
+
+            return source;
+        }
+
+        private void StartChargeSound()
+        {
+            if (_chargeClip == null) return;
+
+            EnsureAudioSource(ref _chargeAudio, false);
+            _chargeAudio.clip = _chargeClip;
+            _chargeAudio.volume = _skillVolume;
+
+            // 溜めの長さを変えても最後まで鳴りきるよう、音の速さを合わせる
+            _chargeAudio.pitch = _chargeDurationSec > 0.05f
+                ? Mathf.Clamp(_chargeClip.length / _chargeDurationSec, 0.5f, 2f)
+                : 1f;
+
+            _chargeAudio.Play();
+        }
+
+        private void StopChargeSound()
+        {
+            if (_chargeAudio == null || !_chargeAudio.isPlaying) return;
+
+            _chargeAudio.Stop();
+        }
+
+        /// <summary>
+        /// 鳴っている一発ものを止める。次の音を立てたいときだけ使う。
+        /// 溜め音は別の口なので、これでは止まらない。
+        /// </summary>
+        private void StopSkillClips()
+        {
+            if (_skillAudio == null || !_skillAudio.isPlaying) return;
+
+            _skillAudio.Stop();
+        }
+
+        private void PlaySkillClip(AudioClip clip)
+        {
+            if (clip == null) return;
+
+            EnsureAudioSource(ref _skillAudio, false);
+
+            // 溜め・完成・投げ・爆発が重なっても切れないよう、重ねて鳴らす
+            _skillAudio.PlayOneShot(clip, _skillVolume);
+        }
+
         private void SetChargeSlow(bool enabled)
         {
             if (_chargeSlowActive == enabled) return;
