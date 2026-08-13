@@ -37,6 +37,63 @@ namespace ProjectKMP.UI.InGame
         private float _animationSeconds = 0.25f;
 
         [Header("確認用")]
+        [Header("ゲージの本数")]
+        [SerializeField, Min(1), Tooltip("HPを何本に分けるか。1本削り切ると、次の本が右から現れる")]
+        private int _segmentCount = 4;
+
+        [SerializeField, Tooltip("本ごとの色。削る順に並べる(先頭が最初に削る本、末尾が最後の1本)")]
+        private Color[] _segmentColors =
+        {
+            new Color(0.45f, 0.82f, 0.32f, 1.0f),
+            new Color(1.00f, 0.84f, 0.22f, 1.0f),
+            new Color(1.00f, 0.55f, 0.14f, 1.0f),
+            new Color(1.00f, 0.28f, 0.24f, 1.0f),
+        };
+
+        [SerializeField, Tooltip("ゲージの溝。次の本の色を薄く出すのに使う。未設定なら色を変えない")]
+        private Graphic _trackGraphic;
+
+        [SerializeField, Range(0.0f, 1.0f), Tooltip("溝の薄さ。小さいほど暗く沈む")]
+        private float _trackBrightness = 0.45f;
+
+        [SerializeField, Tooltip("最後の1本を削っているときの溝の色。この先が無いことを見せる")]
+        private Color _trackLastColor = new Color(0.16f, 0.06f, 0.14f, 1.0f);
+
+        [SerializeField, Tooltip("残りの本数を出す印。左から順に、残っているぶんだけ灯る")]
+        private Graphic[] _segmentPips;
+
+        [SerializeField, Tooltip("残っている印の色")]
+        private Color _pipOnColor = new Color(1.0f, 0.85f, 0.35f, 1.0f);
+
+        [SerializeField, Tooltip("削り終わった印の色")]
+        private Color _pipOffColor = new Color(0.25f, 0.12f, 0.22f, 0.7f);
+
+        [Header("削れた分の残像")]
+        [SerializeField, Tooltip("本体より遅れて追いつく帯。未設定なら出さない")]
+        private RectTransform _delayedRect;
+
+        [SerializeField, Min(0.0f), Tooltip("追いつき始めるまでの待ち(秒)。ここが『どれだけ削ったか』を見せる時間")]
+        private float _delayedHoldSeconds = 0.35f;
+
+        [SerializeField, Min(0.01f), Tooltip("追いつくのにかける時間(秒)")]
+        private float _delayedCatchSeconds = 0.45f;
+
+        [Header("残りが少ないとき")]
+        [SerializeField, Tooltip("色を変える中身の絵。未設定なら色を変えない")]
+        private Graphic _fillGraphic;
+
+        [SerializeField, Tooltip("ふだんの色")]
+        private Color _normalColor = new Color(0.910f, 0.435f, 0.839f, 1.0f);
+
+        [SerializeField, Tooltip("残りわずかのときの色")]
+        private Color _lowColor = new Color(1.0f, 0.30f, 0.25f, 1.0f);
+
+        [SerializeField, Range(0.0f, 1.0f), Tooltip("この割合を下回ったら色を変え始める")]
+        private float _lowThreshold = 0.3f;
+
+        [SerializeField, Min(0.0f), Tooltip("残りわずかのときの脈打ちの速さ(1秒あたりの回数)。0で脈打たない")]
+        private float _lowPulseHz = 2.2f;
+
         [SerializeField, Range(0.0f, 1.0f), Tooltip("エディタで見た目を確かめるための値。実行中は使わない")]
         private float _previewRatio = 1.0f;
 
@@ -44,6 +101,9 @@ namespace ProjectKMP.UI.InGame
 
         private float _displayRatio = 1.0f;
         private float _targetRatio = 1.0f;
+
+        private float _delayedRatio = 1.0f;
+        private float _delayedHoldRemain;
         private CancellationTokenSource _animationCts;
 
         // ---- 公開API -------------------------------------
@@ -97,12 +157,26 @@ namespace ProjectKMP.UI.InGame
 
         private void OnEnable()
         {
+            // 残像を合わせずに出すと、置いたままの大きさで真ん中に白い塊が残る
+            _delayedRatio = _displayRatio;
+
             ApplyFill(_displayRatio);
+            ApplyWidth(_delayedRect, SegmentRatio(_delayedRatio));
+            UpdatePips();
+            UpdateTrackColor();
         }
 
         private void OnDisable()
         {
             StopAnimation();
+        }
+
+        private void Update()
+        {
+            UpdateDelayed();
+            UpdateFillColor();
+            UpdateTrackColor();
+            UpdatePips();
         }
 
 #if UNITY_EDITOR
@@ -159,10 +233,145 @@ namespace ProjectKMP.UI.InGame
             }
         }
 
+        /// <summary>
+        /// 削れた分を、少し待ってから追いつかせる。
+        /// 本体と一緒に減らすと『どれだけ削ったか』が見えず、手応えが伝わらない。
+        /// </summary>
+        private void UpdateDelayed()
+        {
+            if (_delayedRect == null) return;
+
+            // 増えたとき(戦闘開始のリセットなど)は待たずに合わせる
+            if (_delayedRatio < _displayRatio) { _delayedRatio = _displayRatio; ApplyWidth(_delayedRect, SegmentRatio(_delayedRatio)); return; }
+            if (Mathf.Approximately(_delayedRatio, _displayRatio)) return;
+
+            // 本が変わったら残像は持ち越さない。前の本の残りが新しい本に見えてしまう
+            if (SegmentIndex(_delayedRatio) != SegmentIndex(_displayRatio))
+            {
+                _delayedRatio = _displayRatio;
+                ApplyWidth(_delayedRect, SegmentRatio(_delayedRatio));
+                return;
+            }
+
+            if (_delayedHoldRemain > 0.0f) { _delayedHoldRemain -= Time.deltaTime; return; }
+
+            float step = Time.deltaTime / Mathf.Max(0.01f, _delayedCatchSeconds);
+            _delayedRatio = Mathf.MoveTowards(_delayedRatio, _displayRatio, step);
+
+            ApplyWidth(_delayedRect, SegmentRatio(_delayedRatio));
+        }
+
+        /// <summary>
+        /// 中身の色を、いま削っている本に合わせる。
+        /// 本ごとに色が変わると、切り替わった瞬間が見た目でも分かる。
+        /// </summary>
+        private void UpdateFillColor()
+        {
+            if (_fillGraphic == null) return;
+
+            Color color = SegmentColor(SegmentIndex(_displayRatio));
+
+            // 全体の残りがわずかなときだけ脈打たせる。最後の1本の緊張感を出す
+            if (_lowPulseHz > 0.0f && _lowThreshold > 0.0f && _displayRatio <= _lowThreshold)
+            {
+                float pulse = 0.80f + 0.20f * Mathf.Sin(Time.unscaledTime * _lowPulseHz * Mathf.PI * 2.0f);
+                color = new Color(color.r * pulse, color.g * pulse, color.b * pulse, color.a);
+            }
+
+            _fillGraphic.color = color;
+        }
+
+        /// <summary>
+        /// 溝の色を『次に現れる本』の色にする。
+        /// いま削り切ったら何色が出てくるかが先に見えるので、
+        /// 本の切り替わりが唐突に感じられなくなる。
+        /// </summary>
+        private void UpdateTrackColor()
+        {
+            if (_trackGraphic == null) return;
+
+            int remaining = SegmentIndex(_displayRatio);
+
+            // 最後の1本を削っている間は、次が無いので暗いままにする
+            if (remaining <= 1) { _trackGraphic.color = _trackLastColor; return; }
+
+            Color next = SegmentColor(remaining - 1);
+
+            _trackGraphic.color = new Color(
+                next.r * _trackBrightness,
+                next.g * _trackBrightness,
+                next.b * _trackBrightness,
+                1.0f);
+        }
+
+        /// <summary>残り本数から、その本の色を返す</summary>
+        private Color SegmentColor(int remaining)
+        {
+            if (_segmentColors == null || _segmentColors.Length == 0) return _normalColor;
+
+            // 残りが多いほど『削る順』では手前。残り4本なら先頭の色になる
+            int index = Mathf.Clamp(_segmentCount - remaining, 0, _segmentColors.Length - 1);
+
+            return _segmentColors[index];
+        }
+
         /// <summary>中身の幅を割合に合わせて変える</summary>
         private void ApplyFill(float ratio01)
         {
-            if (_trackRect == null || _fillRect == null) return;
+            ApplyWidth(_fillRect, SegmentRatio(ratio01));
+
+            // 減ったときだけ残像を残す。増えたときは UpdateDelayed 側ですぐ合わせる
+            if (_delayedRect != null && ratio01 < _delayedRatio) _delayedHoldRemain = _delayedHoldSeconds;
+        }
+
+        /// <summary>
+        /// いま何本目を削っているか(1が最後の1本)。
+        /// 全体の割合を本数で割って、残っている本の数として数える。
+        /// </summary>
+        private int SegmentIndex(float total01)
+        {
+            if (_segmentCount <= 1) return 1;
+            if (total01 <= 0.0f) return 0;
+
+            return Mathf.Clamp(Mathf.CeilToInt(total01 * _segmentCount), 1, _segmentCount);
+        }
+
+        /// <summary>
+        /// いま削っている1本ぶんの残り(0〜1)。
+        /// 全体が減って本の切れ目をまたぐと0から1へ戻り、次の本が右から現れる。
+        /// </summary>
+        private float SegmentRatio(float total01)
+        {
+            if (_segmentCount <= 1) return Mathf.Clamp01(total01);
+            if (total01 <= 0.0f) return 0.0f;
+            if (total01 >= 1.0f) return 1.0f;
+
+            float scaled = total01 * _segmentCount;
+
+            // 切れ目のちょうど上は、削り切った側ではなく満タン側として見せる
+            return Mathf.Clamp01(scaled - (Mathf.CeilToInt(scaled) - 1));
+        }
+
+        /// <summary>残りの本数を印に反映する</summary>
+        private void UpdatePips()
+        {
+            if (_segmentPips == null) return;
+
+            int remaining = SegmentIndex(_displayRatio);
+
+            for (int i = 0; i < _segmentPips.Length; i++)
+            {
+                if (_segmentPips[i] == null) continue;
+
+                // 左の印ほど後に削る本。帯と同じ色にして、どの印がどの本かを分からせる
+                _segmentPips[i].color = i < remaining ? SegmentColor(i + 1) : _pipOffColor;
+            }
+        }
+
+        /// <summary>指定した帯の幅を割合に合わせて変える</summary>
+        private void ApplyWidth(RectTransform target, float ratio01)
+        {
+            if (_trackRect == null || target == null) return;
 
             float trackWidth = _trackRect.rect.width - _padding * 2.0f;
             float trackHeight = _trackRect.rect.height - _padding * 2.0f;
@@ -170,10 +379,10 @@ namespace ProjectKMP.UI.InGame
             // 残りわずかでも高さぶんの幅を残し、丸い端がつぶれないようにする。0のときだけ完全に消す
             float width = ratio01 <= 0.0f ? 0.0f : Mathf.Max(trackHeight, ratio01 * trackWidth);
 
-            _fillRect.anchorMin = new Vector2(0.0f, 0.0f);
-            _fillRect.anchorMax = new Vector2(0.0f, 1.0f);
-            _fillRect.offsetMin = new Vector2(_padding, _padding);
-            _fillRect.offsetMax = new Vector2(_padding + width, -_padding);
+            target.anchorMin = new Vector2(0.0f, 0.0f);
+            target.anchorMax = new Vector2(0.0f, 1.0f);
+            target.offsetMin = new Vector2(_padding, _padding);
+            target.offsetMax = new Vector2(_padding + width, -_padding);
         }
     }
 }
