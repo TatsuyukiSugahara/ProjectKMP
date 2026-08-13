@@ -1,41 +1,71 @@
 name: Build
 
 on:
-  workflow_dispatch:        # Actions タブから手動で実行
-  # push:                   # 慣れてきたら開放する
+  workflow_dispatch:          # Actions タブから手動で実行
+  # push:                     # 慣れてきたら開放する
   #   branches: [ main ]
+  #   paths-ignore:
+  #     - '**.md'
 
 jobs:
   build:
-    name: Build WebGL
+    name: Build ${{ matrix.targetPlatform }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        targetPlatform:
+          - StandaloneWindows64
+          - Android
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0    # versioning で必要
+          fetch-depth: 0
           lfs: true
 
       - uses: actions/cache@v4
         with:
           path: Library
-          key: Library-WebGL-${{ hashFiles('Assets/**','Packages/**','ProjectSettings/**') }}
+          key: Library-${{ matrix.targetPlatform }}-${{ hashFiles('Assets/**','Packages/**','ProjectSettings/**') }}
           restore-keys: |
-            Library-WebGL-
+            Library-${{ matrix.targetPlatform }}-
             Library-
 
-      - uses: game-ci/unity-builder@v4
+      - name: Free disk space
+        if: matrix.targetPlatform == 'Android'
+        uses: jlumbroso/free-disk-space@main
+
+      - name: Build Windows
+        if: matrix.targetPlatform == 'StandaloneWindows64'
+        uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
-          targetPlatform: WebGL
-          # projectPath: UnityProject   # サブフォルダ構成のときだけ
-          # unityVersion: auto          # 既定。ProjectVersion.txt から自動判定
+          targetPlatform: StandaloneWindows64
           versioning: Semantic
+
+      - name: Build Android
+        if: matrix.targetPlatform == 'Android'
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: Android
+          versioning: Semantic
+          androidExportType: androidPackage
+          androidKeystoreName: user.keystore
+          androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Build-WebGL
-          path: build/WebGL
+          name: Build-${{ matrix.targetPlatform }}
+          path: build/${{ matrix.targetPlatform }}
           retention-days: 7
