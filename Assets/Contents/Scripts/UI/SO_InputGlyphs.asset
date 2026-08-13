@@ -1,0 +1,210 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71ccfed5513f045859e9a69a19c5c962, type: 3}
+  m_Name: SO_InputGlyphs
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.UI.InputGlyphTable
+  _entries:
+  - Action: 0
+    Mode: 0
+    Label: 
+    Shape: 0
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 1
+    Mode: 0
+    Label: 
+    Shape: 0
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 2
+    Mode: 0
+    Label: 
+    Shape: 0
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 3
+    Mode: 0
+    Label: 
+    Shape: 0
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 4
+    Mode: 0
+    Label: 
+    Shape: 0
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 0
+    Mode: 1
+    Label: Space
+    Shape: 3
+    Tint: {r: 0.94, g: 0.94, b: 0.95, a: 1}
+    LabelColor: {r: 0.12, g: 0.12, b: 0.14, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 1
+    Mode: 1
+    Label: R
+    Shape: 2
+    Tint: {r: 0.94, g: 0.94, b: 0.95, a: 1}
+    LabelColor: {r: 0.12, g: 0.12, b: 0.14, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 1
+  - Action: 2
+    Mode: 1
+    Label: Q
+    Shape: 2
+    Tint: {r: 0.94, g: 0.94, b: 0.95, a: 1}
+    LabelColor: {r: 0.12, g: 0.12, b: 0.14, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 1
+  - Action: 3
+    Mode: 1
+    Label: E
+    Shape: 2
+    Tint: {r: 0.94, g: 0.94, b: 0.95, a: 1}
+    LabelColor: {r: 0.12, g: 0.12, b: 0.14, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 4
+    Mode: 1
+    Label: F
+    Shape: 2
+    Tint: {r: 0.94, g: 0.94, b: 0.95, a: 1}
+    LabelColor: {r: 0.12, g: 0.12, b: 0.14, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 0
+    Mode: 2
+    Label: A
+    Shape: 1
+    Tint: {r: 0.06, g: 0.55, b: 0.16, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 1
+    Mode: 2
+    Label: B
+    Shape: 1
+    Tint: {r: 0.8, g: 0.16, b: 0.19, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 1
+  - Action: 2
+    Mode: 2
+    Label: Y
+    Shape: 1
+    Tint: {r: 0.95, g: 0.72, b: 0.08, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 1
+  - Action: 3
+    Mode: 2
+    Label: LB
+    Shape: 3
+    Tint: {r: 0.22, g: 0.23, b: 0.25, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 4
+    Mode: 2
+    Label: RB
+    Shape: 3
+    Tint: {r: 0.22, g: 0.23, b: 0.25, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 5
+    Mode: 0
+    Label: 
+    Shape: 0
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 5
+    Mode: 1
+    Label: 
+    Shape: 0
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 6
+    Mode: 0
+    Label: 
+    Shape: 0
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 6
+    Mode: 1
+    Label: 
+    Shape: 0
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 7
+    Mode: 0
+    Label: 
+    Shape: 0
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 7
+    Mode: 1
+    Label: 
+    Shape: 0
+    Tint: {r: 1, g: 1, b: 1, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 5
+    Mode: 2
+    Label: A
+    Shape: 1
+    Tint: {r: 0.06, g: 0.55, b: 0.16, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 6
+    Mode: 2
+    Label: B
+    Shape: 1
+    Tint: {r: 0.8, g: 0.16, b: 0.19, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 0
+  - Action: 7
+    Mode: 2
+    Label: A
+    Shape: 1
+    Tint: {r: 0.06, g: 0.55, b: 0.16, a: 1}
+    LabelColor: {r: 1, g: 1, b: 1, a: 1}
+    Sprite: {fileID: 0}
+    Hold: 1
+  _roundSprite: {fileID: 21300000, guid: 3dde2a744e5ae4d32bdac39e1cca875d, type: 3}
+  _keySprite: {fileID: 21300000, guid: b23b15d6a0a04498bbe09c581729f954, type: 3}
+  _wideSprite: {fileID: 21300000, guid: bc07d7dc348f64d53aa996e507011824, type: 3}

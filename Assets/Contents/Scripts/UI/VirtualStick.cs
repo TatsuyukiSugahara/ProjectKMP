@@ -28,6 +28,7 @@ namespace ProjectKMP.UI
         private Canvas _canvas;
         private Vector2 _value;
         private bool _isSupportedPlatform;
+        private bool _platformChecked;
         private int _activePointerId = INVALID_POINTER_ID;
 
         // ---- 公開API -------------------------------------
@@ -35,16 +36,35 @@ namespace ProjectKMP.UI
         /// <summary>-1〜1 に正規化された入力値。非対応環境では常にゼロ</summary>
         public Vector2 Value => _value;
 
-        /// <summary>表示を切り替える。非対応環境では visible を渡しても表示されない</summary>
+        /// <summary>
+        /// 表示を切り替える。非対応環境では visible を渡しても表示されない。
+        /// オブジェクトが無効なまま呼ばれることがある(操作機器に合わせて消しているとき)ので、
+        /// 参照は使う直前に取り直す。Awake を通っていなくても落ちないようにするため。
+        /// </summary>
         public void SetVisible(bool visible)
         {
-            bool show = visible && _isSupportedPlatform;
+            bool show = visible && IsSupportedPlatform();
+
+            if (_canvasGroup == null) _canvasGroup = GetComponent<CanvasGroup>();
+            if (_canvasGroup == null) return;
 
             _canvasGroup.alpha = show ? 1.0f : 0.0f;
             _canvasGroup.interactable = show;
             _canvasGroup.blocksRaycasts = show;
 
             if (!show) ResetStick();
+        }
+
+        /// <summary>Awake を通っていない場合でも正しく答えられるようにする</summary>
+        private bool IsSupportedPlatform()
+        {
+            if (!_platformChecked)
+            {
+                _isSupportedPlatform = IsTouchPlatform();
+                _platformChecked = true;
+            }
+
+            return _isSupportedPlatform;
         }
 
         // ---- Unityイベント -------------------------------
@@ -55,6 +75,7 @@ namespace ProjectKMP.UI
             _canvasGroup = GetComponent<CanvasGroup>();
             _canvas = GetComponentInParent<Canvas>();
             _isSupportedPlatform = IsTouchPlatform();
+            _platformChecked = true;
 
             ServiceLocator.Register(this);
 

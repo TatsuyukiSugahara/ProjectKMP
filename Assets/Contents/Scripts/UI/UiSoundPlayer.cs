@@ -27,6 +27,9 @@ namespace ProjectKMP.UI
             /// <summary>先へ進むボタン</summary>
             Decide,
 
+            /// <summary>自前で音を鳴らすので、ここでは鳴らさない</summary>
+            None,
+
             /// <summary>戻る・やめるボタン</summary>
             Cancel,
         }
@@ -93,6 +96,9 @@ namespace ProjectKMP.UI
         {
             switch (kind)
             {
+                // 鳴らす側が自前で音を持っている場合。ここで鳴らすと二重になる
+                case SoundKind.None: break;
+
                 case SoundKind.Decide: PlayOneShot(_decideClip, _decideVolume); break;
                 case SoundKind.Cancel: PlayOneShot(_cancelClip, _cancelVolume); break;
                 default: PlayOneShot(_clickClip, _clickVolume); break;

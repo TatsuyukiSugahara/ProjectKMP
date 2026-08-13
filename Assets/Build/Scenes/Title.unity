@@ -3137,6 +3137,7 @@ GameObject:
   - component: {fileID: 1084997531}
   - component: {fileID: 1084997530}
   - component: {fileID: 1084997532}
+  - component: {fileID: 1084997533}
   m_Layer: 0
   m_Name: NameInputField
   m_TagString: Untagged
@@ -3303,6 +3304,19 @@ MonoBehaviour:
   isAlert: 0
   m_InputValidator: {fileID: 0}
   m_ShouldActivateOnSelect: 1
+--- !u!114 &1084997533
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1084997528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0f6939b86a524ad195c3cacb7817b95, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.UI.KanaKeyboardOpener
+  _keyboard: {fileID: 1688264747}
 --- !u!1 &1198447567
 GameObject:
   m_ObjectHideFlags: 0
@@ -4094,7 +4108,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.902, b: 0.502, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -4226,7 +4240,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.902, b: 0.502, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -4513,6 +4527,8 @@ GameObject:
   - component: {fileID: 1688264745}
   - component: {fileID: 1688264744}
   - component: {fileID: 1688264743}
+  - component: {fileID: 1688264746}
+  - component: {fileID: 1688264747}
   m_Layer: 0
   m_Name: TitleCanvas
   m_TagString: Untagged
@@ -4609,6 +4625,48 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
+--- !u!114 &1688264746
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1688264741}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f201d50745b8246a7be4b0c748e960a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.UI.MenuNavigation
+  _candidates:
+  - {fileID: 1084997532}
+  - {fileID: 436819026}
+  - {fileID: 352460807}
+  - {fileID: 1063267540}
+  - {fileID: 253277788}
+  - {fileID: 94275951}
+--- !u!114 &1688264747
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1688264741}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da642cd3002b743aab77d4be89c60445, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.UI.KanaKeyboard
+  _nameField: {fileID: 1084997532}
+  _nameInputGroup: {fileID: 2077871445}
+  _okButton: {fileID: 436819026}
+  _backButton: {fileID: 352460807}
+  _font: {fileID: 11400000, guid: 870fc15084f38430bb939121b59e0d1a, type: 2}
+  _inputClip: {fileID: 8300000, guid: fae299667f6554b01b7f98d6db4c6d62, type: 3}
+  _deleteClip: {fileID: 8300000, guid: 64b14b8fd824a46d680b2f37f11cb1cc, type: 3}
+  _soundVolume: 0.7
+  _maxLength: 8
+  _keySize: 92
+  _keySpacing: 8
 --- !u!1 &1722753125
 GameObject:
   m_ObjectHideFlags: 0
@@ -5177,6 +5235,7 @@ GameObject:
   - component: {fileID: 2057789140}
   - component: {fileID: 2057789139}
   - component: {fileID: 2057789138}
+  - component: {fileID: 2057789143}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -5347,6 +5406,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2057789136}
   m_CullTransparentMesh: 1
+--- !u!114 &2057789143
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2057789136}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6205d7d93d5d4ea89e82ba439f001e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.UI.InputModeText
+  _tmpText: {fileID: 2057789141}
+  _legacyText: {fileID: 0}
+  _touchText: "\u304C\u3081\u3093\u3092 \u30BF\u30C3\u30C1\u3057\u3066\u306D"
+  _keyboardText: "\u306A\u306B\u304B\u30AD\u30FC\u3092\u304A\u3057\u3066\u306D"
+  _gamepadText: "\u306A\u306B\u304B\u30DC\u30BF\u30F3\u3092\u304A\u3057\u3066\u306D"
 --- !u!1 &2074127633
 GameObject:
   m_ObjectHideFlags: 0

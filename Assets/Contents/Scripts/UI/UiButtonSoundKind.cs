@@ -14,5 +14,14 @@ namespace ProjectKMP.UI
 
         /// <summary>指定された音の種類</summary>
         public UiSoundPlayer.SoundKind Kind => _kind;
+
+        /// <summary>
+        /// 種類を後から決める。実行時に組み立てるボタン(五十音パネルなど)で使う。
+        /// 音がつながる前に呼ぶこと。つないだ後だと反映されない。
+        /// </summary>
+        public void SetKind(UiSoundPlayer.SoundKind kind)
+        {
+            _kind = kind;
+        }
     }
 }

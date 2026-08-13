@@ -319,6 +319,10 @@ namespace ProjectKMP.UI.Title
             await UniTask.Delay(TimeSpan.FromSeconds(INPUT_GUARD_SECONDS), true, cancellationToken: ct);
             if (group != null) group.interactable = true;
 
+            // 選ぶのはパッドのときだけ。マウスや指では、触っていないボタンが
+            // 選択の色で光ってしまい、押せる場所を取り違えさせる
+            if (InputModeTracker.Current != InputMode.Gamepad) return;
+
             if (firstSelected != null && EventSystem.current != null)
             {
                 EventSystem.current.SetSelectedGameObject(firstSelected.gameObject);
