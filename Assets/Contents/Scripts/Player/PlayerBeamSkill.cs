@@ -72,6 +72,31 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("発射位置の前方オフセット(m)。体にビームが重ならないようにする")]
         private float _originForwardOffset = 0.8f;
 
+        [Header("友達ビーム")]
+        [SerializeField, Tooltip("何人かで合わせて撃つと強くなる")]
+        private bool _enableFriendBeam = true;
+
+        [SerializeField, Tooltip("2人・3人・4人で合わせたときのダメージ倍率")]
+        private float[] _friendDamageScales = { 2.5f, 4.0f, 6.0f };
+
+        [SerializeField, Tooltip("2人・3人・4人で合わせたときの太さの倍率")]
+        private float[] _friendWidthScales = { 2.5f, 3.0f, 3.5f };
+
+        [SerializeField, Tooltip("2人・3人・4人で合わせたときの射程の倍率")]
+        private float[] _friendLengthScales = { 1.5f, 1.8f, 2.0f };
+
+        [SerializeField, Tooltip("合体したビームの色。通常の青と見分けがつく色にする")]
+        private Color _friendColor = new Color(1.0f, 0.85f, 0.35f, 1.0f);
+
+        [SerializeField, Min(0.0f), Tooltip("合体時のカットインを出す時間(秒)。0で出さない")]
+        private float _friendCutinSec = 0.9f;
+
+        [SerializeField, Min(0.0f), Tooltip("合わせた相手との間に渡す光の橋を出す時間(秒)。0で出さない")]
+        private float _friendBridgeSec = 0.8f;
+
+        [SerializeField, Range(0.5f, 1.0f), Tooltip("合体時に残るクールタイムの割合。合わせたご褒美として短くする")]
+        private float _friendCooldownScale = 0.5f;
+
         [Header("口元から出す")]
         [SerializeField, Tooltip("ビームの発射口にする Transform(犬の head ボーンなど)。未設定なら上の発射位置設定を使う")]
         private Transform _muzzleTransform;
@@ -321,6 +346,20 @@ namespace ProjectKMP.Player
         private float _loopFadeDurationSec;
         private float _loopFadeStartVolume;
         private DestructionBeamVisual _beamVisual;
+
+        /// <summary>いま合体している人数。合体していなければ0</summary>
+        private int _friendMembers;
+
+        /// <summary>このキャラを操作している人の名前。取れなければ既定の呼び名を返す</summary>
+        public string OwnerName
+        {
+            get
+            {
+                string nickName = photonView != null && photonView.Owner != null ? photonView.Owner.NickName : null;
+
+                return string.IsNullOrWhiteSpace(nickName) ? "プレイヤー" : nickName;
+            }
+        }
         private BeamAimIndicator _aimIndicatorInstance;
 
         private LocalPlayerMover _mover;
@@ -392,7 +431,12 @@ namespace ProjectKMP.Player
 
         private void Start()
         {
-            if (IsOwner) Local = this;
+            if (!IsOwner) return;
+
+            Local = this;
+
+            // 合図は自分の画面に出すものなので、操作している本人の側で用意する
+            if (_enableFriendBeam) FriendBeamSignal.Ensure();
         }
 
         private void OnDestroy()
@@ -410,6 +454,9 @@ namespace ProjectKMP.Player
 
             // 鳴りっぱなしで残らないよう、ここでも確実に止める
             StopLoopSound();
+
+            // 合図を出したまま消えると、他の人がずっと待つことになる
+            FriendBeam.EndAim(this);
         }
 
         private void Update()
@@ -514,6 +561,10 @@ namespace ProjectKMP.Player
         {
             _phase = Phase.Aiming;
 
+            // 狙いに入った時点で他の人に『合わせろ』の合図を出す。
+            // 撃ってからでは間に合わないので、構えの段階から知らせる
+            if (_enableFriendBeam && IsOwner) photonView.RPC(nameof(RpcBeginAim), RpcTarget.All);
+
             // 狙い中は移動せず、その場で向きだけ変えられるようにする
             if (_mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.RotateOnly;
 
@@ -529,6 +580,8 @@ namespace ProjectKMP.Player
         private void CancelAiming()
         {
             _phase = Phase.Ready;
+
+            if (_enableFriendBeam && IsOwner) photonView.RPC(nameof(RpcEndAim), RpcTarget.All);
             if (_mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.None;
             DestroyAimIndicator();
         }
@@ -714,6 +767,20 @@ namespace ProjectKMP.Player
         // ---- RPC -----------------------------------------
 
         /// <summary>跳び上がりの開始。位置と回転は座標同期で伝わるので、ここではポーズだけ揃える</summary>
+        /// <summary>狙いに入ったことを全員に知らせる。合図はこれを見て出る</summary>
+        [PunRPC]
+        private void RpcBeginAim()
+        {
+            FriendBeam.BeginAim(this);
+        }
+
+        /// <summary>狙いをやめたことを全員に知らせる</summary>
+        [PunRPC]
+        private void RpcEndAim()
+        {
+            FriendBeam.EndAim(this);
+        }
+
         [PunRPC]
         private void RpcBeginLeap()
         {
@@ -800,6 +867,10 @@ namespace ProjectKMP.Player
             float pitch = boosted ? _boostPitch : 1f;
             PlayOneShotClip(_fireClip, pitch);
             StartLoopSound(pitch);
+
+            // 撃ち始めたので狙いの合図は下ろし、代わりに合体できるか調べる
+            FriendBeam.EndAim(this);
+            TryFormFriendBeam();
         }
 
         /// <summary>
@@ -893,6 +964,96 @@ namespace ProjectKMP.Player
         }
 
         /// <summary>発射の瞬間にカメラを短く揺らして「撃った感」を出す</summary>
+        /// <summary>
+        /// 受付時間のうちに撃った人がいれば、その全員をまとめて強化する。
+        /// 先に撃っていた人は途中から太くなるが、それが『合わさった』合図にもなる。
+        /// </summary>
+        private void TryFormFriendBeam()
+        {
+            if (!_enableFriendBeam) return;
+
+            var partners = FriendBeam.RegisterShot(this);
+            if (partners.Count == 0) return;
+
+            int members = Mathf.Min(partners.Count + 1, FriendBeam.MAX_MEMBERS);
+
+            // リストは使い回しなので、強化をかける前に控えを取る
+            var targets = new PlayerBeamSkill[partners.Count];
+            for (int i = 0; i < partners.Count; i++) targets[i] = partners[i];
+
+            // カットインに『誰と誰が合わせたか』を出すので、先に名前を揃える。
+            // 自分を左、あとから合わせた人をまとめて右に置く
+            string leftName = OwnerName;
+            var rightBuilder = new System.Text.StringBuilder();
+            foreach (PlayerBeamSkill target in targets)
+            {
+                if (target == null) continue;
+                if (rightBuilder.Length > 0) rightBuilder.Append(" ＋ ");
+                rightBuilder.Append(target.OwnerName);
+            }
+
+            string rightName = rightBuilder.ToString();
+
+            ApplyFriendBoost(members, leftName, rightName);
+            foreach (PlayerBeamSkill target in targets)
+            {
+                // 相手から見ると左右が入れ替わる。自分の名前が左に来るほうが分かりやすい
+                if (target != null) target.ApplyFriendBoost(members, target.OwnerName, leftName);
+            }
+
+            // 光の橋はワールドに置かれるので視界を塞がない。
+            // 参加していない人の画面にも出して、協力が起きたことを見せる
+            if (_friendBridgeSec > 0f)
+            {
+                foreach (PlayerBeamSkill target in targets)
+                {
+                    if (target == null) continue;
+
+                    FriendBeamBridge.Play(transform, target.transform, _friendColor, _friendBridgeSec);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 合体ぶんの強化をかける。照射中でなければ何もしない。
+        /// あとから人数が増えたときだけ上書きするので、3人目・4人目にも追随できる。
+        /// </summary>
+        public void ApplyFriendBoost(int members, string leftName, string rightName)
+        {
+            if (members < 2 || _phase != Phase.Firing) return;
+            if (_friendMembers >= members) return;
+
+            _friendMembers = members;
+            int index = members - 2;
+
+            // とびこみ強化と掛け算にすると壊れるので、大きいほうだけを使う
+            _damageScale = Mathf.Max(_damageScale, PickScale(_friendDamageScales, index));
+            _widthScale = Mathf.Max(_widthScale, PickScale(_friendWidthScales, index));
+            _lengthScale = Mathf.Max(_lengthScale, PickScale(_friendLengthScales, index));
+
+            if (_beamVisual != null) _beamVisual.OverrideColor(_friendColor);
+
+            // 合わせられたご褒美にクールタイムを削る。次も合わせたくなるようにする
+            if (IsOwner) _cooldownRemainSec *= _friendCooldownScale;
+
+            // カットインは合わせられた本人の画面にだけ出す。
+            // 関わっていない人の画面にも出ると、ただ視界を塞ぐだけになる
+            if (!IsOwner) return;
+
+            // 同じ瞬間に何人ぶんも成立するので、演出は1回だけに間引く
+            if (!FriendBeam.TryAnnounce(members)) return;
+
+            if (_friendCutinSec > 0f) FriendBeamCutin.Play(leftName, rightName, members, _friendColor, _friendCutinSec);
+        }
+
+        /// <summary>人数ぶんの倍率を取り出す。設定が足りなければ最後の値を使い回す</summary>
+        private static float PickScale(float[] scales, int index)
+        {
+            if (scales == null || scales.Length == 0) return 1f;
+
+            return scales[Mathf.Clamp(index, 0, scales.Length - 1)];
+        }
+
         private void PlayFireCameraShake()
         {
             if (_fireCameraShakeAmplitude <= 0f || _fireCameraShakeDurationSec <= 0f) return;
@@ -1091,6 +1252,7 @@ namespace ProjectKMP.Player
         private void FinishFiring()
         {
             _targetStates.Clear();
+            _friendMembers = 0;
 
             // 見た目のフェードと同じ時間で音も絞る。絵と音の消え方を揃える
             FadeOutLoopSound(_fadeOutDurationSec);

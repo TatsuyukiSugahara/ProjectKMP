@@ -249,6 +249,66 @@ namespace ProjectKMP.Gorilla
             ApplyGeometry(_currentPulse);
         }
 
+        /// <summary>
+        /// 光線の色をあとから塗り替える。合体ビームのように、
+        /// 撃っている最中に見た目を変えたいときに使う。
+        /// 変えるのは色味だけで、透明度・太さ・流れる速さには手を触れない。
+        /// </summary>
+        public void OverrideColor(Color color)
+        {
+            // 透明度は元のまま残す。ここを塗り替えると根元と先端の濃淡が崩れる
+            Color Tint(Color original) => new Color(color.r, color.g, color.b, original.a);
+
+            _glowStartColor = Tint(_glowStartColor);
+            _glowEndColor = Tint(_glowEndColor);
+            if (_glowLine != null)
+            {
+                _glowLine.startColor = _glowStartColor;
+                _glowLine.endColor = _glowEndColor;
+            }
+
+            _glowBaseMaterialColor = Tint(_glowBaseMaterialColor);
+            SetMaterialColor(_glowMaterialInstance, _glowBaseMaterialColor);
+
+            _coreStartColor = Tint(_coreStartColor);
+            _coreEndColor = Tint(_coreEndColor);
+            if (_coreLine != null)
+            {
+                _coreLine.startColor = _coreStartColor;
+                _coreLine.endColor = _coreEndColor;
+            }
+
+            // 芯は白熱寄せをかけ直す。素の色をそのまま入れると芯だけ暗く沈む
+            _coreBaseMaterialColor = ApplyCoreLook(Tint(_coreBaseMaterialColor));
+            SetMaterialColor(_coreMaterialInstance, _coreBaseMaterialColor);
+
+            _helixColor = Tint(_helixColor);
+            _helixBaseMaterialColor = Tint(_helixBaseMaterialColor);
+            SetMaterialColor(_helixMaterialInstance, _helixBaseMaterialColor);
+
+            if (_helixLines != null)
+            {
+                foreach (var line in _helixLines)
+                {
+                    if (line == null) continue;
+                    line.startColor = _helixColor;
+                    line.endColor = HelixEndColor(1f);
+                }
+            }
+
+            // 照り返しも変えないと、光線だけ色が変わって地面が前の色のまま残る
+            if (_beamLights != null)
+            {
+                foreach (var light in _beamLights)
+                {
+                    if (light != null) light.color = color;
+                }
+            }
+
+            if (_tipLight != null) _tipLight.color = color;
+            if (_muzzleLight != null) _muzzleLight.color = color;
+        }
+
         /// <summary>徐々に透明にしてから自分自身を破棄する(パッと消えないようにする)</summary>
         public void FadeOut(float duration)
         {
