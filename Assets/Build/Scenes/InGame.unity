@@ -4869,7 +4869,7 @@ GameObject:
   m_Component:
   - component: {fileID: 480050361}
   - component: {fileID: 480050362}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Wall_North
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5566,7 +5566,7 @@ GameObject:
   m_Component:
   - component: {fileID: 533744223}
   - component: {fileID: 533744224}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Wall_West
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -8489,7 +8489,7 @@ GameObject:
   m_Component:
   - component: {fileID: 784083615}
   - component: {fileID: 784083616}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Wall_South
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -9938,6 +9938,7 @@ GameObject:
   - component: {fileID: 940877453}
   - component: {fileID: 940877452}
   - component: {fileID: 940877455}
+  - component: {fileID: 940877456}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -9975,7 +9976,7 @@ MonoBehaviour:
   _target: {fileID: 0}
   _targetHeight: 0.7
   _distance: 6.5
-  _minDistance: 1.5
+  _minDistance: 4
   _maxDistance: 15
   _zoomSpeed: 1
   _yawSpeedDeg: 120
@@ -9991,7 +9992,7 @@ MonoBehaviour:
   _avoidObstacles: 1
   _obstacleMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 4294966783
   _obstacleRadius: 0.2
   _offsetBlendSpeed: 12
   _fovBlendSpeed: 60
@@ -10098,6 +10099,25 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &940877456
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 940877450}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9878c20b05b047c6a9bb935da2ebdac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.CameraObstacleFader
+  _targetsRoot: {fileID: 760600716}
+  _ditherShader: {fileID: 4800000, guid: 9e2524b47a9f64284b971a4f34486165, type: 3}
+  _focusHeight: 0.7
+  _blockRadius: 0.7
+  _nearSkip: 0.5
+  _fadedAmount: 0.25
+  _fadeSpeed: 6
 --- !u!1001 &942663041
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -15818,6 +15838,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Gorilla
       objectReference: {fileID: 0}
+    - target: {fileID: 2319171089922761703, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
     - target: {fileID: 2319171091383985418, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: m_ConstrainProportionsScale
       value: 1
@@ -20161,7 +20185,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.UI.LockOnMarker
   _marker: {fileID: 166583121}
-  _heightOffset: 2.5
+  _padding: 1.18
+  _minSizeRatio: 0.07
+  _maxSizeRatio: 0.55
   _pulseScale: 0.08
 --- !u!1001 &1822014366
 PrefabInstance:
@@ -24058,7 +24084,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2140906711}
   - component: {fileID: 2140906712}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Wall_East
   m_TagString: Untagged
   m_Icon: {fileID: 0}
