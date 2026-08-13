@@ -28,6 +28,9 @@ namespace ProjectKMP.UI
         [SerializeField, Tooltip("とびこみボタン")]
         private SkillButton _diveButton;
 
+        [SerializeField, Tooltip("ターゲットカメラボタン。押すたびにボスへの固定を入り切りする")]
+        private SkillButton _targetButton;
+
         // ---- 公開API -------------------------------------
 
         /// <summary>シーン内で唯一のタッチ操作。無い環境では null になる</summary>
@@ -48,6 +51,12 @@ namespace ProjectKMP.UI
         /// <summary>スキル(元気玉)ボタンが押されているか。長押し判定に使う</summary>
         public bool EnergyBallHeld => _energyBallButton != null && _energyBallButton.IsHeld;
 
+        /// <summary>
+        /// ターゲットカメラボタンが押されているか。
+        /// 押した瞬間の判定はカメラ側で持つので、ここでは押下の有無だけを返す。
+        /// </summary>
+        public bool TargetHeld => _targetButton != null && _targetButton.IsHeld;
+
         /// <summary>とびこみボタンが押されているか。押している間だけ予測を出す</summary>
         public bool DiveHeld => _diveButton != null && _diveButton.IsHeld;
 
@@ -59,6 +68,7 @@ namespace ProjectKMP.UI
             if (_skillButton != null) _skillButton.SetVisible(visible);
             if (_energyBallButton != null) _energyBallButton.SetVisible(visible);
             if (_diveButton != null) _diveButton.SetVisible(visible);
+            if (_targetButton != null) _targetButton.SetVisible(visible);
         }
 
         /// <summary>攻撃ボタンを押した瞬間を1回だけ取り出す</summary>

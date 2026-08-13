@@ -90,6 +90,14 @@ namespace ProjectKMP.Battle
             var touch = FindAnyObjectByType<TouchControls>();
             if (touch != null) touch.SetControlsVisible(false);
 
+            // ターゲットカメラを解く。解かないと、倒したあとも照準がボスに残り続ける
+            var cameraController = FindAnyObjectByType<Player.ThirdPersonCamera>();
+            if (cameraController != null) cameraController.ReleaseLockOn();
+
+            // 照準は消えるまで少しかかる。この直後に画面を撮るので、待たずにその場で消す
+            var lockOnMarker = FindAnyObjectByType<UI.LockOnMarker>();
+            if (lockOnMarker != null) lockOnMarker.HideNow();
+
             var bossGauge = FindAnyObjectByType<BossHealthGauge>();
             if (bossGauge != null) bossGauge.SetVisible(false);
 

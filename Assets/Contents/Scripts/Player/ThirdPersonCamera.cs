@@ -1,11 +1,16 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using ProjectKMP.UI;
 
 namespace ProjectKMP.Player
 {
     /// <summary>
-    /// プレイヤーを一定距離から追いかけるサードパーソンカメラ。矢印キーで左右・上下に回り込む。
+    /// プレイヤーを一定距離から追いかけるサードパーソンカメラ。矢印キーで左右に回り込む。
+    ///
+    /// 上下の回り込みは持たない。見下ろし角は固定で、上下に振れると空や地面が映って
+    /// 戦況が見えなくなるうえ、初めて触る人が構図を崩したまま戻せなくなるため。
+    ///
+    /// ターゲットカメラを入れると、ボスの方向へ水平角が自動で追従する。
     /// 距離、回転速度、追従の滑らかさはすべてインスペクタから調整できる。
     /// </summary>
     public class ThirdPersonCamera : MonoBehaviour
@@ -25,7 +30,7 @@ namespace ProjectKMP.Player
 
         [Header("距離")]
         [SerializeField, Tooltip("対象からのカメラ距離(メートル)")]
-        private float _distance = 8.0f;
+        private float _distance = 5.5f;
 
         [SerializeField, Tooltip("ズームで縮められる最小距離(メートル)")]
         private float _minDistance = 2.0f;
@@ -36,21 +41,12 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("マウスホイール1目盛りあたりのズーム量(メートル)。0でズーム無効")]
         private float _zoomSpeed = 1.0f;
 
-        [Header("回転(矢印キー)")]
+        [Header("回転(左右のみ)")]
         [SerializeField, Tooltip("左右回転の速さ(度/秒)")]
         private float _yawSpeedDeg = 120.0f;
 
-        [SerializeField, Tooltip("上下回転の速さ(度/秒)")]
-        private float _pitchSpeedDeg = 80.0f;
-
-        [SerializeField, Tooltip("見下ろし角の下限(度)。マイナスで下から見上げる")]
-        private float _minPitchDeg = -10.0f;
-
-        [SerializeField, Tooltip("見下ろし角の上限(度)")]
-        private float _maxPitchDeg = 70.0f;
-
-        [SerializeField, Tooltip("上下の入力方向を反転する")]
-        private bool _invertPitch = false;
+        [SerializeField, Range(-20.0f, 60.0f), Tooltip("見下ろし角(度)。固定で、操作では変えられない")]
+        private float _fixedPitchDeg = 16.0f;
 
         [SerializeField, Tooltip("スワイプでの回転の効き(度/ピクセル)。大きいほど少ない指の動きで回る")]
         private float _touchLookSensitivity = 0.18f;
@@ -62,8 +58,21 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("起動時の水平角(度)")]
         private float _initialYawDeg = 0.0f;
 
-        [SerializeField, Tooltip("起動時の見下ろし角(度)")]
-        private float _initialPitchDeg = 20.0f;
+        [Header("ターゲットカメラ")]
+        [SerializeField, Tooltip("ボタンでボスの方向にカメラを固定できるようにする")]
+        private bool _enableTargetCamera = true;
+
+        [SerializeField, Tooltip("Fキーで切り替える")]
+        private bool _useFKey = true;
+
+        [SerializeField, Tooltip("ゲームパッドの右肩ボタンで切り替える")]
+        private bool _useGamepadRightShoulder = true;
+
+        [SerializeField, Min(0.0f), Tooltip("狙いへ向き直る速さ(度/秒)。大きいほど機敏だが酔いやすい")]
+        private float _lockTurnSpeedDeg = 360.0f;
+
+        [SerializeField, Min(0.0f), Tooltip("ターゲット中に少し引く量(メートル)。相手と自分を同時に映すため")]
+        private float _lockDistanceAdd = 1.5f;
 
         [Header("障害物")]
         [SerializeField, Tooltip("木や壁にカメラがめり込むとき、手前に寄せる")]
@@ -95,6 +104,14 @@ namespace ProjectKMP.Player
         private float _distanceOffsetCurrent;
         private float _fovOffsetTarget;
         private float _fovOffsetCurrent;
+
+        /// <summary>ターゲット中に見ている相手。していなければ null</summary>
+        private Transform _lockTarget;
+
+        /// <summary>ボスを毎フレーム探し直さないための控え</summary>
+        private Transform _bossTransform;
+
+        private bool _togglePressedLastFrame;
 
         private float _shakeRemainSec;
         private float _shakeDurationSec;
@@ -137,7 +154,7 @@ namespace ProjectKMP.Player
         /// <summary>
         /// 指定したワールド座標が画面に入るように、水平角をその方向へ即座に合わせる。
         /// カメラは対象の背後に回り込むため、「プレイヤーの背中越しに指定地点を見る」構図になる。
-        /// 見下ろし角は初期値に戻す。ゲーム開始時・リスポーン時にボスの方を向かせるのに使う。
+        /// 見下ろし角は固定なので変わらない。ゲーム開始時・リスポーン時にボスの方を向かせるのに使う。
         /// </summary>
         public void AimAt(Vector3 worldPosition)
         {
@@ -148,7 +165,6 @@ namespace ProjectKMP.Player
             if (toPoint.sqrMagnitude < 0.0001f) return;
 
             _yawDeg = Quaternion.LookRotation(toPoint.normalized, Vector3.up).eulerAngles.y;
-            _pitchDeg = Mathf.Clamp(_initialPitchDeg, _minPitchDeg, _maxPitchDeg);
             SnapToTarget();
         }
 
@@ -167,6 +183,34 @@ namespace ProjectKMP.Player
             _fovOffsetTarget = offset;
         }
 
+        /// <summary>いまターゲットカメラで誰かを見ているか</summary>
+        public bool IsLockedOn => _lockTarget != null;
+
+        /// <summary>いま狙っている相手。狙っていなければ null。印を出す側が読む</summary>
+        public Transform LockTarget => _lockTarget;
+
+        /// <summary>
+        /// ターゲットカメラを解く。クリアなど、操作が終わった場面で呼ぶ。
+        /// すでに解けていれば何も起きない。
+        /// </summary>
+        public void ReleaseLockOn()
+        {
+            _lockTarget = null;
+        }
+
+        /// <summary>
+        /// ターゲットカメラを入れ直す。相手が居なければ何も起きない。
+        /// 画面のボタンからも呼べるように公開している。
+        /// </summary>
+        public void ToggleLockOn()
+        {
+            if (!_enableTargetCamera) return;
+
+            if (_lockTarget != null) { _lockTarget = null; return; }
+
+            _lockTarget = ResolveBossTransform();
+        }
+
         /// <summary>カメラを短時間揺らす。スキルの爆発など衝撃の演出に使う</summary>
         public void Shake(float amplitude, float durationSec)
         {
@@ -180,7 +224,7 @@ namespace ProjectKMP.Player
         private void Awake()
         {
             _yawDeg = _initialYawDeg;
-            _pitchDeg = Mathf.Clamp(_initialPitchDeg, _minPitchDeg, _maxPitchDeg);
+            _pitchDeg = _fixedPitchDeg;
             _currentDistance = _distance;
 
             _camera = GetComponent<Camera>();
@@ -205,46 +249,100 @@ namespace ProjectKMP.Player
             // 対象が後から入ったときは、一度だけ位置を合わせてから追従を始める
             if (!_hasSnapped) SnapToTarget();
 
-            ReadRotationInput();
+            ReadLockOnInput();
+
+            // ターゲット中は自動で向き直るので、手での回転入力は受け取らない
+            if (_lockTarget != null) UpdateLockOnYaw();
+            else ReadRotationInput();
+
             ReadZoomInput();
             ApplyTransform(CalcDesiredPosition(), false);
         }
 
         // ---- 内部処理 ------------------------------------
 
-        /// <summary>矢印キーとゲームパッド右スティックから回転入力を取る</summary>
+        /// <summary>
+        /// 矢印キーとゲームパッド右スティックから左右の回転入力を取る。
+        /// 上下は読まない(見下ろし角は固定)。
+        /// </summary>
         private void ReadRotationInput()
         {
-            Vector2 input = Vector2.zero;
+            float input = 0.0f;
 
             Keyboard keyboard = Keyboard.current;
             if (keyboard != null)
             {
-                if (keyboard.rightArrowKey.isPressed) input.x += 1.0f;
-                if (keyboard.leftArrowKey.isPressed) input.x -= 1.0f;
-                if (keyboard.upArrowKey.isPressed) input.y += 1.0f;
-                if (keyboard.downArrowKey.isPressed) input.y -= 1.0f;
+                if (keyboard.rightArrowKey.isPressed) input += 1.0f;
+                if (keyboard.leftArrowKey.isPressed) input -= 1.0f;
             }
 
             Gamepad gamepad = Gamepad.current;
             if (gamepad != null)
             {
                 Vector2 stick = gamepad.rightStick.ReadValue();
-                if (stick.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) input += stick;
+                if (stick.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) input += stick.x;
             }
 
-            _yawDeg += input.x * _yawSpeedDeg * Time.deltaTime;
-            _pitchDeg += (_invertPitch ? -input.y : input.y) * _pitchSpeedDeg * Time.deltaTime;
+            _yawDeg += input * _yawSpeedDeg * Time.deltaTime;
 
-            // スマホは画面をなぞって回す。指の移動量にそのまま比例させる
+            // スマホは画面をなぞって回す。指の横移動だけを使い、縦のなぞりは無視する
             TouchControls touch = TouchControls.Instance;
-            if (touch != null)
-            {
-                Vector2 swipe = touch.LookDelta;
-                _yawDeg += swipe.x * _touchLookSensitivity;
-                _pitchDeg += (_invertPitch ? -swipe.y : swipe.y) * _touchLookSensitivity;
-            }
-            _pitchDeg = Mathf.Clamp(_pitchDeg, _minPitchDeg, _maxPitchDeg);
+            if (touch != null) _yawDeg += touch.LookDelta.x * _touchLookSensitivity;
+
+            _pitchDeg = _fixedPitchDeg;
+        }
+
+        /// <summary>ターゲットカメラの入り切りを読む。押した瞬間だけを拾う</summary>
+        private void ReadLockOnInput()
+        {
+            if (!_enableTargetCamera) return;
+
+            bool pressed = false;
+
+            Keyboard keyboard = Keyboard.current;
+            if (_useFKey && keyboard != null && keyboard.fKey.isPressed) pressed = true;
+
+            Gamepad gamepad = Gamepad.current;
+            if (_useGamepadRightShoulder && gamepad != null && gamepad.rightShoulder.isPressed) pressed = true;
+
+            TouchControls touch = TouchControls.Instance;
+            if (touch != null && touch.TargetHeld) pressed = true;
+
+            // 押しっぱなしで切り替わり続けないよう、離してから次を受け付ける
+            if (pressed && !_togglePressedLastFrame) ToggleLockOn();
+
+            _togglePressedLastFrame = pressed;
+
+            // 相手が倒れて消えたら自動で解く。見えないものを見続けても仕方がない
+            if (_lockTarget != null && !_lockTarget.gameObject.activeInHierarchy) _lockTarget = null;
+        }
+
+        /// <summary>
+        /// ターゲット中の水平角。プレイヤーから相手への向きへ、少しずつ回り込む。
+        /// 一瞬で向くと画面が飛んで酔うので、速さに上限をかける。
+        /// </summary>
+        private void UpdateLockOnYaw()
+        {
+            if (_lockTarget == null || _target == null) return;
+
+            Vector3 toTarget = _lockTarget.position - _target.position;
+            toTarget.y = 0.0f;
+            if (toTarget.sqrMagnitude < 0.0001f) return;
+
+            float desiredYaw = Quaternion.LookRotation(toTarget.normalized, Vector3.up).eulerAngles.y;
+            _yawDeg = Mathf.MoveTowardsAngle(_yawDeg, desiredYaw, _lockTurnSpeedDeg * Time.deltaTime);
+            _pitchDeg = _fixedPitchDeg;
+        }
+
+        /// <summary>ボスを探す。一度見つけたら控えておき、毎フレーム探し直さない</summary>
+        private Transform ResolveBossTransform()
+        {
+            if (_bossTransform != null && _bossTransform.gameObject.activeInHierarchy) return _bossTransform;
+
+            Monster.BossHealth boss = FindAnyObjectByType<Monster.BossHealth>();
+            _bossTransform = boss != null ? boss.transform : null;
+
+            return _bossTransform;
         }
 
         /// <summary>マウスホイールでカメラ距離を変える</summary>
@@ -283,8 +381,10 @@ namespace ProjectKMP.Player
             Vector3 focus = _target.position + Vector3.up * _targetHeight;
             Quaternion rotation = Quaternion.Euler(_pitchDeg, _yawDeg, 0.0f);
 
-            // 演出で寄せている量を足した距離を基準にする
-            float desired = Mathf.Max(_minDistance, _distance + _distanceOffsetCurrent);
+            // 演出で寄せている量を足した距離を基準にする。
+            // ターゲット中は相手と自分を同時に映したいので、少しだけ引く
+            float lockAdd = _lockTarget != null ? _lockDistanceAdd : 0.0f;
+            float desired = Mathf.Max(_minDistance, _distance + _distanceOffsetCurrent + lockAdd);
             Vector3 offset = rotation * Vector3.back * desired;
 
             float distance = desired;
