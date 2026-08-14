@@ -46,6 +46,7 @@ jobs:
         with:
           targetPlatform: StandaloneWindows64
           versioning: Semantic
+          customParameters: -kmpSingleOnly
 
       - name: Build Android
         if: matrix.targetPlatform == 'Android'
@@ -57,6 +58,7 @@ jobs:
         with:
           targetPlatform: Android
           versioning: Semantic
+          customParameters: -kmpSingleOnly
           androidExportType: androidPackage
           androidKeystoreName: user.keystore
           androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
