@@ -32,6 +32,9 @@ namespace ProjectKMP.UI
             EventSystem eventSystem = EventSystem.current;
             if (eventSystem == null) return;
 
+            // 遊び方が開いている間は口を出さない。後ろのボタンを選び直してしまう
+            if (TitleOverlay.IsOpen) return;
+
             if (InputModeTracker.Current != InputMode.Gamepad)
             {
                 // パッド以外では選択枠を出さない
