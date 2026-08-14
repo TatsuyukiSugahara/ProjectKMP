@@ -44,6 +44,7 @@ Shader "ProjectKMP/Field/SkyDayNight"
         [HDR]_StarColor ("星の色", Color) = (0.85,0.92,1,1)
         _StarDensity ("星の細かさ", Range(20,400)) = 240
         _StarAmount ("星の量", Range(0,1)) = 0.45
+        _DitherStrength("Dither Strength", Range(0, 12)) = 4
         _StarIntensity ("星の強さ", Range(0,8)) = 3.2
     }
 
@@ -97,6 +98,7 @@ Shader "ProjectKMP/Field/SkyDayNight"
                 half _StarDensity;
                 half _StarAmount;
                 half _StarIntensity;
+            half _DitherStrength;
             CBUFFER_END
 
             struct Attributes
@@ -126,11 +128,22 @@ Shader "ProjectKMP/Field/SkyDayNight"
                 return frac((p.x + p.y) * p.z);
             }
 
+            // マス目ごとの乱数。
+            //
+            // 大きな数を掛けて小数を取り出す作り方は、計算の桁数が足りない環境で崩れる。
+            // 端末によっては同じマスが並んで、空が板を貼り合わせたように見える。
+            //
+            // 先に座標を折り返して小さく保ち、掛ける数も控えめにすることで、
+            // 桁数の少ない環境でも同じ絵が出るようにしている。
+            // 折り返しの繰り返しは 289 マスごとなので、見える範囲では気づかない
             float Hash21(float2 p)
             {
-                p = frac(p * float2(123.34, 345.45));
-                p += dot(p, p + 34.345);
-                return frac(p.x * p.y);
+                p = p - floor(p / 289.0) * 289.0;
+
+                float3 p3 = frac(float3(p.x, p.y, p.x) * 0.1031);
+                p3 += dot(p3, p3.yzx + 33.33);
+
+                return frac((p3.x + p3.y) * p3.z);
             }
 
             // マス目の四隅の乱数をなめらかにつないだ、もやもやの元
@@ -212,7 +225,10 @@ Shader "ProjectKMP/Field/SkyDayNight"
                 // キューブマップの空には雲が描かれているので、そのときは出さない
                 float denom = max(up, 0.02) + _CloudHeightCurve;
                 float2 cloudUV = dir.xz / denom * _CloudScale;
-                cloudUV += _Time.y * _CloudSpeed * normalize(_CloudWind.xy + float2(0.0001, 0.0001));
+                // 時間をそのまま足すと、遊び続けるほど座標が大きくなって崩れる。
+                // 一定のところで折り返しておく
+                float driftTime = fmod(_Time.y, 600.0);
+                cloudUV += driftTime * _CloudSpeed * normalize(_CloudWind.xy + float2(0.0001, 0.0001));
 
                 // 座標そのものを別のノイズで歪めると、筋ではなくもこもこした固まりになる
                 float warp = ValueNoise(cloudUV * 0.6);
@@ -250,6 +266,21 @@ Shader "ProjectKMP/Field/SkyDayNight"
                 night += Stars(dir) * _StarColor.rgb * _StarIntensity * saturate(up * 2.0 + 0.05) * (1.0 - cloud);
 
                 half3 color = lerp(day, night, saturate(_NightBlend));
+
+                // 画面に出せる色の段数は限られているので、なだらかな空は縞に割れる。
+                // ごく薄い揺らぎを足して境目を散らす。
+                //
+                // 量は 1/255 では足りない。ここは線形の値で、画面へ出す前に
+                // 明るい側を圧縮する変換が入るため、明るい空ほど効きが弱まるため。
+                //
+                // 揺らぎは2つの乱数の差で作る。一様な乱数より、中央に寄った
+                // 揺らぎのほうが縞を消す力が強く、ざらつきも目立ちにくい
+                float2 pixel = IN.positionCS.xy;
+                float r1 = frac(sin(dot(pixel, float2(12.9898, 78.233))) * 43758.5453);
+                float r2 = frac(sin(dot(pixel, float2(63.7264, 10.873))) * 32143.9137);
+
+                color += (r1 - r2) * (_DitherStrength / 255.0);
+
                 return half4(color, 1.0);
             }
             ENDHLSL

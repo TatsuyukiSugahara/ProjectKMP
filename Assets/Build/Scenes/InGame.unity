@@ -9671,6 +9671,10 @@ MonoBehaviour:
   - {fileID: 1463539638}
   _pipOnColor: {r: 1, g: 0.85, b: 0.35, a: 1}
   _pipOffColor: {r: 0.25, g: 0.12, b: 0.22, a: 0.7}
+  _enableBreakEffect: 1
+  _breakLabel: "\u30D6\u30EC\u30A4\u30AF\uFF01"
+  _breakColor: {r: 1, g: 0.9, b: 0.45, a: 1}
+  _breakHitStopSec: 0.12
   _delayedRect: {fileID: 1606912565}
   _delayedHoldSeconds: 0.35
   _delayedCatchSeconds: 0.45
@@ -9796,6 +9800,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Battle.GameClearDirector
   _ui: {fileID: 2003179227}
+  _enableFinishBlow: 1
+  _finishTimeScale: 0.18
+  _finishSlowSec: 1.1
+  _finishRecoverSec: 0.5
+  _finishCameraPull: 3
   _delayBeforeShowSec: 1.2
   _showSeconds: 4
   _resultSceneName: Result
@@ -10451,7 +10460,7 @@ MonoBehaviour:
   m_Antialiasing: 1
   m_AntialiasingQuality: 2
   m_StopNaN: 0
-  m_Dithering: 0
+  m_Dithering: 1
   m_ClearDepth: 1
   m_AllowXRRendering: 1
   m_AllowHDROutput: 1
