@@ -132,6 +132,9 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("着地点の地面を測る対象。空中から跳んだときの降り先を決めるのに使う")]
         private LayerMask _groundMask = ~0;
 
+        [SerializeField, Min(0.0f), Tooltip("跳びこみで登れる段差の高さ(メートル)。これより高い所は地面と見なさない")]
+        private float _maxStepUp = 2.5f;
+
         private enum Phase { Ready, Aiming, Flying }
 
         private Phase _phase = Phase.Ready;
@@ -402,6 +405,10 @@ namespace ProjectKMP.Player
         /// <summary>
         /// 指定した場所の地面の高さを返す。自分自身は無視する。
         /// 見つからなければ、代わりの高さをそのまま返す。
+        ///
+        /// 一番高いところではなく、いまの足元より下で一番高いところを拾う。
+        /// 外周の壁は高さ30mまであるので、単純に一番高いところを取ると
+        /// 壁の上を地面と見なして、そこまで跳び上がってしまう。
         /// </summary>
         private float ResolveGroundY(Vector3 position, float fallbackY)
         {
@@ -410,14 +417,20 @@ namespace ProjectKMP.Player
             int count = Physics.RaycastNonAlloc(
                 origin, Vector3.down, _castBuffer, 100.0f, _groundMask, QueryTriggerInteraction.Ignore);
 
+            // 少しの段差は登れるが、それ以上は登れない高さ
+            float ceiling = fallbackY + _maxStepUp;
+
             float best = float.NegativeInfinity;
             for (int i = 0; i < count; i++)
             {
                 Transform hit = _castBuffer[i].transform;
                 if (hit == null || hit == transform || hit.IsChildOf(transform)) continue;
 
-                // 一番高いところを拾う。橋や台の上に降りたときに床下へ潜らせないため
-                if (_castBuffer[i].point.y > best) best = _castBuffer[i].point.y;
+                float y = _castBuffer[i].point.y;
+                if (y > ceiling) continue;
+
+                // 登れる範囲の中では一番高いところ。台の上へは乗れるが、壁の上へは乗れない
+                if (y > best) best = y;
             }
 
             return best > float.NegativeInfinity ? best : fallbackY;
