@@ -544,7 +544,7 @@ MonoBehaviour:
   _hitEffectScale: 1
   _hitEffectLifeSec: 1.5
   _useRKey: 1
-  _useGamepadEast: 1
+  _useGamepadShoulder: 1
   _useTouchButton: 1
   _targetLayers:
     serializedVersion: 2
@@ -644,7 +644,7 @@ MonoBehaviour:
   _aimIndicatorPrefab: {fileID: 3762744561026247363, guid: c00a353ffc58341cab6a76cc5ee4ab38, type: 3}
   _damagePopupPrefab: {fileID: 334619725715907676, guid: dc738a3d7ee4b430aab1e466091f1be0, type: 3}
   _useQKey: 1
-  _useGamepadNorth: 1
+  _useGamepadTriggers: 1
   _useTouchButton: 1
   _targetLayers:
     serializedVersion: 2

@@ -303,8 +303,8 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("Qキーの長押しで狙う")]
         private bool _useQKey = true;
 
-        [SerializeField, Tooltip("ゲームパッドのYボタン(上ボタン)の長押しで狙う")]
-        private bool _useGamepadNorth = true;
+        [SerializeField, Tooltip("ゲームパッドの LT と RT の同時長押しで狙う")]
+        private bool _useGamepadTriggers = true;
 
         [SerializeField, Tooltip("画面上の元気玉ボタンの長押しで狙う")]
         private bool _useTouchButton = true;
@@ -549,10 +549,13 @@ namespace ProjectKMP.Player
                 if (keyboard != null && keyboard.qKey.isPressed) held = true;
             }
 
-            if (_useGamepadNorth)
+            if (_useGamepadTriggers)
             {
                 Gamepad gamepad = Gamepad.current;
-                if (gamepad != null && gamepad.buttonNorth.isPressed) held = true;
+
+                // 両方のトリガーを引いている間だけ。片方では出ないようにして、
+                // 必殺技が偶然出てしまうのを防ぐ
+                if (gamepad != null && gamepad.leftTrigger.isPressed && gamepad.rightTrigger.isPressed) held = true;
             }
 
             if (_useTouchButton)

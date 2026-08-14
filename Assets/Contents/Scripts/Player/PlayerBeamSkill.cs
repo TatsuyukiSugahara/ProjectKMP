@@ -269,8 +269,8 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("Rキーの長押しで狙う")]
         private bool _useRKey = true;
 
-        [SerializeField, Tooltip("ゲームパッドのBボタン(右ボタン)の長押しで狙う")]
-        private bool _useGamepadEast = true;
+        [SerializeField, Tooltip("ゲームパッドのRB(右肩ボタン)の長押しで狙う")]
+        private bool _useGamepadShoulder = true;
 
         [SerializeField, Tooltip("画面上のスキルボタンの長押しで狙う")]
         private bool _useTouchButton = true;
@@ -542,10 +542,10 @@ namespace ProjectKMP.Player
                 if (keyboard != null && keyboard.rKey.isPressed) held = true;
             }
 
-            if (_useGamepadEast)
+            if (_useGamepadShoulder)
             {
                 Gamepad gamepad = Gamepad.current;
-                if (gamepad != null && gamepad.buttonEast.isPressed) held = true;
+                if (gamepad != null && gamepad.rightShoulder.isPressed) held = true;
             }
 
             if (_useTouchButton)

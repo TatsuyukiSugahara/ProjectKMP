@@ -65,8 +65,8 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("Fキーで切り替える")]
         private bool _useFKey = true;
 
-        [SerializeField, Tooltip("ゲームパッドの右肩ボタンで切り替える")]
-        private bool _useGamepadRightShoulder = true;
+        [SerializeField, Tooltip("ゲームパッドの右スティック押し込みで切り替える")]
+        private bool _useGamepadStickPress = true;
 
         [SerializeField, Min(0.0f), Tooltip("狙いへ向き直る速さ(度/秒)。大きいほど機敏だが酔いやすい")]
         private float _lockTurnSpeedDeg = 360.0f;
@@ -303,7 +303,7 @@ namespace ProjectKMP.Player
             if (_useFKey && keyboard != null && keyboard.fKey.isPressed) pressed = true;
 
             Gamepad gamepad = Gamepad.current;
-            if (_useGamepadRightShoulder && gamepad != null && gamepad.rightShoulder.isPressed) pressed = true;
+            if (_useGamepadStickPress && gamepad != null && gamepad.rightStickButton.isPressed) pressed = true;
 
             TouchControls touch = TouchControls.Instance;
             if (touch != null && touch.TargetHeld) pressed = true;
