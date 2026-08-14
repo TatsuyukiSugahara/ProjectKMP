@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using ProjectKMP.UI;
 
@@ -127,6 +127,38 @@ namespace ProjectKMP.Player
             _controller.Move(velocity * Time.deltaTime);
 
             CurrentSpeed = new Vector3(velocity.x, 0.0f, velocity.z).magnitude;
+        }
+
+        /// <summary>向きを変える速さ(度/秒)。狙いを自前で回す側が合わせるために読む</summary>
+        public float TurnSpeedDeg => _turnSpeedDeg;
+
+        /// <summary>
+        /// いまこの部品が入力で向きを回しているか。
+        /// 回していないなら、狙いを付けたい側が自前で角度を持つ必要がある。
+        /// </summary>
+        public bool RotatesByInput =>
+            enabled && (MoveLock == MovementLock.None || MoveLock == MovementLock.RotateOnly);
+
+        /// <summary>入力の向きをワールド座標で返す。入力が無ければ false</summary>
+        public bool TryReadMoveDirection(out Vector3 direction)
+        {
+            direction = ToWorldDirection(ReadMoveInput());
+
+            return direction.sqrMagnitude > 0.0001f;
+        }
+
+        /// <summary>
+        /// 移動はせず、向きだけ入力に合わせて回す。
+        /// とびこみの飛行中はこの部品ごと止められるため、
+        /// 狙いを付けたい側から毎フレーム呼んでもらって回転だけを生かす。
+        /// </summary>
+        public void RotateTowardInput()
+        {
+            Vector3 moveDir = ToWorldDirection(ReadMoveInput());
+            if (moveDir.sqrMagnitude <= 0.0001f) return;
+
+            Quaternion look = Quaternion.LookRotation(moveDir);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, look, _turnSpeedDeg * Time.deltaTime);
         }
 
         // ---- 内部処理 ------------------------------------

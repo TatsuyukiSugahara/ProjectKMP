@@ -733,6 +733,9 @@ MonoBehaviour:
   _useEKey: 1
   _useGamepadShoulder: 1
   _useTouchButton: 1
+  _groundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1001 &8618206059551019404
 PrefabInstance:
   m_ObjectHideFlags: 0

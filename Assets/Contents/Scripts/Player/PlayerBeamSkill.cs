@@ -350,6 +350,9 @@ namespace ProjectKMP.Player
         /// <summary>いま合体している人数。合体していなければ0</summary>
         private int _friendMembers;
 
+        /// <summary>指を離したが、他の技の最中でまだ撃てない状態。空くと同時に撃つ</summary>
+        private bool _fireReserved;
+
         /// <summary>このキャラを操作している人の名前。取れなければ既定の呼び名を返す</summary>
         public string OwnerName
         {
@@ -504,19 +507,42 @@ namespace ProjectKMP.Player
                     if (!Battle.BattlePlayGate.IsPlayable || (_health != null && _health.IsDead))
                     {
                         CancelAiming();
+                        break;
                     }
-                    else if (!held)
-                    {
-                        Fire();
-                    }
-                    else
+
+                    // とびこみの飛行中は移動の部品ごと止まっていて、向きも変えられない。
+                    // 狙っている間だけ、こちらから回転だけを回してやる
+                    KeepAimRotation();
+
+                    // 他の技が終わった瞬間に、待たせていた1発を出す
+                    if (_fireReserved)
                     {
                         UpdateAimHitState();
+                        if (CanFireNow()) Fire();
+                        break;
                     }
+
+                    if (!held)
+                    {
+                        // 撃てない間は予約だけして、狙いは出したままにする
+                        if (CanFireNow()) Fire();
+                        else _fireReserved = true;
+                        break;
+                    }
+
+                    // 他の技が動いている間は、そちらに動きを任せる。
+                    // ここで移動を止めると、とびこみの飛行と取り合いになる
+                    if (_mover != null && CanFireNow()) _mover.MoveLock = LocalPlayerMover.MovementLock.RotateOnly;
+
+                    UpdateAimHitState();
                     break;
             }
         }
 
+        /// <summary>
+        /// 狙いに入れるか。他の技の最中でも狙いだけは始められる。
+        /// 動けない時間に何もできないと、技を繋ぐたびに手が止まって気持ちよくないため。
+        /// </summary>
         private bool CanStartAiming()
         {
             if (_cooldownRemainSec > 0f) return false;
@@ -524,9 +550,35 @@ namespace ProjectKMP.Player
             if (_health != null && _health.IsDead) return false;
             if (_playerAttack != null && _playerAttack.IsAttacking) return false;
 
-            // 元気玉スキルの最中はビームを出せない
+            return true;
+        }
+
+        /// <summary>
+        /// 移動の部品が止められている間、向きだけは入力どおりに回す。
+        /// 止まっていなければ何もしない(そちらが同じことをしている)。
+        /// </summary>
+        private void KeepAimRotation()
+        {
+            if (_mover == null || _mover.enabled) return;
+
+            _mover.RotateTowardInput();
+        }
+
+        /// <summary>
+        /// いま撃ってよいか。他の技が動いている間は撃たずに待つ。
+        /// 割り込むと位置や向きが取り合いになって、演出が破綻する。
+        /// </summary>
+        private bool CanFireNow()
+        {
+            if (!Battle.BattlePlayGate.IsPlayable) return false;
+            if (_health != null && _health.IsDead) return false;
+
+            // 投げ終わって降りているだけの間は、そのまま次へ繋げたほうが気持ちいい
             PlayerEnergyBallSkill energyBallSkill = GetComponent<PlayerEnergyBallSkill>();
-            if (energyBallSkill != null && energyBallSkill.IsBusy) return false;
+            if (energyBallSkill != null && energyBallSkill.IsBusy && !energyBallSkill.IsDescending) return false;
+
+            PlayerDiveSkill diveSkill = GetComponent<PlayerDiveSkill>();
+            if (diveSkill != null && (diveSkill.IsFlying || diveSkill.IsAiming)) return false;
 
             return true;
         }
@@ -565,8 +617,9 @@ namespace ProjectKMP.Player
             // 撃ってからでは間に合わないので、構えの段階から知らせる
             if (_enableFriendBeam && IsOwner) photonView.RPC(nameof(RpcBeginAim), RpcTarget.All);
 
-            // 狙い中は移動せず、その場で向きだけ変えられるようにする
-            if (_mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.RotateOnly;
+            // 狙い中は移動せず、その場で向きだけ変えられるようにする。
+            // ただし他の技が動いている間は触らない。動きの主導権を奪うと演出が壊れる
+            if (_mover != null && CanFireNow()) _mover.MoveLock = LocalPlayerMover.MovementLock.RotateOnly;
 
             if (_aimIndicatorPrefab != null)
             {
@@ -580,6 +633,7 @@ namespace ProjectKMP.Player
         private void CancelAiming()
         {
             _phase = Phase.Ready;
+            _fireReserved = false;
 
             if (_enableFriendBeam && IsOwner) photonView.RPC(nameof(RpcEndAim), RpcTarget.All);
             if (_mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.None;
@@ -592,6 +646,7 @@ namespace ProjectKMP.Player
         /// </summary>
         private void Fire()
         {
+            _fireReserved = false;
             DestroyAimIndicator();
             _cooldownRemainSec = _cooldownSec;
 

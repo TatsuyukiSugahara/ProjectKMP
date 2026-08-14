@@ -399,6 +399,12 @@ namespace ProjectKMP.Player
         private ThirdPersonCamera _cameraController;
 
         private LocalPlayerMover _mover;
+
+        /// <summary>指を離したが、他の技の最中でまだ投げられない状態。空くと同時に投げる</summary>
+        private bool _throwReserved;
+
+        /// <summary>前のフレームの自分の位置。動いたぶんだけマーカーを運ぶのに使う</summary>
+        private Vector3 _aimAnchorPosition;
         private DogAnimationDriver _animationDriver;
         private PlayerHealth _health;
         private PlayerAttack _playerAttack;
@@ -417,6 +423,12 @@ namespace ProjectKMP.Player
         public bool IsBusy =>
             _phase == Phase.Aiming || _phase == Phase.Rising || _phase == Phase.WindUp
             || _phase == Phase.Throwing || _descendActive;
+
+        /// <summary>
+        /// 投げ終わって降りているだけの間。
+        /// もう玉は手を離れているので、ここから次の技へ繋げても演出は壊れない。
+        /// </summary>
+        public bool IsDescending => _descendActive;
 
         /// <summary>跳び上がってから着地するまでの間。この間は吹き飛ばされたくない</summary>
         public bool IsInThrowAction =>
@@ -513,7 +525,21 @@ namespace ProjectKMP.Player
                 return;
             }
 
+            // 狙い始めた時点で他の技が動いていると、ここを掛けられない。
+            // 掛けられるようになったら止める。溜めながら走り回れるのは意図と違う
+            if (_mover != null && CanThrowNow() && _mover.MoveLock != LocalPlayerMover.MovementLock.Full)
+            {
+                _mover.MoveLock = LocalPlayerMover.MovementLock.Full;
+            }
+
             UpdateAimMarker();
+
+            // 他の技が終わった瞬間に、待たせていた1発を出す
+            if (_throwReserved)
+            {
+                if (CanThrowNow()) Throw();
+                return;
+            }
 
             if (held) return;
 
@@ -521,20 +547,41 @@ namespace ProjectKMP.Player
             if (_chargeElapsedSec < _chargeDurationSec)
             {
                 CancelAiming();
+                return;
             }
-            else
-            {
-                Throw();
-            }
+
+            // 投げられない間は予約だけして、狙いは出したままにする
+            if (CanThrowNow()) Throw();
+            else _throwReserved = true;
         }
 
+        /// <summary>
+        /// 狙いに入れるか。他の技の最中でも狙いだけは始められる。
+        /// 動けない時間に何もできないと、技を繋ぐたびに手が止まって気持ちよくないため。
+        /// </summary>
         private bool CanStartAiming()
         {
             if (_cooldownRemainSec > 0f) return false;
             if (!Battle.BattlePlayGate.IsPlayable) return false;
             if (_health != null && _health.IsDead) return false;
             if (_playerAttack != null && _playerAttack.IsAttacking) return false;
+            return true;
+        }
+
+        /// <summary>
+        /// いま投げてよいか。他の技が動いている間は投げずに待つ。
+        /// 割り込むと位置や向きが取り合いになって、演出が破綻する。
+        /// </summary>
+        private bool CanThrowNow()
+        {
+            if (!Battle.BattlePlayGate.IsPlayable) return false;
+            if (_health != null && _health.IsDead) return false;
+
             if (_beamSkill != null && _beamSkill.IsBusy) return false;
+
+            PlayerDiveSkill diveSkill = GetComponent<PlayerDiveSkill>();
+            if (diveSkill != null && (diveSkill.IsFlying || diveSkill.IsAiming)) return false;
+
             return true;
         }
 
@@ -573,9 +620,11 @@ namespace ProjectKMP.Player
             Vector3 start = transform.position + transform.forward * Mathf.Min(3f, _maxRange);
             start.y = transform.position.y;
             _aimMarkerPosition = start;
+            _aimAnchorPosition = transform.position;
 
-            // 狙い中は移動しない。向きはマーカーの方へスキル側で向ける
-            if (_mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.Full;
+            // 狙い中は移動しない。向きはマーカーの方へスキル側で向ける。
+            // ただし他の技が動いている間は触らない。動きの主導権を奪うと演出が壊れる
+            if (_mover != null && CanThrowNow()) _mover.MoveLock = LocalPlayerMover.MovementLock.Full;
 
             if (_aimIndicatorPrefab != null)
             {
@@ -590,6 +639,13 @@ namespace ProjectKMP.Player
         /// <summary>移動入力(WASD/左スティック/仮想スティック)で照準マーカーを動かし、射程内に収める</summary>
         private void UpdateAimMarker()
         {
+            // とびこみの最中など、狙っている間に自分が動くことがある。
+            // 動いたぶんだけマーカーも運ばないと、射程の縁に張り付いて動かせなくなる
+            Vector3 moved = transform.position - _aimAnchorPosition;
+            moved.y = 0.0f;
+            _aimMarkerPosition += moved;
+            _aimAnchorPosition = transform.position;
+
             Vector2 input = ReadMoveInput();
             Vector3 moveDir = ToWorldDirection(input);
             _aimMarkerPosition += moveDir * (_markerMoveSpeed * Time.deltaTime);
@@ -604,8 +660,10 @@ namespace ProjectKMP.Player
             _aimMarkerPosition = transform.position + fromPlayer;
             _aimMarkerPosition.y = transform.position.y;
 
-            // プレイヤーはマーカーの方を向く
-            if (fromPlayer.sqrMagnitude > 0.01f)
+            // プレイヤーはマーカーの方を向く。
+            // ただし他の技が動いている間は向きを変えない。
+            // ビームの向きはキャラの向きから決まるので、回すと照射中の光線まで振れてしまう
+            if (fromPlayer.sqrMagnitude > 0.01f && CanThrowNow())
             {
                 Quaternion look = Quaternion.LookRotation(fromPlayer.normalized);
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, look, TURN_SPEED_DEG * Time.deltaTime);
@@ -621,6 +679,7 @@ namespace ProjectKMP.Player
 
         private void CancelAiming()
         {
+            _throwReserved = false;
             DestroyAimIndicator();
             if (_mover != null) _mover.MoveLock = LocalPlayerMover.MovementLock.None;
             photonView.RPC(nameof(RpcCancelCharge), RpcTarget.All);
@@ -632,6 +691,7 @@ namespace ProjectKMP.Player
         /// </summary>
         private void Throw()
         {
+            _throwReserved = false;
             DestroyAimIndicator();
             _cooldownRemainSec = _cooldownSec;
 

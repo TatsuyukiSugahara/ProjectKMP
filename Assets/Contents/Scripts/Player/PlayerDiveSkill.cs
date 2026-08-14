@@ -127,6 +127,10 @@ namespace ProjectKMP.Player
         private readonly Collider[] _overlapBuffer = new Collider[32];
         private readonly RaycastHit[] _castBuffer = new RaycastHit[16];
 
+        /// <summary>着地点の高さを測るときに地面と見なすもの</summary>
+        [SerializeField, Tooltip("着地点の地面を測る対象。空中から跳んだときの降り先を決めるのに使う")]
+        private LayerMask _groundMask = ~0;
+
         private enum Phase { Ready, Aiming, Flying }
 
         private Phase _phase = Phase.Ready;
@@ -134,6 +138,12 @@ namespace ProjectKMP.Player
 
         /// <summary>押した事実を覚えておく控え。押している間だけ残る</summary>
         private bool _pressBuffered;
+
+        /// <summary>指を離したが、他の技の最中でまだ跳べない状態。空くと同時に跳ぶ</summary>
+        private bool _diveReserved;
+
+        /// <summary>狙っている向き(度)。キャラを回せない場面でも狙いだけは動かせるように別で持つ</summary>
+        private float _aimYawDeg;
         private bool _isRising;
         private float _boostWindowEndTime;
         private float _cooldownRemainSec;
@@ -215,30 +225,60 @@ namespace ProjectKMP.Player
                     if (!Battle.BattlePlayGate.IsPlayable || (_health != null && _health.IsDead))
                     {
                         CancelAiming();
+                        break;
                     }
-                    else if (!held)
+
+                    // 他の技が動いている間は移動の部品ごと止まっていることがある。
+                    // 狙っている間だけ、こちらから向きを回してやる
+                    UpdateAimYaw();
+                    UpdateAim();
+
+                    // 他の技が終わった瞬間に、待たせていた1発を出す
+                    if (_diveReserved)
                     {
-                        StartDive();
+                        if (CanStartDiveNow()) StartDive();
+                        break;
                     }
-                    else
-                    {
-                        UpdateAim();
-                    }
+
+                    if (held) break;
+
+                    // 跳べない間は予約だけして、狙いは出したままにする
+                    if (CanStartDiveNow()) StartDive();
+                    else _diveReserved = true;
                     break;
             }
         }
 
         // ---- 内部処理: 開始条件 ---------------------------
 
+        /// <summary>
+        /// 狙いに入れるか。他の技の最中でも狙いだけは始められる。
+        /// 動けない時間に何もできないと、技を繋ぐたびに手が止まって気持ちよくないため。
+        /// </summary>
         private bool CanDive()
         {
             if (_phase != Phase.Ready || _cooldownRemainSec > 0.0f) return false;
             if (!Battle.BattlePlayGate.IsPlayable) return false;
             if (_health != null && _health.IsDead) return false;
 
-            // ビームの狙い・跳び上がり・照射の最中は、割り込むと位置がずれて演出が破綻する。
-            // ただし撃ち終わって降りているだけの間は、そのまま次へ繋げたほうが気持ちいい
+            return true;
+        }
+
+        /// <summary>
+        /// いま跳んでよいか。他の技が動いている間は跳ばずに待つ。
+        /// 割り込むと位置がずれて演出が破綻する。
+        /// ただしビームを撃ち終わって降りているだけの間は、そのまま繋げたほうが気持ちいい
+        /// </summary>
+        private bool CanStartDiveNow()
+        {
+            if (!Battle.BattlePlayGate.IsPlayable) return false;
+            if (_health != null && _health.IsDead) return false;
+
             if (_beamSkill != null && _beamSkill.IsBusy && !_beamSkill.IsFinishing) return false;
+
+            // 投げ終わって降りているだけの間は、そのまま次へ繋げたほうが気持ちいい
+            PlayerEnergyBallSkill energyBallSkill = GetComponent<PlayerEnergyBallSkill>();
+            if (energyBallSkill != null && energyBallSkill.IsBusy && !energyBallSkill.IsDescending) return false;
 
             return true;
         }
@@ -272,9 +312,33 @@ namespace ProjectKMP.Player
         /// 予測を出す。ビームと違って移動は止めない。
         /// 避けるための技なので、狙っている間に位置を直せないと使いものにならない。
         /// </summary>
+        /// <summary>
+        /// 狙っている向きを更新する。
+        ///
+        /// 移動側が向きを回しているときは、キャラの向きがそのまま狙い。
+        /// ビームの照射中のように向きを変えられない場面では、こちらで角度だけを動かす。
+        /// キャラごと回すとビームまで振れてしまうため、キャラには触らない。
+        /// </summary>
+        private void UpdateAimYaw()
+        {
+            var localMover = _mover as LocalPlayerMover;
+            if (localMover == null) { _aimYawDeg = transform.eulerAngles.y; return; }
+
+            if (localMover.RotatesByInput) { _aimYawDeg = transform.eulerAngles.y; return; }
+
+            if (!localMover.TryReadMoveDirection(out Vector3 direction)) return;
+
+            float target = Quaternion.LookRotation(direction).eulerAngles.y;
+            _aimYawDeg = Mathf.MoveTowardsAngle(_aimYawDeg, target, localMover.TurnSpeedDeg * Time.deltaTime);
+        }
+
+        /// <summary>狙っている向きのワールド方向</summary>
+        private Vector3 AimDirection => Quaternion.Euler(0.0f, _aimYawDeg, 0.0f) * Vector3.forward;
+
         private void StartAiming()
         {
             _phase = Phase.Aiming;
+            _aimYawDeg = transform.eulerAngles.y;
 
             if (_aimIndicatorPrefab == null) return;
 
@@ -287,6 +351,7 @@ namespace ProjectKMP.Player
         private void CancelAiming()
         {
             _phase = Phase.Ready;
+            _diveReserved = false;
             DestroyAimIndicator();
         }
 
@@ -303,10 +368,11 @@ namespace ProjectKMP.Player
         {
             if (_aimIndicatorInstance == null) return;
 
-            Vector3 direction = transform.forward;
-            direction.y = 0.0f;
-            if (direction.sqrMagnitude < 0.0001f) direction = transform.forward;
-            else direction.Normalize();
+            Vector3 direction = AimDirection;
+
+            // 予測はキャラの子なので、キャラの向きとの差だけ回してやる
+            _aimIndicatorInstance.transform.localRotation =
+                Quaternion.Euler(0.0f, _aimYawDeg - transform.eulerAngles.y, 0.0f);
 
             Vector3 start = transform.position;
             Vector3 end = start + direction * _distance;
@@ -331,10 +397,35 @@ namespace ProjectKMP.Player
             _aimIndicatorInstance.SetWillHit(willHit);
         }
 
+        /// <summary>
+        /// 指定した場所の地面の高さを返す。自分自身は無視する。
+        /// 見つからなければ、代わりの高さをそのまま返す。
+        /// </summary>
+        private float ResolveGroundY(Vector3 position, float fallbackY)
+        {
+            Vector3 origin = position + Vector3.up * 30.0f;
+
+            int count = Physics.RaycastNonAlloc(
+                origin, Vector3.down, _castBuffer, 100.0f, _groundMask, QueryTriggerInteraction.Ignore);
+
+            float best = float.NegativeInfinity;
+            for (int i = 0; i < count; i++)
+            {
+                Transform hit = _castBuffer[i].transform;
+                if (hit == null || hit == transform || hit.IsChildOf(transform)) continue;
+
+                // 一番高いところを拾う。橋や台の上に降りたときに床下へ潜らせないため
+                if (_castBuffer[i].point.y > best) best = _castBuffer[i].point.y;
+            }
+
+            return best > float.NegativeInfinity ? best : fallbackY;
+        }
+
         // ---- 内部処理: 飛行 -------------------------------
 
         private void StartDive()
         {
+            _diveReserved = false;
             DestroyAimIndicator();
 
             // ビームの降下から繋ぐ場合、あちらの移動を先に畳んでおく
@@ -343,10 +434,9 @@ namespace ProjectKMP.Player
             _phase = Phase.Flying;
             _cooldownRemainSec = _cooldownSec;
 
-            Vector3 direction = transform.forward;
-            direction.y = 0.0f;
-            if (direction.sqrMagnitude < 0.0001f) direction = Vector3.forward;
-            direction.Normalize();
+            // 狙っていた向きへ跳ぶ。キャラの向きも合わせておく
+            Vector3 direction = AimDirection;
+            transform.rotation = Quaternion.Euler(0.0f, _aimYawDeg, 0.0f);
 
             // 回転と音は全員の画面で見せたいので配る
             photonView.RPC(nameof(RpcDive), RpcTarget.All, direction);
@@ -380,6 +470,10 @@ namespace ProjectKMP.Player
             // 止まる判定は別に SphereCast で取っているので、すり抜けたりはしない
             SetBossCollisionIgnored(true);
 
+            // 降り先は跳ぶ前に決めておく。飛びながら測ると、
+            // 途中の起伏を拾って高さが暴れる
+            float landingY = ResolveGroundY(start + direction * _distance, start.y);
+
             try
             {
                 float elapsed = 0.0f;
@@ -399,9 +493,10 @@ namespace ProjectKMP.Player
                         _isRising = false;
                     }
 
-                    Vector3 next = start
-                        + direction * (_distance * t)
-                        + Vector3.up * (_peakHeight * 4.0f * t * (1.0f - t));
+                    // 跳び始めた高さから着地点の地面へ、進むにつれて降ろしていく。
+                    // 始点の高さのままだと、空中から跳んだときに空中で終わってしまう
+                    Vector3 next = start + direction * (_distance * t);
+                    next.y = Mathf.Lerp(start.y, landingY, t) + _peakHeight * 4.0f * t * (1.0f - t);
 
                     Vector3 delta = next - transform.position;
                     float distance = delta.magnitude;
