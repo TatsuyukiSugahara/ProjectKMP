@@ -122,6 +122,7 @@ namespace ProjectKMP.Player
         private PlayerHealth _health;
         private PlayerBeamSkill _beamSkill;
         private MonoBehaviour _mover;
+        private SquashStretch _squash;
         private ThirdPersonCamera _cameraController;
 
         private readonly Collider[] _overlapBuffer = new Collider[32];
@@ -184,6 +185,7 @@ namespace ProjectKMP.Player
             _beamSkill = GetComponent<PlayerBeamSkill>();
 
             // 移動スクリプトはシーンによって型が違うので、あるほうを使う
+            _squash = GetComponentInChildren<SquashStretch>(true);
             _mover = GetComponent<PlayerMover>();
             if (_mover == null) _mover = GetComponent<LocalPlayerMover>();
         }
@@ -448,6 +450,9 @@ namespace ProjectKMP.Player
             SpinAsync(destroyCancellationToken).Forget();
             PlayClip(_jumpClip);
 
+            // 跳んだ瞬間に縦へ伸ばす。飛び出す勢いは形の変化でいちばん伝わる
+            if (_squash != null) _squash.Stretch(0.35f);
+
             // 実際に動かすのは操作している本人だけ。他人の位置は同期で届く
             if (IsOwner) FlyAsync(direction, destroyCancellationToken).Forget();
         }
@@ -662,6 +667,9 @@ namespace ProjectKMP.Player
 
             int attackerActorNumber = info.Sender != null ? info.Sender.ActorNumber : -1;
             target.NotifyHit(hitPoint, attackerActorNumber, damage);
+
+            Battle.HitFlash.PlayWhite(target.transform, 0.14f);
+            Battle.Onomatopoeia.Play(hitPoint, "ドンッ！", new Color(1.0f, 0.85f, 0.55f, 1.0f), 1.2f);
         }
 
         // ---- 内部処理: 見た目と手応え ---------------------
@@ -731,6 +739,15 @@ namespace ProjectKMP.Player
             if (!IsOwner) return;
 
             Battle.HitStop.Play(0.04f, 0.08f, 0.1f);
+
+            // 着地で潰す。伸びたぶんを潰しで受け止めると、動きが繋がって見える
+            if (_squash != null) _squash.Squash(0.32f);
+
+            // 着地の一瞬だけ周りを引かせる。踏みしめた重さが出る
+            UI.BgmPlayer.Duck(0.3f, 0.08f, 0.3f);
+
+            // 地面を走る輪。着地の重さは、キャラではなく地面の反応で伝わる
+            Battle.ShockwaveRing.Play(transform.position, new Color(1.0f, 0.92f, 0.72f, 1.0f), 5.0f, 0.4f, 0.7f);
 
             if (_cameraController == null) _cameraController = FindAnyObjectByType<ThirdPersonCamera>();
             if (_cameraController != null) _cameraController.Shake(0.12f, 0.15f);

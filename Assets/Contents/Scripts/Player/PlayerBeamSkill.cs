@@ -440,6 +440,9 @@ namespace ProjectKMP.Player
 
             // 合図は自分の画面に出すものなので、操作している本人の側で用意する
             if (_enableFriendBeam) FriendBeamSignal.Ensure();
+
+            // ピンチの合図も自分の画面だけのもの。ここでまとめて用意する
+            DangerVignette.Ensure();
         }
 
         private void OnDestroy()
@@ -1115,11 +1118,15 @@ namespace ProjectKMP.Player
 
             ThirdPersonCamera playerCamera = FindAnyObjectByType<ThirdPersonCamera>();
             if (playerCamera != null) playerCamera.Shake(_fireCameraShakeAmplitude, _fireCameraShakeDurationSec);
+
+            // 撃った足元から輪を走らせる。反動が地面に伝わったように見せる
+            Battle.ShockwaveRing.Play(transform.position, new Color(0.7f, 0.92f, 1.0f, 1.0f), 4.0f, 0.35f, 0.5f);
         }
 
         /// <summary>ヒットの通知。全員のクライアントでエフェクトとダメージ処理を行う</summary>
         [PunRPC]
-        private void RpcBeamHit(Vector3 hitPoint, int targetNetworkId, int damage, bool combo, PhotonMessageInfo info)
+        private void RpcBeamHit(
+            Vector3 hitPoint, int targetNetworkId, int damage, bool combo, bool initial, PhotonMessageInfo info)
         {
             HitTarget target = HitTarget.Find(targetNetworkId);
             if (target == null) return;
@@ -1144,6 +1151,18 @@ namespace ProjectKMP.Player
 
             int attackerActorNumber = info.Sender != null ? info.Sender.ActorNumber : -1;
             target.NotifyHit(position, attackerActorNumber, damage);
+
+            // 焼き始めは強く光らせ、照射中は薄く点滅させる。
+            // ずっと同じ強さで光らせると、白いままの敵になってしまう
+            Battle.HitFlash.Play(
+                target.transform,
+                new Color(0.85f, 0.95f, 1.0f, 1.0f),
+                initial ? 0.14f : 0.05f);
+
+            // 焼き始めだけ大きく出す。照射中ずっと同じ擬音だと、
+            // どこで当たり始めたのかが分からなくなる
+            if (initial) Battle.Onomatopoeia.Play(position, "ゴォォッ！", new Color(0.75f, 0.95f, 1.0f, 1.0f), 1.1f);
+            else Battle.Onomatopoeia.Play(position, "ジジッ", new Color(0.7f, 0.88f, 1.0f, 1.0f), 0.45f);
         }
 
         // ---- 照射の進行(全クライアント) -------------------
@@ -1381,10 +1400,16 @@ namespace ProjectKMP.Player
                         TickTimer = 0f,
                         JustEntered = true,
                     };
-                    SendBeamHit(target, collider, _initialDamage);
+                    SendBeamHit(target, collider, _initialDamage, true);
 
                     // 焼き始めの手応え。照射中はここが一番強く感じる場面
                     if (IsOwner) Battle.HitStop.Play(_initialHitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
+
+                    // 焼き始めだけ周りを引かせる。照射中ずっと絞ると音が痩せて聞こえる
+                    UI.BgmPlayer.Duck(0.35f, 0.12f, 0.4f);
+
+                    // 当たり始めの1回だけ決めゴマを出す。照射中ずっと出すと画面が点滅して見づらい
+                    UI.ImpactFrame.Play(new Color(0.75f, 0.9f, 1.0f, 0.55f), 0.045f);
                 }
             }
 
@@ -1407,7 +1432,7 @@ namespace ProjectKMP.Player
                 while (state.TickTimer >= _tickIntervalSec)
                 {
                     state.TickTimer -= _tickIntervalSec;
-                    SendBeamHit(state.Target, state.Collider, _tickDamage);
+                    SendBeamHit(state.Target, state.Collider, _tickDamage, false);
 
                     // 継続はごく短く。長く止めるとカクついて照射が途切れて見える
                     if (IsOwner) Battle.HitStop.Play(_tickHitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
@@ -1417,7 +1442,8 @@ namespace ProjectKMP.Player
             foreach (int id in _removeWork) _targetStates.Remove(id);
         }
 
-        private void SendBeamHit(HitTarget target, Collider collider, int damage)
+        /// <param name="initial">焼き始めの一撃かどうか。照射中の継続ダメージなら false</param>
+        private void SendBeamHit(HitTarget target, Collider collider, int damage, bool initial)
         {
             // 強化ぶんを先に掛けてから、そのうえに同時ヒットボーナスを掛ける
             damage = Mathf.RoundToInt(damage * _damageScale);
@@ -1434,7 +1460,7 @@ namespace ProjectKMP.Player
             Vector3 axisPoint = _beamOrigin + _beamDirection * along;
             Vector3 hitPoint = collider != null ? collider.ClosestPoint(axisPoint) : target.transform.position;
 
-            photonView.RPC(nameof(RpcBeamHit), RpcTarget.All, hitPoint, target.NetworkId, damage, combo);
+            photonView.RPC(nameof(RpcBeamHit), RpcTarget.All, hitPoint, target.NetworkId, damage, combo, initial);
         }
 
         // ---- 内部処理 ------------------------------------

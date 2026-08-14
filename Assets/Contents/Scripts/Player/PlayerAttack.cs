@@ -350,6 +350,12 @@ namespace ProjectKMP.Player
 
             if (target != null) target.NotifyHit(position, attackerActorNumber, damage);
 
+            // 殴られた側を光らせる。当たった手応えは相手の反応でいちばん伝わる
+            if (target != null) Battle.HitFlash.PlayWhite(target.transform, 0.1f);
+
+            // 数字だけでは噛んだ手応えが出ない。擬音を弾けさせて音の代わりに絵で伝える
+            Battle.Onomatopoeia.Play(position, "ガブッ！", new Color(1.0f, 0.95f, 0.85f, 1.0f), 0.6f);
+
             // 手応えは当てた本人にだけ返す。他人の画面まで止めると位置同期の補間がガタつく
             if (IsOwner) PlayHitFeedback();
 
@@ -369,6 +375,10 @@ namespace ProjectKMP.Player
         private void PlayHitFeedback()
         {
             Battle.HitStop.Play(_hitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
+
+            // 噛みついた瞬間に縦へ縮める。噛む力が入ったように見える
+            SquashStretch squash = GetComponentInChildren<SquashStretch>(true);
+            if (squash != null) squash.Squash(0.18f);
 
             if (_cameraShakeAmplitude > 0.0f && _cameraShakeSec > 0.0f)
             {

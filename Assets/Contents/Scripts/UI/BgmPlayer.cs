@@ -33,10 +33,27 @@ namespace ProjectKMP.UI
         private AudioSource _source;
         private CancellationTokenSource _cts;
 
+        /// <summary>絞ったまま保つ残り時間</summary>
+        private float _duckRemainSec;
+        private bool _ducking;
+
         // ---- 公開API -------------------------------------
 
         /// <summary>いま鳴っているBGM。無ければ null</summary>
         public static BgmPlayer Current => _current;
+
+        /// <summary>
+        /// 一瞬だけBGMを絞る。大きい音の直前に呼ぶと、その音だけが前に出る。
+        ///
+        /// 音量を上げずに音が大きく聞こえるのは、周りが引くから。
+        /// 打撃の手応えは音量よりも『間』で決まる。
+        /// </summary>
+        public static void Duck(float amount = 0.35f, float holdSec = 0.12f, float recoverSec = 0.35f)
+        {
+            if (_current == null) return;
+
+            _current.DuckAsync(amount, holdSec, recoverSec).Forget();
+        }
 
         /// <summary>鳴っているBGMを消していく。シーンを抜けるときに呼ぶ</summary>
         public static void FadeOutCurrent()
@@ -99,6 +116,43 @@ namespace ProjectKMP.UI
             _cts.Cancel();
             _cts.Dispose();
             _cts = null;
+        }
+
+        /// <summary>
+        /// 一瞬だけ絞ってから戻す。
+        /// 落とすのは一気に、戻すのはゆっくり。逆にすると絞ったことが目立ってしまう。
+        /// </summary>
+        private async UniTaskVoid DuckAsync(float amount, float holdSec, float recoverSec)
+        {
+            if (_source == null) return;
+
+            // 絞っている最中にもう一度呼ばれたら、より深いほうを採る
+            float target = _volume * Mathf.Clamp01(1.0f - amount);
+            if (_source.volume > target) _source.volume = target;
+
+            _duckRemainSec = Mathf.Max(_duckRemainSec, holdSec);
+            if (_ducking) return;
+
+            _ducking = true;
+
+            while (_duckRemainSec > 0.0f)
+            {
+                _duckRemainSec -= Time.unscaledDeltaTime;
+                await UniTask.Yield(PlayerLoopTiming.Update, destroyCancellationToken);
+            }
+
+            float start = _source.volume;
+            float elapsed = 0.0f;
+
+            while (elapsed < recoverSec)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                _source.volume = Mathf.Lerp(start, _volume, elapsed / recoverSec);
+                await UniTask.Yield(PlayerLoopTiming.Update, destroyCancellationToken);
+            }
+
+            _source.volume = _volume;
+            _ducking = false;
         }
 
         /// <summary>

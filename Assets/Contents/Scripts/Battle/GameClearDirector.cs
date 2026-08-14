@@ -25,6 +25,22 @@ namespace ProjectKMP.Battle
         [SerializeField, Tooltip("「ゲームクリア」表示。未設定ならシーンから探す")]
         private GameClearUI _ui;
 
+        [Header("とどめの演出")]
+        [SerializeField, Tooltip("倒した瞬間をゆっくり見せる")]
+        private bool _enableFinishBlow = true;
+
+        [SerializeField, Range(0.05f, 1.0f), Tooltip("どれだけ遅くするか。0.2で5分の1の速さ")]
+        private float _finishTimeScale = 0.18f;
+
+        [SerializeField, Min(0.0f), Tooltip("遅くしている時間(秒)。実時間で数える")]
+        private float _finishSlowSec = 1.1f;
+
+        [SerializeField, Min(0.0f), Tooltip("元の速さへ戻すのにかける時間(秒)")]
+        private float _finishRecoverSec = 0.5f;
+
+        [SerializeField, Min(0.0f), Tooltip("倒した瞬間にカメラを寄せる量(メートル)。0で寄せない")]
+        private float _finishCameraPull = 3.0f;
+
         [SerializeField, Min(0.0f), Tooltip("撃破からゲームクリア表示までの間(秒)。ボスが倒れるのを見せる時間")]
         private float _delayBeforeShowSec = 1.2f;
 
@@ -79,6 +95,28 @@ namespace ProjectKMP.Battle
             FinishAsync(destroyCancellationToken).Forget();
         }
 
+        /// <summary>
+        /// 倒した瞬間をゆっくり見せる。
+        ///
+        /// 決着はギャラリーがいちばん沸く場面なので、そこに一番よい絵を置く。
+        /// 速度を落としてカメラを寄せるだけで、同じ動きが見せ場に変わる。
+        /// </summary>
+        private void PlayFinishBlow(Player.ThirdPersonCamera cameraController)
+        {
+            if (!_enableFinishBlow) return;
+
+            // ヒットストップと同じ係へ預ける。別々に速度を書くと取り合いになる
+            HitStop.Play(_finishSlowSec, _finishTimeScale, _finishRecoverSec);
+
+            // 決着の瞬間はいちばん深く引かせる。静けさが見せ場を作る
+            UI.BgmPlayer.Duck(0.75f, _finishSlowSec, 0.8f);
+
+            if (cameraController == null || _finishCameraPull <= 0.0f) return;
+
+            // 寄せたままにする。この後は倒れる演出とクリア表示が続くので、戻す必要がない
+            cameraController.SetDistanceOffset(-_finishCameraPull);
+        }
+
         private async UniTaskVoid FinishAsync(CancellationToken ct)
         {
             // 倒した時点でタイムを確定する。操作を止めるより先に測る
@@ -104,6 +142,8 @@ namespace ProjectKMP.Battle
             // ボスを倒れさせる(各クライアントが自分の画面で再生する)
             var gorillaAI = FindAnyObjectByType<GorillaAI>();
             if (gorillaAI != null && !gorillaAI.IsDead) gorillaAI.ChangeState(new GorillaStateDeath());
+
+            PlayFinishBlow(cameraController);
 
             // UIが消えた状態を1フレーム反映させてから、倒した瞬間の画面を撮っておく(リザルトの背景に使う)
             await UniTask.Yield(PlayerLoopTiming.Update, ct);

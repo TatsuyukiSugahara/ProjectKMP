@@ -205,6 +205,7 @@ GameObject:
   - component: {fileID: 4087651730471892998}
   - component: {fileID: 9112132388033168563}
   - component: {fileID: 5134342651220004649}
+  - component: {fileID: 6252243456253839388}
   m_Layer: 0
   m_Name: PF_Player_Online
   m_TagString: Player
@@ -736,6 +737,24 @@ MonoBehaviour:
   _groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &6252243456253839388
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3612530661535202673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eeff422ca3718410db55b783effb1a24, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.RunDust
+  _minSpeed: 2.5
+  _intervalSec: 0.09
+  _lifeSec: 0.45
+  _startSize: 0.25
+  _growth: 3.2
+  _color: {r: 0.72, g: 0.6, b: 0.45, a: 0.55}
 --- !u!1001 &8618206059551019404
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -811,7 +830,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4008398642261818647, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 34820962685949999}
   m_SourcePrefab: {fileID: 100100000, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}
 --- !u!4 &372642322084930559 stripped
 Transform:
@@ -838,6 +860,26 @@ Animator:
   m_CorrespondingSourceObject: {fileID: 4008398642261818645, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}
   m_PrefabInstance: {fileID: 8618206059551019404}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &4628211592738385051 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4008398642261818647, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}
+  m_PrefabInstance: {fileID: 8618206059551019404}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &34820962685949999
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4628211592738385051}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 875fde868fadc4a6c9f747afb362be03, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Player.SquashStretch
+  _target: {fileID: 4628211592738385048}
+  _recoverSpeed: 9
+  _overshoot: 0.35
 --- !u!137 &4628211593749845080 stripped
 SkinnedMeshRenderer:
   m_CorrespondingSourceObject: {fileID: 4008398641258923476, guid: 850dc4fe69e740949ab11eb18add6638, type: 3}

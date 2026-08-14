@@ -1026,7 +1026,8 @@ namespace ProjectKMP.Player
 
         /// <summary>ヒットの通知。全員のクライアントでエフェクトとダメージ処理を行う</summary>
         [PunRPC]
-        private void RpcEnergyBallHit(Vector3 hitPoint, int targetNetworkId, int damage, bool combo, PhotonMessageInfo info)
+        private void RpcEnergyBallHit(
+            Vector3 hitPoint, int targetNetworkId, int damage, bool combo, bool burst, PhotonMessageInfo info)
         {
             HitTarget target = HitTarget.Find(targetNetworkId);
             if (target == null) return;
@@ -1042,6 +1043,17 @@ namespace ProjectKMP.Player
 
             int attackerActorNumber = info.Sender != null ? info.Sender.ActorNumber : -1;
             target.NotifyHit(position, attackerActorNumber, damage);
+
+            // 爆発は長く、残り火は短く光らせる
+            Battle.HitFlash.Play(
+                target.transform,
+                new Color(1.0f, 0.95f, 0.85f, 1.0f),
+                burst ? 0.18f : 0.05f);
+
+            // 着弾の爆発だけ大きく出す。残り火のダメージまで『ドカーン！』だと、
+            // いつ爆発したのか分からなくなる
+            if (burst) Battle.Onomatopoeia.Play(position, "ドカーン！", new Color(1.0f, 0.9f, 0.6f, 1.0f), 1.6f);
+            else Battle.Onomatopoeia.Play(position, "ジュッ", new Color(1.0f, 0.75f, 0.45f, 1.0f), 0.5f);
         }
 
         // ---- チャージと投擲の進行(全クライアント) ---------
@@ -1437,6 +1449,14 @@ namespace ProjectKMP.Player
             }
 
             Battle.HitStop.Play(_hitStopDurationSec, _hitStopTimeScale, _hitStopRecoverSec);
+
+            // 周りの音を引かせて、爆発だけを前に出す。
+            // 音量を上げるより、周りが引いたほうが大きく聞こえる
+            UI.BgmPlayer.Duck(0.55f, 0.18f, 0.5f);
+
+            // 一番強い技なので、決めゴマも輪も他より大きく長くする。技の格の差を絵で見せる
+            UI.ImpactFrame.PlayWhite(0.06f, 0.85f);
+            Battle.ShockwaveRing.Play(transform.position, new Color(0.75f, 0.9f, 1.0f, 1.0f), 12.0f, 0.55f, 1.2f);
         }
 
         // ---- 発動時の演出 ----------------------------------
@@ -1644,7 +1664,7 @@ namespace ProjectKMP.Player
                 int id = target.GetInstanceID();
                 if (!_presentThisFrame.Add(id)) continue;
 
-                SendHit(target, collider, center, damage);
+                SendHit(target, collider, center, damage, true);
             }
         }
 
@@ -1699,7 +1719,7 @@ namespace ProjectKMP.Player
                 while (state.TickTimer >= _zoneTickIntervalSec)
                 {
                     state.TickTimer -= _zoneTickIntervalSec;
-                    SendHit(state.Target, state.Collider, _zonePosition, _zoneTickDamage);
+                    SendHit(state.Target, state.Collider, _zonePosition, _zoneTickDamage, false);
                 }
             }
 
@@ -1719,7 +1739,8 @@ namespace ProjectKMP.Player
             return target;
         }
 
-        private void SendHit(HitTarget target, Collider collider, Vector3 center, int damage)
+        /// <param name="burst">着弾の爆発かどうか。残留地帯の継続ダメージなら false</param>
+        private void SendHit(HitTarget target, Collider collider, Vector3 center, int damage, bool burst)
         {
             // 他のプレイヤーが直前に当てていれば、同時ヒットボーナスを掛けてから配る
             bool combo = Battle.ComboBonus.IsActive;
@@ -1728,7 +1749,7 @@ namespace ProjectKMP.Player
             if (damage <= 0) return;
 
             Vector3 hitPoint = collider != null ? collider.ClosestPoint(center) : target.transform.position;
-            photonView.RPC(nameof(RpcEnergyBallHit), RpcTarget.All, hitPoint, target.NetworkId, damage, combo);
+            photonView.RPC(nameof(RpcEnergyBallHit), RpcTarget.All, hitPoint, target.NetworkId, damage, combo, burst);
         }
 
         // ---- 内部処理 ------------------------------------

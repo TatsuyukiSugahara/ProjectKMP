@@ -283,7 +283,8 @@ namespace ProjectKMP.Player
                 if (stick.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) input += stick.x;
             }
 
-            _yawDeg += input * _yawSpeedDeg * Time.deltaTime;
+            // カメラの操作は、ゲームが遅くなっても同じ速さで効いたほうが素直
+            _yawDeg += input * _yawSpeedDeg * Time.unscaledDeltaTime;
 
             // スマホは画面をなぞって回す。指の横移動だけを使い、縦のなぞりは無視する
             TouchControls touch = TouchControls.Instance;
@@ -330,7 +331,7 @@ namespace ProjectKMP.Player
             if (toTarget.sqrMagnitude < 0.0001f) return;
 
             float desiredYaw = Quaternion.LookRotation(toTarget.normalized, Vector3.up).eulerAngles.y;
-            _yawDeg = Mathf.MoveTowardsAngle(_yawDeg, desiredYaw, _lockTurnSpeedDeg * Time.deltaTime);
+            _yawDeg = Mathf.MoveTowardsAngle(_yawDeg, desiredYaw, _lockTurnSpeedDeg * Time.unscaledDeltaTime);
             _pitchDeg = _fixedPitchDeg;
         }
 
@@ -414,13 +415,17 @@ namespace ProjectKMP.Player
             }
             else
             {
-                transform.position = Vector3.SmoothDamp(transform.position, desiredPosition, ref _followVelocity, _followSmoothTime);
+                // 寄せの量は実時間で動くのに、追従だけがゲーム内の時間だと速さが噛み合わない。
+                // スローの最中に目標だけ先へ進み、追いかける側が刻んで揺れて見える
+                transform.position = Vector3.SmoothDamp(
+                    transform.position, desiredPosition, ref _followVelocity,
+                    _followSmoothTime, Mathf.Infinity, Time.unscaledDeltaTime);
             }
 
             // 揺れの演出。残り時間に応じて減衰しながらランダムにずらす
             if (_shakeRemainSec > 0f)
             {
-                _shakeRemainSec -= Time.deltaTime;
+                _shakeRemainSec -= Time.unscaledDeltaTime;
                 float strength = _shakeDurationSec <= 0f ? 0f : Mathf.Clamp01(_shakeRemainSec / _shakeDurationSec);
                 transform.position += Random.insideUnitSphere * (_shakeAmplitude * strength);
             }

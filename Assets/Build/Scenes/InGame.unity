@@ -10355,7 +10355,7 @@ MonoBehaviour:
   _initialYawDeg: 0
   _enableTargetCamera: 1
   _useFKey: 1
-  _useGamepadRightShoulder: 1
+  _useGamepadStickPress: 1
   _lockTurnSpeedDeg: 360
   _lockDistanceAdd: 1.5
   _avoidObstacles: 1
@@ -24682,7 +24682,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 72
+  m_fontSize: 65
   m_fontSizeBase: 40
   m_fontWeight: 400
   m_enableAutoSizing: 1

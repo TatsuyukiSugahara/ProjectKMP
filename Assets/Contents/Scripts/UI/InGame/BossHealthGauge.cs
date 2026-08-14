@@ -68,6 +68,19 @@ namespace ProjectKMP.UI.InGame
         [SerializeField, Tooltip("削り終わった印の色")]
         private Color _pipOffColor = new Color(0.25f, 0.12f, 0.22f, 0.7f);
 
+        [Header("1本削り切ったとき")]
+        [SerializeField, Tooltip("ゲージを1本削り切った瞬間に演出を出す")]
+        private bool _enableBreakEffect = true;
+
+        [SerializeField, Tooltip("そのときに出す言葉")]
+        private string _breakLabel = "ブレイク！";
+
+        [SerializeField, Tooltip("演出の色")]
+        private Color _breakColor = new Color(1.0f, 0.9f, 0.45f, 1.0f);
+
+        [SerializeField, Min(0.0f), Tooltip("止める時間(秒)。長いと次の攻撃が遅れて気持ち悪い")]
+        private float _breakHitStopSec = 0.12f;
+
         [Header("削れた分の残像")]
         [SerializeField, Tooltip("本体より遅れて追いつく帯。未設定なら出さない")]
         private RectTransform _delayedRect;
@@ -101,6 +114,10 @@ namespace ProjectKMP.UI.InGame
 
         private float _displayRatio = 1.0f;
         private float _targetRatio = 1.0f;
+
+        /// <summary>前に見えていた残り本数。減った瞬間を捕まえるのに使う</summary>
+        private int _lastSegment = -1;
+        private Transform _bossTransform;
 
         private float _delayedRatio = 1.0f;
         private float _delayedHoldRemain;
@@ -176,6 +193,7 @@ namespace ProjectKMP.UI.InGame
             UpdateDelayed();
             UpdateFillColor();
             UpdateTrackColor();
+            CheckSegmentBreak();
             UpdatePips();
         }
 
@@ -302,6 +320,57 @@ namespace ProjectKMP.UI.InGame
                 next.g * _trackBrightness,
                 next.b * _trackBrightness,
                 1.0f);
+        }
+
+        /// <summary>
+        /// 1本削り切った瞬間を捕まえて演出を出す。
+        ///
+        /// 4人で削っているときの達成感がここに集まる。
+        /// 『あと1本』が見えると、そこから一気に攻めたくなる。
+        /// </summary>
+        private void CheckSegmentBreak()
+        {
+            int remaining = SegmentIndex(_displayRatio);
+
+            // 最初の1回は前の値が無いので、覚えるだけにする
+            if (_lastSegment < 0) { _lastSegment = remaining; return; }
+            if (remaining >= _lastSegment) { _lastSegment = remaining; return; }
+
+            _lastSegment = remaining;
+
+            if (!_enableBreakEffect) return;
+
+            // 最後の1本を削り切ったときは撃破。そちらの演出に任せる
+            if (remaining <= 0) return;
+
+            PlayBreakEffect(remaining);
+        }
+
+        private void PlayBreakEffect(int remaining)
+        {
+            ProjectKMP.Battle.HitStop.Play(_breakHitStopSec, 0.06f, 0.18f);
+            ImpactFrame.Play(_breakColor, 0.05f);
+            BgmPlayer.Duck(0.45f, 0.15f, 0.45f);
+
+            Transform boss = ResolveBossTransform();
+            if (boss == null) return;
+
+            // 残り1本になったら言葉を変える。ここからが最後だと伝えたい
+            string label = remaining == 1 ? "あと1本！" : _breakLabel;
+
+            ProjectKMP.Battle.Onomatopoeia.Play(boss.position + Vector3.up * 3.0f, label, _breakColor, 1.8f, 0.9f);
+            ProjectKMP.Battle.ShockwaveRing.Play(boss.position, _breakColor, 10.0f, 0.5f, 1.0f);
+        }
+
+        /// <summary>ボスを探す。一度見つけたら控えておき、毎回探し直さない</summary>
+        private Transform ResolveBossTransform()
+        {
+            if (_bossTransform != null) return _bossTransform;
+
+            Monster.BossHealth boss = FindAnyObjectByType<Monster.BossHealth>();
+            _bossTransform = boss != null ? boss.transform : null;
+
+            return _bossTransform;
         }
 
         /// <summary>残り本数から、その本の色を返す</summary>
