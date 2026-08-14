@@ -104,3 +104,34 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# ---------------------------------------------------------------------------
+# OS 生成ファイル (macOS / Windows)
+# ---------------------------------------------------------------------------
+.DS_Store
+.DS_Store.meta
+._*
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+Icon?
+Thumbs.db
+Thumbs.db.meta
+ehthumbs.db
+Desktop.ini
+Desktop.ini.meta
+$RECYCLE.BIN/
+
+# ---------------------------------------------------------------------------
+# エディタ / IDE
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*~
+
+# ---------------------------------------------------------------------------
+# Claude Code (個人設定のみ無視。共有する skills / settings.json は追跡する)
+# ---------------------------------------------------------------------------
+.claude/settings.local.json
