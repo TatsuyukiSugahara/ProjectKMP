@@ -1,15 +1,75 @@
 name: Release
 
 on:
+  workflow_dispatch:      # Actions タブから手動で実行(タグは中で作る)
+    inputs:
+      version:
+        description: 'バージョン (空にすると 直前の番号を1つ進める。例: 0.3.0)'
+        type: string
+        required: false
+        default: ''
   push:
-    tags: [ 'v*' ]        # 例: git tag v0.3.0 && git push origin v0.3.0
+    tags: [ 'v*' ]        # 手元でタグを打った場合。例: git tag v0.3.0 && git push origin v0.3.0
 
 permissions:
   contents: write         # Releases を作るために必要
 
 jobs:
+  # どの番号で出すかを最初に1回だけ決める。
+  # 機種ごとの job で別々に計算すると、ずれる可能性があるため
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.decide.outputs.version }}
+      tag: ${{ steps.decide.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # 既存のタグを全部見るために必要
+
+      - name: 番号を決める
+        id: decide
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # タグを打って動かした場合は、そのタグの番号をそのまま使う
+            tag="${GITHUB_REF_NAME}"
+            version="${tag#v}"
+          elif [ -n "${{ inputs.version }}" ]; then
+            # 手動実行で番号を指定した場合
+            version="$(echo '${{ inputs.version }}' | sed 's/^v//')"
+            tag="v${version}"
+          else
+            # 手動実行で空欄の場合は、直前のタグの一番右の数字を1つ進める
+            latest="$(git tag -l 'v*' --sort=-v:refname | head -n 1)"
+
+            if [ -z "${latest}" ]; then
+              version="0.1.0"
+            else
+              base="${latest#v}"
+              major="$(echo "${base}" | cut -d. -f1)"
+              minor="$(echo "${base}" | cut -d. -f2)"
+              patch="$(echo "${base}" | cut -d. -f3)"
+              version="${major}.${minor}.$((patch + 1))"
+            fi
+
+            tag="v${version}"
+          fi
+
+          if git rev-parse "${tag}" >/dev/null 2>&1 && [ "${{ github.event_name }}" != "push" ]; then
+            echo "::error::${tag} はすでにあります。別の番号を入れてください"
+            exit 1
+          fi
+
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "### 出すバージョン: ${tag}" >> "$GITHUB_STEP_SUMMARY"
+
   build:
     name: Build ${{ matrix.targetPlatform }}
+    needs: version
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -30,7 +90,9 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           targetPlatform: ${{ matrix.targetPlatform }}
-          versioning: Tag
+          # 手動実行ではタグがまだ無いので、決めた番号をそのまま渡す
+          versioning: Custom
+          version: ${{ needs.version.outputs.version }}
           # 配布するのは ひとり用 だけ。サーバーに繋がないので AppId は要らない。
           # 通信ありを組みたいときは Build ワークフローを multi で手動実行する
           customParameters: -kmpSingleOnly
@@ -45,9 +107,35 @@ jobs:
         if: matrix.targetPlatform == 'StandaloneWindows64'
         run: cd build && zip -r ../ProjectKMP-Windows.zip StandaloneWindows64
 
-      - uses: softprops/action-gh-release@v2
+      # 機種ごとに出来たものを一旦預けておき、最後にまとめて1つの Release にする
+      - uses: actions/upload-artifact@v4
         with:
-          files: |
+          name: release-${{ matrix.targetPlatform }}
+          path: |
             ProjectKMP-Windows.zip
             build/Android/*.apk
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # Release を作るのは最後の1回だけ。
+  # 機種ごとの job から同時に作ろうとすると、ぶつかることがある
+  release:
+    name: Release
+    needs: [ version, build ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+
+      - name: できたものを確認
+        run: ls -lR dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: ${{ needs.version.outputs.tag }}
+          files: dist/**
           generate_release_notes: true
