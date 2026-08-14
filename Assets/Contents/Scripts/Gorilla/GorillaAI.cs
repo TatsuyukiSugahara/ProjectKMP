@@ -177,6 +177,7 @@ namespace ProjectKMP.Gorilla
         private Animator _animator;
         private IGorillaState _currentState;
         private Vector3 _homePosition;
+        private float _teamPowerStunRemain;
 
         // ---- 未発見時の被弾リアクション ----
         private HitTarget _hitTarget;
@@ -254,6 +255,14 @@ namespace ProjectKMP.Gorilla
         public void NotifyBeamAttackUsed()
         {
             _beamCooldownRemain = _beamAttackCooldownSec;
+        }
+
+        /// <summary>共有必殺中、AIを止めて大きくのけぞらせる。</summary>
+        public void BeginTeamPowerStun(float durationSec)
+        {
+            if (_isDead) return;
+            _teamPowerStunRemain = Mathf.Max(_teamPowerStunRemain, durationSec);
+            PlayAnimation(ANIM_HIT);
         }
 
         private void Awake()
@@ -365,6 +374,13 @@ namespace ProjectKMP.Gorilla
 
         private void Update()
         {
+            if (_teamPowerStunRemain > 0.0f)
+            {
+                _teamPowerStunRemain -= Time.unscaledDeltaTime;
+                if (_teamPowerStunRemain <= 0.0f && !_isDead) PlayAnimation(ANIM_IDLE);
+                return;
+            }
+
             if (_target == null)
             {
                 _targetSearchTimer -= Time.deltaTime;

@@ -8,9 +8,9 @@ using UnityEngine.UI;
 namespace ProjectKMP.UI.Result
 {
     /// <summary>
-    /// リザルトの与ダメージランキング表示。
-    /// ルームの各プレイヤーの与ダメージ(DamageScore、CustomProperties同期)を読み、多い順に行を並べる。
-    /// 1〜3位には金・銀・銅の王冠を付けて目立たせる。行はコードで生成するので人数が変わっても崩れない。
+    /// リザルトの「みんなのかつやく」表示。
+    /// 順位で競わせず、合体必殺への参加や攻撃など、その子ができたことを必ずひとつ褒める。
+    /// 行はコードで生成するので人数が変わっても崩れない。
     /// ルームに入っていないとき(エディタで直接再生)は、レイアウト確認用のサンプルを表示する。
     /// </summary>
     public class ResultRanking : MonoBehaviour
@@ -20,11 +20,15 @@ namespace ProjectKMP.UI.Result
         {
             public string Name;
             public int Damage;
+            public int BurstJoins;
+            public string Praise;
 
-            public RankingEntry(string name, int damage)
+            public RankingEntry(string name, int damage, int burstJoins = 0, string praise = null)
             {
                 Name = name;
                 Damage = damage;
+                BurstJoins = burstJoins;
+                Praise = praise;
             }
         }
 
@@ -96,40 +100,36 @@ namespace ProjectKMP.UI.Result
                 foreach (var player in PhotonNetwork.PlayerList)
                 {
                     string name = string.IsNullOrWhiteSpace(player.NickName) ? $"プレイヤー{player.ActorNumber}" : player.NickName;
-                    entries.Add(new RankingEntry(name, DamageScore.GetDamage(player)));
+                    int damage = DamageScore.GetDamage(player);
+                    int joins = TeamPlayScore.GetBurstJoins(player);
+                    entries.Add(new RankingEntry(name, damage, joins, ResolvePraise(damage, joins)));
                 }
             }
             else
             {
                 // ルームに入っていない(エディタで直接再生した)ときのレイアウト確認用サンプル
-                entries.Add(new RankingEntry("プレイヤー1", 320));
-                entries.Add(new RankingEntry("プレイヤー2", 250));
-                entries.Add(new RankingEntry("プレイヤー3", 180));
-                entries.Add(new RankingEntry("プレイヤー4", 90));
+                entries.Add(new RankingEntry("プレイヤー1", 320, 2, "ひっさつ名人！"));
+                entries.Add(new RankingEntry("プレイヤー2", 250, 1, "れんけい名人！"));
+                entries.Add(new RankingEntry("プレイヤー3", 180, 0, "ガブガブ名人！"));
+                entries.Add(new RankingEntry("プレイヤー4", 90, 0, "げんきいっぱい！"));
             }
 
-            // ダメージの多い順。同点は名前順で安定させる
-            entries.Sort((a, b) =>
-            {
-                int byDamage = b.Damage.CompareTo(a.Damage);
-                return byDamage != 0 ? byDamage : string.CompareOrdinal(a.Name, b.Name);
-            });
+            // 順位にしない。ロビーから同じ入室順で並べ、全員を同じ大きさで見せる。
             return entries;
         }
 
-        /// <summary>順位に応じた色。4位以下は白</summary>
-        private Color GetRankColor(int rankIndex)
+        private static string ResolvePraise(int damage, int burstJoins)
         {
-            if (rankIndex == 0) return _goldColor;
-            if (rankIndex == 1) return _silverColor;
-            if (rankIndex == 2) return _bronzeColor;
-            return Color.white;
+            if (burstJoins >= 2) return "ひっさつ名人！";
+            if (burstJoins == 1) return "れんけい名人！";
+            if (damage >= 200) return "ガブガブ名人！";
+            if (damage > 0) return "ナイスアタック！";
+            return "げんきいっぱい！";
         }
 
         private void CreateRow(int index, RankingEntry entry)
         {
-            bool isTop3 = index < 3;
-            Color rankColor = GetRankColor(index);
+            Color accent = entry.BurstJoins > 0 ? _goldColor : new Color(0.45f, 0.85f, 1.0f, 1.0f);
 
             var rowGo = new GameObject($"Row_{index + 1}", typeof(RectTransform));
             var row = rowGo.GetComponent<RectTransform>();
@@ -141,52 +141,30 @@ namespace ProjectKMP.UI.Result
             row.sizeDelta = new Vector2(_rowWidth, _rowHeight);
             row.anchoredPosition = new Vector2(0.0f, -index * (_rowHeight + _rowSpacing));
 
-            // 1位はひとまわり大きくして主役感を出す
-            if (index == 0) row.localScale = Vector3.one * 1.06f;
-
-            // 背景: 上位3位は順位の色を暗くした帯にする(ボスゲージと同じ配色関係)
+            // 全員を同じ大きさで表示する。色は協力必殺へ参加したかだけで変える。
             var bg = rowGo.AddComponent<Image>();
             bg.sprite = _rowSprite;
             bg.type = Image.Type.Sliced;
-            bg.color = isTop3 ? Color.Lerp(rankColor, Color.black, 0.55f) : _rowColor;
+            bg.color = entry.BurstJoins > 0 ? Color.Lerp(accent, Color.black, 0.62f) : _rowColor;
             bg.raycastTarget = false;
-
-            // 王冠(1〜3位のみ)
-            if (isTop3 && _crownSprite != null)
-            {
-                var crown = CreateImage(row, "Crown", _crownSprite, rankColor);
-                crown.rectTransform.anchorMin = new Vector2(0.0f, 0.5f);
-                crown.rectTransform.anchorMax = new Vector2(0.0f, 0.5f);
-                crown.rectTransform.anchoredPosition = new Vector2(64.0f, 6.0f);
-                crown.rectTransform.sizeDelta = new Vector2(64.0f, 64.0f);
-                crown.rectTransform.localRotation = Quaternion.Euler(0.0f, 0.0f, 10.0f);
-            }
-
-            // 順位
-            var rank = CreateText(row, "Rank", (index + 1).ToString(), isTop3 ? 52.0f : 40.0f, rankColor);
-            rank.rectTransform.anchorMin = new Vector2(0.0f, 0.0f);
-            rank.rectTransform.anchorMax = new Vector2(0.0f, 1.0f);
-            rank.rectTransform.offsetMin = new Vector2(110.0f, 0.0f);
-            rank.rectTransform.offsetMax = new Vector2(190.0f, 0.0f);
-            rank.alignment = TextAlignmentOptions.Center;
 
             // プレイヤー名
             var name = CreateText(row, "Name", entry.Name, 40.0f, Color.white);
             name.rectTransform.anchorMin = new Vector2(0.0f, 0.0f);
             name.rectTransform.anchorMax = new Vector2(1.0f, 1.0f);
-            name.rectTransform.offsetMin = new Vector2(210.0f, 0.0f);
-            name.rectTransform.offsetMax = new Vector2(-300.0f, 0.0f);
+            name.rectTransform.offsetMin = new Vector2(50.0f, 0.0f);
+            name.rectTransform.offsetMax = new Vector2(-520.0f, 0.0f);
             name.alignment = TextAlignmentOptions.MidlineLeft;
             name.overflowMode = TextOverflowModes.Ellipsis;
 
-            // ダメージ量
-            var damage = CreateText(row, "Damage", entry.Damage.ToString("N0"), isTop3 ? 46.0f : 38.0f, isTop3 ? rankColor : Color.white);
-            damage.rectTransform.anchorMin = new Vector2(1.0f, 0.0f);
-            damage.rectTransform.anchorMax = new Vector2(1.0f, 1.0f);
-            damage.rectTransform.offsetMin = new Vector2(-280.0f, 0.0f);
-            damage.rectTransform.offsetMax = new Vector2(-40.0f, 0.0f);
-            damage.alignment = TextAlignmentOptions.MidlineRight;
-            damage.fontStyle = FontStyles.Bold;
+            // 順位や王冠の代わりに、その子だけの肯定的な称号を大きく出す。
+            var praise = CreateText(row, "Praise", string.IsNullOrEmpty(entry.Praise) ? ResolvePraise(entry.Damage, entry.BurstJoins) : entry.Praise, 38.0f, accent);
+            praise.rectTransform.anchorMin = new Vector2(1.0f, 0.0f);
+            praise.rectTransform.anchorMax = new Vector2(1.0f, 1.0f);
+            praise.rectTransform.offsetMin = new Vector2(-500.0f, 0.0f);
+            praise.rectTransform.offsetMax = new Vector2(-35.0f, 0.0f);
+            praise.alignment = TextAlignmentOptions.MidlineRight;
+            praise.fontStyle = FontStyles.Bold;
         }
 
         private Image CreateImage(RectTransform parent, string name, Sprite sprite, Color color)

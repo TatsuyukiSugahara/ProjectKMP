@@ -371,6 +371,7 @@ namespace ProjectKMP.Battle
 
             if (_bossGauge != null) _bossGauge.SetVisible(false);
             if (_touchControls != null) _touchControls.SetControlsVisible(false);
+            UI.InGame.TeamPowerHud.SetVisible(false);
 
             if (_ui != null)
             {
@@ -531,6 +532,7 @@ namespace ProjectKMP.Battle
 
             if (_bossGauge != null) _bossGauge.SetVisible(true);
             if (_touchControls != null) _touchControls.SetControlsVisible(true);
+            UI.InGame.TeamPowerHud.SetVisible(true);
 
             BattlePlayGate.SetPlayable(true);
             Debug.Log("[BattleIntro] カットシーン終了。操作を解放しました");

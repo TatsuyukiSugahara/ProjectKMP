@@ -127,6 +127,7 @@ namespace ProjectKMP.Battle
 
             var touch = FindAnyObjectByType<TouchControls>();
             if (touch != null) touch.SetControlsVisible(false);
+            UI.InGame.TeamPowerHud.SetVisible(false);
 
             // ターゲットカメラを解く。解かないと、倒したあとも照準がボスに残り続ける
             var cameraController = FindAnyObjectByType<Player.ThirdPersonCamera>();

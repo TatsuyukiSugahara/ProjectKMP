@@ -41,12 +41,12 @@ namespace ProjectKMP.UI
 
         [Header("押さないときの並び")]
         [SerializeField, Min(10.0f), Tooltip("1つぶんの大きさ(px)")]
-        private float _compactSize = 150.0f;
+        private float _compactSize = 100.0f;
 
         [SerializeField, Min(0.0f), Tooltip("間隔(px)")]
-        private float _compactSpacing = 20.0f;
+        private float _compactSpacing = 18.0f;
 
-        [SerializeField, Tooltip("画面の右下からの余白(px)")]
+        [SerializeField, Tooltip("画面の右下からの余白(px)。下は自分のゲージを避ける高さにする")]
         private Vector2 _compactMargin = new Vector2(70.0f, 70.0f);
 
         // ---- 内部状態 ------------------------------------
@@ -59,6 +59,7 @@ namespace ProjectKMP.UI
             public Vector2 Pivot;
             public Vector2 Position;
             public Vector2 Size;
+            public Vector3 Scale;
         }
 
         private readonly List<Pose> _touchPoses = new List<Pose>();
@@ -78,6 +79,7 @@ namespace ProjectKMP.UI
                     Pivot = slot.Target.pivot,
                     Position = slot.Target.anchoredPosition,
                     Size = slot.Target.sizeDelta,
+                    Scale = slot.Target.localScale,
                 });
 
                 if (slot.Raycast == null) slot.Raycast = slot.Target.GetComponent<Graphic>();
@@ -126,10 +128,15 @@ namespace ProjectKMP.UI
             slot.Target.pivot = pose.Pivot;
             slot.Target.anchoredPosition = pose.Position;
             slot.Target.sizeDelta = pose.Size;
+            slot.Target.localScale = pose.Scale;
         }
 
         private void ApplyCompact(Slot slot, int index)
         {
+            // ボタンごとに元の縮尺が違うので、そのままだと指定した大きさで並ばない。
+            // 押さない並びでは縮尺を揃えて、見た目の大きさを1つの値で決められるようにする
+            slot.Target.localScale = Vector3.one;
+
             // 右下を基準にして、右から左へ並べる
             slot.Target.anchorMin = new Vector2(1.0f, 0.0f);
             slot.Target.anchorMax = new Vector2(1.0f, 0.0f);

@@ -255,6 +255,10 @@ namespace ProjectKMP.Player
             // 押しっぱなしの取りこぼしを防ぐため、クールタイム中でも入力自体は読み切る
             bool pressed = ReadAttackInput();
 
+            // 共有必殺の受付中は同じ攻撃ボタンを参加入力として使う。
+            // クールタイム中でも参加でき、通常攻撃へ入力を漏らさない。
+            if (Battle.TeamPowerDirector.TryConsumeJoinInput(pressed)) return;
+
             if (_cooldownRemainSec > 0f)
             {
                 if (pressed) OnPressedWhileCooling();

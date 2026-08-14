@@ -63,6 +63,7 @@ namespace ProjectKMP.Monster
         private int _offlineHp;
 
         private bool _isDefeated;
+        private int _lastReactionSegment = -1;
 
         private readonly Subject<Unit> _defeated = new Subject<Unit>();
 
@@ -73,6 +74,11 @@ namespace ProjectKMP.Monster
 
         /// <summary>実際に使われている最大HP(人数ぶん増えた後の値)</summary>
         public int MaxHp => _resolvedMaxHp;
+
+        /// <summary>現在HP。合体必殺など、ボス戦全体の進行役から参照する</summary>
+        public int CurrentHp => _sync != null && _sync.Value.CurrentValue.MaxHP > 0
+            ? _sync.Value.CurrentValue.HP
+            : _offlineHp;
 
         /// <summary>倒された瞬間に流れる。HPは同期経由で届くため、全クライアントで発火する</summary>
         public Observable<Unit> Defeated => _defeated;
@@ -97,6 +103,36 @@ namespace ProjectKMP.Monster
             if (_hitTarget == null) _hitTarget = GetComponent<HitTarget>();
             if (_sync == null) _sync = GetComponent<MonsterSyncObject>();
             if (_gauge == null) _gauge = FindAnyObjectByType<BossHealthGauge>(FindObjectsInactive.Include);
+
+            // 共有ゲージはボスと同じ PhotonView を使う。既存シーンにも自動で導入できるようここで足す。
+            if (GetComponent<TeamPowerDirector>() == null) gameObject.AddComponent<TeamPowerDirector>();
+        }
+
+        /// <summary>合体必殺の受付中だけ通常攻撃を受け付けないようにする。</summary>
+        public void SetTeamPowerLock(bool locked)
+        {
+            if (_hitTarget != null) _hitTarget.SetCanBeHit(!locked && !_isDefeated);
+        }
+
+        /// <summary>最大HPに対する割合で合体必殺ダメージを与える。実際の更新はMasterClientだけ。</summary>
+        public void ApplyTeamPowerDamage(float maxHpRatio)
+        {
+            if (!HasAuthority || _isDefeated || maxHpRatio <= 0.0f) return;
+
+            int damage = Mathf.Max(1, Mathf.CeilToInt(_resolvedMaxHp * maxHpRatio));
+            if (IsPhotonReady && _sync != null)
+            {
+                _sync.SetValue(data =>
+                {
+                    data.HP = Mathf.Max(0, data.HP - damage);
+                    if (data.HP <= 0) data.State = MonsterState.Dead;
+                });
+                return;
+            }
+
+            _offlineHp = Mathf.Max(0, _offlineHp - damage);
+            ApplyToGauge(_offlineHp, _resolvedMaxHp, false);
+            CheckDefeated(_offlineHp);
         }
 
         private void Start()
@@ -109,6 +145,7 @@ namespace ProjectKMP.Monster
 
             // バトル開始時に自分の与ダメージを初期化する(前回のぶんを持ち越さない)
             DamageScore.ResetLocal();
+            TeamPlayScore.ResetLocal();
 
             int playerCount = GetPlayerCount();
             _resolvedMaxHp = CalcMaxHp(playerCount);
@@ -222,10 +259,45 @@ namespace ProjectKMP.Monster
 
         private void ApplyToGauge(int current, int max, bool immediate)
         {
-            if (_gauge == null) return;
+            if (_gauge != null)
+            {
+                if (immediate) _gauge.SetRatioImmediate(max <= 0 ? 0.0f : current / (float)max);
+                else _gauge.SetHealth(current, max);
+            }
 
-            if (immediate) _gauge.SetRatioImmediate(max <= 0 ? 0.0f : current / (float)max);
-            else _gauge.SetHealth(current, max);
+            PlaySegmentReaction(current, max);
+        }
+
+        /// <summary>4本あるHPを削り切るたび、UIだけでなくボス本体も大きく反応させる。</summary>
+        private void PlaySegmentReaction(int current, int max)
+        {
+            if (max <= 0) return;
+
+            int segment = current <= 0 ? 0 : Mathf.Clamp(Mathf.CeilToInt(current / (float)max * 4.0f), 1, 4);
+            if (_lastReactionSegment < 0)
+            {
+                _lastReactionSegment = segment;
+                return;
+            }
+            if (segment >= _lastReactionSegment)
+            {
+                _lastReactionSegment = segment;
+                return;
+            }
+
+            _lastReactionSegment = segment;
+            if (segment <= 0) return;
+
+            Gorilla.GorillaAI gorilla = GetComponent<Gorilla.GorillaAI>();
+            gorilla?.BeginTeamPowerStun(segment == 1 ? 0.85f : 0.55f);
+
+            Color color = segment == 1
+                ? new Color(1.0f, 0.22f, 0.12f, 1.0f)
+                : new Color(1.0f, 0.7f, 0.18f, 1.0f);
+
+            HitFlash.Play(transform, color, segment == 1 ? 0.5f : 0.3f, 1.0f);
+            ShockwaveRing.Play(transform.position, color, segment == 1 ? 13.0f : 9.0f, 0.6f, 0.9f);
+            UI.BgmPlayer.Duck(segment == 1 ? 0.65f : 0.4f, 0.16f, 0.5f);
         }
 
         private void CheckDefeated(int currentHp)

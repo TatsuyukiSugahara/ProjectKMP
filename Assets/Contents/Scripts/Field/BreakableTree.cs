@@ -55,6 +55,7 @@ namespace ProjectKMP.Field
         private static readonly List<BreakableTree> TREES = new List<BreakableTree>();
 
         private bool _isBroken;
+        private bool _isBreakReserved;
         private Vector3 _defaultPosition;
         private Quaternion _defaultRotation;
 
@@ -101,10 +102,13 @@ namespace ProjectKMP.Field
         {
             if (TREES.Count == 0 || radius <= 0.0f) return;
 
+            // 爆心に近い順に少しずつ遅らせ、破壊が外へ走る「連鎖」に見せる。
+            var candidates = new List<BreakableTree>();
+
             for (int i = TREES.Count - 1; i >= 0; i--)
             {
                 BreakableTree tree = TREES[i];
-                if (tree == null || tree._isBroken) continue;
+                if (tree == null || tree._isBroken || tree._isBreakReserved) continue;
 
                 Vector3 basePosition = tree.transform.position;
 
@@ -114,15 +118,58 @@ namespace ProjectKMP.Field
 
                 if (!tree.IsWithinTrunk(center, radius)) continue;
 
-                tree.Break(center);
+                candidates.Add(tree);
+            }
+
+            candidates.Sort((left, right) =>
+                Vector3.SqrMagnitude(left.transform.position - center)
+                    .CompareTo(Vector3.SqrMagnitude(right.transform.position - center)));
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                float delay = Mathf.Min(0.6f, i * 0.065f);
+                candidates[i].ReserveBreak(center, delay);
             }
         }
 
         /// <summary>発生源から離れる方へ倒す。すでに倒れている木は何もしない</summary>
         public void Break(Vector3 sourcePosition)
         {
+            if (_isBroken || _isBreakReserved) return;
+            _isBreakReserved = true;
+            BreakNow(sourcePosition);
+        }
+
+        private void ReserveBreak(Vector3 sourcePosition, float delaySec)
+        {
+            if (_isBroken || _isBreakReserved) return;
+            _isBreakReserved = true;
+            BreakAfterDelayAsync(sourcePosition, delaySec, destroyCancellationToken).Forget();
+        }
+
+        private async UniTaskVoid BreakAfterDelayAsync(Vector3 sourcePosition, float delaySec, CancellationToken ct)
+        {
+            try
+            {
+                if (delaySec > 0.0f)
+                {
+                    await UniTask.Delay(TimeSpan.FromSeconds(delaySec), DelayType.UnscaledDeltaTime, cancellationToken: ct);
+                }
+                BreakNow(sourcePosition);
+            }
+            catch (OperationCanceledException)
+            {
+                _isBreakReserved = false;
+            }
+        }
+
+        private void BreakNow(Vector3 sourcePosition)
+        {
             if (_isBroken) return;
             _isBroken = true;
+            _isBreakReserved = false;
+
+            Battle.DestructionChain.NotifyBreak(transform.position);
 
             Vector3 away = transform.position - sourcePosition;
             away.y = 0.0f;
@@ -227,6 +274,7 @@ namespace ProjectKMP.Field
                 transform.SetPositionAndRotation(_defaultPosition, _defaultRotation);
                 gameObject.SetActive(true);
                 _isBroken = false;
+                _isBreakReserved = false;
             }
             catch (OperationCanceledException)
             {
