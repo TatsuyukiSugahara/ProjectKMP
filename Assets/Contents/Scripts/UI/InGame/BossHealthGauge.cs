@@ -355,8 +355,15 @@ namespace ProjectKMP.UI.InGame
             Transform boss = ResolveBossTransform();
             if (boss == null) return;
 
-            // 残り1本になったら言葉を変える。ここからが最後だと伝えたい
-            string label = remaining == 1 ? "あと1本！" : _breakLabel;
+            // 残り1本になったら、世界の空気ごと切り替える。
+            // 言葉だけでなく、色と音でも『ここからが最後』を伝える
+            if (remaining == 1)
+            {
+                ProjectKMP.Battle.FinalPhaseDirector.Begin();
+                return;
+            }
+
+            string label = _breakLabel;
 
             ProjectKMP.Battle.Onomatopoeia.Play(boss.position + Vector3.up * 3.0f, label, _breakColor, 1.8f, 0.9f);
             ProjectKMP.Battle.ShockwaveRing.Play(boss.position, _breakColor, 10.0f, 0.5f, 1.0f);

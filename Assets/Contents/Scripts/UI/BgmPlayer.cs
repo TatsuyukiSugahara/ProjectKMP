@@ -37,6 +37,9 @@ namespace ProjectKMP.UI
         private float _duckRemainSec;
         private bool _ducking;
 
+        /// <summary>張り詰めによる音量の倍率。1で元のまま</summary>
+        private float _tensionScale = 1.0f;
+
         // ---- 公開API -------------------------------------
 
         /// <summary>いま鳴っているBGM。無ければ null</summary>
@@ -53,6 +56,49 @@ namespace ProjectKMP.UI
             if (_current == null) return;
 
             _current.DuckAsync(amount, holdSec, recoverSec).Forget();
+        }
+
+        /// <summary>
+        /// 曲の張り詰め具合を変える。最終局面で呼ぶ。
+        ///
+        /// 曲を差し替えるのが本筋だが、いまは戦闘曲が1つしかない。
+        /// 速さと高さを少し上げるだけでも、同じ曲が『急かす曲』に変わる。
+        /// 上げすぎると別の曲に聞こえてしまうので、1割ほどに留める。
+        /// </summary>
+        public static void SetTension(float pitch, float volumeScale, float fadeSec)
+        {
+            if (_current == null) return;
+
+            _current.ApplyTensionAsync(pitch, volumeScale, fadeSec).Forget();
+        }
+
+        /// <summary>張り詰めを元へ戻す</summary>
+        public static void ResetTension(float fadeSec = 0.6f)
+        {
+            SetTension(1.0f, 1.0f, fadeSec);
+        }
+
+        private async UniTaskVoid ApplyTensionAsync(float pitch, float volumeScale, float fadeSec)
+        {
+            if (_source == null) return;
+
+            float startPitch = _source.pitch;
+            float startScale = _tensionScale;
+            float elapsed = 0.0f;
+
+            while (elapsed < fadeSec)
+            {
+                elapsed += Time.unscaledDeltaTime;
+
+                float k = Mathf.Clamp01(elapsed / Mathf.Max(0.01f, fadeSec));
+                _source.pitch = Mathf.Lerp(startPitch, pitch, k);
+                _tensionScale = Mathf.Lerp(startScale, volumeScale, k);
+
+                await UniTask.Yield(PlayerLoopTiming.Update, destroyCancellationToken);
+            }
+
+            _source.pitch = pitch;
+            _tensionScale = volumeScale;
         }
 
         /// <summary>鳴っているBGMを消していく。シーンを抜けるときに呼ぶ</summary>

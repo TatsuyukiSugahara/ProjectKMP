@@ -129,6 +129,9 @@ namespace ProjectKMP.Battle
             if (touch != null) touch.SetControlsVisible(false);
             UI.InGame.TeamPowerHud.SetVisible(false);
 
+            // 最終フェーズの赤みを消す。決着の絵に赤が乗ったままだと締まらない
+            FinalPhaseDirector.End();
+
             // ターゲットカメラを解く。解かないと、倒したあとも照準がボスに残り続ける
             var cameraController = FindAnyObjectByType<Player.ThirdPersonCamera>();
             if (cameraController != null) cameraController.ReleaseLockOn();
