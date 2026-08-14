@@ -2,14 +2,48 @@ name: Build
 
 on:
   workflow_dispatch:          # Actions タブから手動で実行
+    inputs:
+      mode:
+        description: 'あそびかた'
+        type: choice
+        required: true
+        default: single
+        options:
+          - single            # ひとり用。サーバーに繋がないので AppId は要らない
+          - multi             # 通信あり。PHOTON_APP_ID の登録が必要
+      platform:
+        description: 'どの機種むけに組むか'
+        type: choice
+        required: true
+        default: both
+        options:
+          - both
+          - Android
+          - StandaloneWindows64
   # push:                     # 慣れてきたら開放する
   #   branches: [ main ]
   #   paths-ignore:
   #     - '**.md'
 
 jobs:
+  # 通信ありなのに AppId が無いと、Unity の起動を待たされたあげく失敗する。
+  # 数秒で分かることは先に確かめておく
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Photon の AppId が登録されているか
+        if: inputs.mode == 'multi'
+        run: |
+          if [ -z "${{ secrets.PHOTON_APP_ID }}" ]; then
+            echo "::error::通信ありビルドには AppId が要ります。リポジトリの Settings > Secrets and variables > Actions で PHOTON_APP_ID を登録してください"
+            exit 1
+          fi
+          echo "AppId は登録済みです"
+
   build:
-    name: Build ${{ matrix.targetPlatform }}
+    name: Build ${{ matrix.targetPlatform }} (${{ inputs.mode }})
+    needs: check
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -19,12 +53,18 @@ jobs:
           - Android
 
     steps:
+      - name: この機種は組まない
+        if: inputs.platform != 'both' && inputs.platform != matrix.targetPlatform
+        run: echo "skip=true" >> $GITHUB_ENV
+
       - uses: actions/checkout@v4
+        if: env.skip != 'true'
         with:
           fetch-depth: 0
           lfs: true
 
       - uses: actions/cache@v4
+        if: env.skip != 'true'
         with:
           path: Library
           key: Library-${{ matrix.targetPlatform }}-${{ hashFiles('Assets/**','Packages/**','ProjectSettings/**') }}
@@ -33,11 +73,11 @@ jobs:
             Library-
 
       - name: Free disk space
-        if: matrix.targetPlatform == 'Android'
+        if: env.skip != 'true' && matrix.targetPlatform == 'Android'
         uses: jlumbroso/free-disk-space@main
 
       - name: Build Windows
-        if: matrix.targetPlatform == 'StandaloneWindows64'
+        if: env.skip != 'true' && matrix.targetPlatform == 'StandaloneWindows64'
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -46,10 +86,11 @@ jobs:
         with:
           targetPlatform: StandaloneWindows64
           versioning: Semantic
-          customParameters: -kmpSingleOnly
+          # single のときだけ -kmpSingleOnly を付ける。AppId は multi のときに使われる
+          customParameters: ${{ inputs.mode == 'single' && '-kmpSingleOnly' || '' }} -kmpPhotonAppId ${{ secrets.PHOTON_APP_ID }}
 
       - name: Build Android
-        if: matrix.targetPlatform == 'Android'
+        if: env.skip != 'true' && matrix.targetPlatform == 'Android'
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -58,7 +99,7 @@ jobs:
         with:
           targetPlatform: Android
           versioning: Semantic
-          customParameters: -kmpSingleOnly
+          customParameters: ${{ inputs.mode == 'single' && '-kmpSingleOnly' || '' }} -kmpPhotonAppId ${{ secrets.PHOTON_APP_ID }}
           androidExportType: androidPackage
           androidKeystoreName: user.keystore
           androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -67,7 +108,9 @@ jobs:
           androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
 
       - uses: actions/upload-artifact@v4
+        if: env.skip != 'true'
         with:
-          name: Build-${{ matrix.targetPlatform }}
+          # ひとり用と通信ありを取り違えないよう、名前に入れておく
+          name: Build-${{ matrix.targetPlatform }}-${{ inputs.mode }}
           path: build/${{ matrix.targetPlatform }}
           retention-days: 7

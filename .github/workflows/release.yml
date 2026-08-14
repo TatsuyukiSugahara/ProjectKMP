@@ -31,6 +31,9 @@ jobs:
         with:
           targetPlatform: ${{ matrix.targetPlatform }}
           versioning: Tag
+          # 配布するのは ひとり用 だけ。サーバーに繋がないので AppId は要らない。
+          # 通信ありを組みたいときは Build ワークフローを multi で手動実行する
+          customParameters: -kmpSingleOnly
           androidExportType: androidPackage
           androidKeystoreName: user.keystore
           androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
