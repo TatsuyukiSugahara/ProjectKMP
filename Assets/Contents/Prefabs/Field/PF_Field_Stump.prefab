@@ -63,6 +63,8 @@ MonoBehaviour:
   _breakDecalPrefab: {fileID: 0}
   _decalDiameter: 2
   _shockwaveColor: {r: 0.85, g: 0.65, b: 0.4, a: 1}
+  _breakClip: {fileID: 8300000, guid: 6db8ca76f282e48bf856799060e04a73, type: 3}
+  _breakVolume: 0.665
 --- !u!1 &8175980201980162023
 GameObject:
   m_ObjectHideFlags: 0

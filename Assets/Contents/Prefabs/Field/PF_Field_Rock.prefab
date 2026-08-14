@@ -154,3 +154,5 @@ MonoBehaviour:
   _breakDecalPrefab: {fileID: 0}
   _decalDiameter: 2
   _shockwaveColor: {r: 0.75, g: 0.74, b: 0.72, a: 1}
+  _breakClip: {fileID: 8300000, guid: f420d4772fd774d6091557faab12d89c, type: 3}
+  _breakVolume: 0.7
