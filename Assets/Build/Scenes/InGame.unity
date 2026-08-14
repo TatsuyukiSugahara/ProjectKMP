@@ -22548,7 +22548,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Monster.BossHealth
   _baseMaxHp: 400
-  _hpPerExtraPlayer: 200
+  _hpPerExtraPlayer: 250
   _playerCountLimit: 15
   _hitTarget: {fileID: 1472372943}
   _sync: {fileID: 1472372950}

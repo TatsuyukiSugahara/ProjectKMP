@@ -651,7 +651,7 @@ namespace ProjectKMP.Player
         {
             _fireReserved = false;
             DestroyAimIndicator();
-            _cooldownRemainSec = _cooldownSec;
+            _cooldownRemainSec = Battle.DebugFlags.ApplyCooldown(_cooldownSec);
 
             // 痕を落とす地面の高さは、真下を測って決める。
             // とびこみの最中など空中で撃つこともあるので、足元の高さをそのまま使うと痕が浮く

@@ -693,7 +693,7 @@ namespace ProjectKMP.Player
         {
             _throwReserved = false;
             DestroyAimIndicator();
-            _cooldownRemainSec = _cooldownSec;
+            _cooldownRemainSec = Battle.DebugFlags.ApplyCooldown(_cooldownSec);
 
             _pendingTarget = _aimMarkerPosition;
             _groundY = transform.position.y;

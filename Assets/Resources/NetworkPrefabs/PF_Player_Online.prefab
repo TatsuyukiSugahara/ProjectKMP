@@ -465,7 +465,7 @@ MonoBehaviour:
   _initialDamage: 10
   _tickDamage: 2
   _tickIntervalSec: 0.5
-  _cooldownSec: 1
+  _cooldownSec: 8
   _beamLength: 10
   _beamWidth: 1.8
   _enableDiveBoost: 1
@@ -566,10 +566,10 @@ MonoBehaviour:
   _zoneTickDamage: 3
   _zoneTickIntervalSec: 0.5
   _zoneDurationSec: 4
-  _cooldownSec: 1
+  _cooldownSec: 20
   _maxRange: 8
   _markerMoveSpeed: 8
-  _chargeDurationSec: 1
+  _chargeDurationSec: 1.5
   _ballHeight: 4.5
   _ballMaxScale: 6
   _throwSpeed: 14
@@ -717,7 +717,7 @@ MonoBehaviour:
   _targetLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  _cooldownSec: 1
+  _cooldownSec: 3
   _boostWindowSec: 0.5
   _invincibleWhileRising: 1
   _aimIndicatorPrefab: {fileID: 6694783469667081188, guid: 8a050945907fa49879d66c8f1044c5e5, type: 3}

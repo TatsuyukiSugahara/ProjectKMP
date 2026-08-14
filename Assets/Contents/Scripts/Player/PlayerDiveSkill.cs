@@ -434,7 +434,7 @@ namespace ProjectKMP.Player
             if (_beamSkill != null) _beamSkill.EndLeapNow();
 
             _phase = Phase.Flying;
-            _cooldownRemainSec = _cooldownSec;
+            _cooldownRemainSec = Battle.DebugFlags.ApplyCooldown(_cooldownSec);
 
             // 狙っていた向きへ跳ぶ。キャラの向きも合わせておく
             Vector3 direction = AimDirection;
