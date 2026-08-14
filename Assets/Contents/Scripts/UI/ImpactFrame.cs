@@ -53,6 +53,20 @@ namespace ProjectKMP.UI
             Play(new Color(1.0f, 1.0f, 1.0f, Mathf.Clamp01(intensity)), durationSec);
         }
 
+        /// <summary>
+        /// いま出ている塗りを即座に消す。
+        ///
+        /// 決着の画面を撮る直前など、絵として残したくない場面で呼ぶ。
+        /// 自然に引くのを待つと、撮った絵が真っ白になってしまう。
+        /// </summary>
+        public static void Clear()
+        {
+            if (_instance == null) return;
+
+            _instance._remainSec = 0.0f;
+            _instance.Apply(0.0f);
+        }
+
         /// <summary>表示を用意する。すでにあれば何もしない</summary>
         public static void Ensure()
         {

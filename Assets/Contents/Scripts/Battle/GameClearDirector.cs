@@ -149,9 +149,16 @@ namespace ProjectKMP.Battle
 
             PlayFinishBlow(cameraController);
 
+            // 全画面を塗る演出が残っていると、撮った絵が一色に潰れる。
+            // 協力技のように決着と同時に光る技だと、これが起きやすい
+            UI.ImpactFrame.Clear();
+
             // UIが消えた状態を1フレーム反映させてから、倒した瞬間の画面を撮っておく(リザルトの背景に使う)
             await UniTask.Yield(PlayerLoopTiming.Update, ct);
             await UniTask.WaitForEndOfFrame(this, ct);
+
+            // 待っている間に新しく光ることがあるので、撮る直前にもう一度消す
+            UI.ImpactFrame.Clear();
             GameClearSnapshot.Set(ScreenCapture.CaptureScreenshotAsTexture());
 
             await UniTask.Delay(TimeSpan.FromSeconds(_delayBeforeShowSec), cancellationToken: ct);

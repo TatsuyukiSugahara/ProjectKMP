@@ -120,6 +120,9 @@ namespace ProjectKMP.Battle
 
             if (_auraLight != null) Destroy(_auraLight.gameObject);
 
+            // 合図が出たまま決着へ入ると、撮った絵に文字が写り込む
+            if (_banner != null) _banner.gameObject.SetActive(false);
+
         }
 
         private void Update()
