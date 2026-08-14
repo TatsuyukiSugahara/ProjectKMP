@@ -104,6 +104,10 @@ namespace ProjectKMP.UI
 
         private void Awake()
         {
+            // 配布の形によっては、始まる前に消えている項目がある。
+            // 一覧に残すと、送ったときに空の位置が回ってきてしまう
+            DropMissing();
+
             foreach (RectTransform item in _items)
             {
                 if (item == null) { _groups.Add(null); continue; }
@@ -121,14 +125,35 @@ namespace ProjectKMP.UI
             Apply(true);
         }
 
+        // 無くなった項目を一覧から外す。
+        //
+        // 消される側と組み立てる側で、どちらが先に動くかは決まっていない。
+        // 表示のたびに確かめれば、順番に関係なく正しく並ぶ。
+        private void DropMissing()
+        {
+            for (int i = _items.Count - 1; i >= 0; i--)
+            {
+                if (_items[i] != null) continue;
+
+                _items.RemoveAt(i);
+                if (_groups.Count > i) _groups.RemoveAt(i);
+            }
+        }
+
         private void OnEnable()
         {
+            DropMissing();
             _index = 0;
             Apply(true);
         }
 
         private void Update()
         {
+            // 消される側と動く順番が決まっていないので、毎回確かめる。
+            // 気づくのが遅れると、消えた場所が空席として並びに残り、
+            // そのぶん他の項目が画面の外へ押し出される
+            DropMissing();
+
             // 遊び方が開いている間は送らない。後ろで勝手に項目が動くと混乱する
             if (!TitleOverlay.IsOpen) ReadInput();
             Apply(false);
@@ -204,6 +229,9 @@ namespace ProjectKMP.UI
         {
             int count = UsableCount();
             if (count <= 0) return;
+
+            // 項目が減ったとき、選んでいた位置が範囲の外に残ることがある
+            if (_index >= count) _index = 0;
 
             for (int i = 0; i < _items.Count; i++)
             {

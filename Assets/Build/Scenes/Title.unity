@@ -396,6 +396,7 @@ GameObject:
   - component: {fileID: 253277787}
   - component: {fileID: 253277786}
   - component: {fileID: 253277788}
+  - component: {fileID: 253277789}
   m_Layer: 0
   m_Name: MultiPlayButton
   m_TagString: Untagged
@@ -507,6 +508,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &253277789
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 253277784}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c4159a91350042d49dc7d9865c2537d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.UI.HideInSingleOnly
 --- !u!1 &276724436
 GameObject:
   m_ObjectHideFlags: 0

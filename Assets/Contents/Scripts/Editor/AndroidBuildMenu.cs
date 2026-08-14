@@ -91,6 +91,9 @@ namespace ProjectKMP.EditorTools
 
             // 日時を入れて、前のビルドを上書きしないようにする
             string suffix = development ? "dev" : "release";
+
+            // 配布の形をファイル名に残す。あとから見て取り違えないようにする
+            if (BuildProfileMenu.IsSingleOnly()) suffix += "_solo";
             string fileName = "GabuttoBuster_" + PlayerSettings.bundleVersion + "_" +
                 DateTime.Now.ToString("yyyyMMdd_HHmm") + "_" + suffix + ".apk";
 

@@ -88,6 +88,20 @@ namespace ProjectKMP.UI.Title
 
         // ---- Unityイベント -------------------------------
 
+        private void Awake()
+        {
+#if KMP_SINGLE_ONLY
+            // 配布用はひとりで遊ぶ形に絞る。
+            //
+            // 隠すだけだと、メニューの並びを面倒みている側が毎フレーム出し直してしまう。
+            // 物ごと消せば、誰が何をしても戻らない。
+            //
+            // 消すのは Start ではなく Awake。並びを組み立てる前に消さないと、
+            // 一覧へ数えられてから消えることになり、空の位置が回ってくる。
+            if (_multiPlayButton != null) Destroy(_multiPlayButton.gameObject);
+#endif
+        }
+
         private void Start()
         {
             RunAsync(destroyCancellationToken).Forget();
