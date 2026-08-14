@@ -170,6 +170,7 @@ namespace ProjectKMP.Field
             _isBreakReserved = false;
 
             Battle.DestructionChain.NotifyBreak(transform.position);
+            BreakableProp.PropagateFromTree(transform.position);
 
             Vector3 away = transform.position - sourcePosition;
             away.y = 0.0f;

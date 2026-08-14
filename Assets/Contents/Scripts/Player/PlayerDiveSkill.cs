@@ -609,7 +609,7 @@ namespace ProjectKMP.Player
 
             // 着地の合図を全員へ送る。ここは本人でしか通らないので、
             // 送らないと他の人の画面ではとびこみが無音のまま終わってしまう
-            photonView.RPC(nameof(RpcLanded), RpcTarget.All, blocked);
+            photonView.RPC(nameof(RpcLanded), RpcTarget.All, blocked, transform.position);
 
             PlayLandingFeedback();
             SpawnLandDecal();
@@ -641,10 +641,15 @@ namespace ProjectKMP.Player
         /// 相手に当たったときは地面とは違う詰まった音にして、当てたかどうかを耳でも分かるようにする。
         /// </summary>
         [PunRPC]
-        private void RpcLanded(bool blocked)
+        private void RpcLanded(bool blocked, Vector3 landingPosition)
         {
             AudioClip clip = blocked && _impactClip != null ? _impactClip : _landClip;
             PlayClip(clip);
+
+            // とびこみも小さな破壊の起点にする。RPC内なので全員の画面で同じ順に壊れる。
+            float breakRadius = Mathf.Max(1.5f, _hitRadius * 1.35f);
+            Field.BreakableTree.BreakInSphere(landingPosition, breakRadius);
+            Field.BreakableProp.BreakInSphere(landingPosition, breakRadius);
         }
 
         [PunRPC]

@@ -1185,6 +1185,7 @@ namespace ProjectKMP.Player
             if (_breakTrees)
             {
                 Field.BreakableTree.BreakAlongBeam(_beamOrigin, _beamDirection, _currentBeamLength, CurrentBeamWidth);
+                Field.BreakableProp.BreakAlongBeam(_beamOrigin, _beamDirection, _currentBeamLength, CurrentBeamWidth);
             }
 
             // 当たり判定は操作している本人だけが取る(二重ダメージを防ぐ)

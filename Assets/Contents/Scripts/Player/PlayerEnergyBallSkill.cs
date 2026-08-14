@@ -1285,6 +1285,7 @@ namespace ProjectKMP.Player
             // 木はシーンに置かれていて全クライアントに同じものがあり、この処理も全員で走る。
             // そのため追加の通信なしで全員の画面の同じ木が倒れる(デカールや草と同じ方式)
             Field.BreakableTree.BreakInSphere(_throwTarget, _treeBreakRadius);
+            Field.BreakableProp.BreakInSphere(_throwTarget, _treeBreakRadius);
 
             if (_explosionEffectPrefab != null)
             {
