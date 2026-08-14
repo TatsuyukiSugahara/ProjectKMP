@@ -105,6 +105,11 @@ InitTestScene*.unity*
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
 
+# Performance Testing Extension の自動生成ファイル
+# (com.unity.test-framework.performance が Assembly リロード / ビルドのたびに再生成する)
+/[Aa]ssets/[Rr]esources/PerformanceTestRunInfo.json*
+/[Aa]ssets/[Rr]esources/PerformanceTestRunSettings.json*
+
 # ---------------------------------------------------------------------------
 # OS 生成ファイル (macOS / Windows)
 # ---------------------------------------------------------------------------
