@@ -7,7 +7,7 @@ using UnityEngine;
 namespace ProjectKMP.UI.InGame
 {
     /// <summary>
-    /// 自分のHPと、倒れたときの復活待ちを表示する。
+    /// 体力の状態と、HPバー・復活の数え上げをつなぐ。
     ///
     /// プレイヤーの部品を探しに行かず、用意された状態だけを見る。
     /// ネットワークで遅れて生まれる相手を待つ必要がなく、
@@ -15,7 +15,7 @@ namespace ProjectKMP.UI.InGame
     ///
     /// カットシーン中は表示ごと隠す。
     /// </summary>
-    public class PlayerHpHud : MonoBehaviour
+    public class PlayerHpPresenter : MonoBehaviour
     {
         // ---- インスペクタ設定 ------------------------------
 

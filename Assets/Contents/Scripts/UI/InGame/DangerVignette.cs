@@ -21,9 +21,6 @@ namespace ProjectKMP.UI
         /// <summary>操作UIより奥、ゲーム画面より手前に出す</summary>
         private const int SORTING_ORDER = 500;
 
-        /// <summary>この割合を下回ったら出しはじめる</summary>
-        private const float THRESHOLD = 0.5f;
-
         /// <summary>いちばん濃いときの不透明度</summary>
         private const float MAX_ALPHA = 0.45f;
 
@@ -41,7 +38,13 @@ namespace ProjectKMP.UI
         private Image _image;
         private float _danger;
 
+        /// <summary>外から渡された危なさ。実際の濃さはここへ向かって少しずつ動く</summary>
+        private float _dangerGoal;
+
         // ---- 公開API -------------------------------------
+
+        /// <summary>いま出ている縁。Presenter が値を渡すのに使う</summary>
+        public static DangerVignette Instance => _instance;
 
         /// <summary>表示を用意する。すでにあれば何もしない</summary>
         public static void Ensure()
@@ -88,19 +91,16 @@ namespace ProjectKMP.UI
             _image.color = new Color(color.r, color.g, color.b, _danger * MAX_ALPHA * pulse);
         }
 
-        /// <summary>いまの危なさ。0で安全、1で瀕死</summary>
+        /// <summary>危なさを外から設定する。0で安全、1で瀕死</summary>
+        public void SetDanger(float danger01)
+        {
+            _dangerGoal = Mathf.Clamp01(danger01);
+        }
+
+        /// <summary>いまの危なさ</summary>
         private float ResolveDanger()
         {
-            Core.PlayerStatus status = Core.PlayerStatusHub.Local;
-
-            // 死んでいる間は出さない。倒れた画面を赤く塗っても意味がない
-            if (status.IsDead.CurrentValue) return 0.0f;
-            if (status.MaxHp.CurrentValue <= 0) return 0.0f;
-
-            float ratio = status.HpRatio01;
-            if (ratio >= THRESHOLD) return 0.0f;
-
-            return 1.0f - ratio / THRESHOLD;
+            return _dangerGoal;
         }
 
         private void Build()

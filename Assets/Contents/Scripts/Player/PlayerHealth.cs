@@ -18,7 +18,7 @@ namespace ProjectKMP.Player
     /// 通常被弾は CharacterController 移動の小さな吹き飛び、死亡時は当たり判定を切ったうえで
     /// 放物線を描いて画面端まで飛ぶような大きな吹き飛びになる(いずれも距離・時間は調整可能)。
     /// 死亡後は「死亡アニメーション(現状0秒=即待機) → リスポーン待機(カウントダウン) → ランダム地点で復活」の順に進む。
-    /// HP・死亡・カウントダウンは Observable で公開しており、UI(PlayerHpHud)や
+    /// HP・死亡・カウントダウンは Observable で公開しており、UI(PlayerHpPresenter)や
     /// アニメーション側(死亡モーションを入れる場合は Died を購読)がここへつなぐ。
     /// </summary>
     [RequireComponent(typeof(CharacterController))]

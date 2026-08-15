@@ -61,12 +61,6 @@ namespace ProjectKMP.UI
         [SerializeField, Tooltip("クールタイム中の暗さ(0〜1)"), Range(0f, 1f)]
         private float _dimAlpha = 0.45f;
 
-        [SerializeField, Tooltip("操作中のプレイヤーのスキルのクールタイムを自動で拾う")]
-        private bool _followLocalPlayer = true;
-
-        [SerializeField, Tooltip("どのスキルのクールタイムを表示するか")]
-        private CooldownSource _cooldownSource = CooldownSource.Beam;
-
         [Header("その他")]
         [SerializeField, Tooltip("タッチ非対応の環境(PCなど)では隠す")]
         private bool _hideOnNonTouchPlatform;
@@ -153,14 +147,12 @@ namespace ProjectKMP.UI
 
         // ---- 内部処理 ------------------------------------
 
-        /// <summary>クールタイム中はゲージを一周させ、ボタンを暗くする</summary>
+        /// <summary>
+        /// クールタイム中はゲージを一周させ、ボタンを暗くする。
+        /// 値は外から渡されたものだけを使う。自分で状態を見に行かない。
+        /// </summary>
         private void UpdateCooldown()
         {
-            if (_followLocalPlayer)
-            {
-                _cooldownRatio = ReadLocalCooldownRatio();
-            }
-
             bool isCooling = _cooldownRatio > 0f;
 
             if (_cooldownFill != null)
@@ -194,24 +186,6 @@ namespace ProjectKMP.UI
                 Color color = _shadow.color;
                 color.a = Mathf.Lerp(0.35f, 0.05f, _pressAmount);
                 _shadow.color = color;
-            }
-        }
-
-        /// <summary>
-        /// クールタイムの残り具合を拾う。
-        ///
-        /// 技そのものではなく、用意された状態から読む。
-        /// 技が生まれるのを待つ必要がなく、技の作りが変わっても影響を受けない。
-        /// </summary>
-        private float ReadLocalCooldownRatio()
-        {
-            Core.PlayerStatus status = Core.PlayerStatusHub.Local;
-
-            switch (_cooldownSource)
-            {
-                case CooldownSource.EnergyBall: return status.EnergyBallCooldown01.CurrentValue;
-                case CooldownSource.Dive: return status.DiveCooldown01.CurrentValue;
-                default: return status.BeamCooldown01.CurrentValue;
             }
         }
 

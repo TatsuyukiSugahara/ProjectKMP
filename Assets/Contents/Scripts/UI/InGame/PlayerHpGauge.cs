@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace ProjectKMP.UI.InGame
 {
     /// <summary>
-    /// 画面下部に出す自分のHPゲージ。表示だけを受け持ち、PlayerHpHud から SetHealth() で更新される。
+    /// 画面下部に出す自分のHPゲージ。表示だけを受け持ち、PlayerHpPresenter から SetHealth() で更新される。
     /// 見た目はボスゲージ(BossHealthGauge)と同じ「白フレーム+暗色トラック+明色フィル」構成。
     /// 減ったぶんは残像がワンテンポ遅れて追いかけ、残量に応じて色が 緑→黄→赤 と変わる
     /// (トラックもフィル色を暗くした色で連動させ、ボスゲージと同じ配色関係を保つ)。

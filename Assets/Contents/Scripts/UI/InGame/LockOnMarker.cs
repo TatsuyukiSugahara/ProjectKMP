@@ -48,6 +48,9 @@ namespace ProjectKMP.UI
         private CanvasGroup _group;
         private float _visibility;
 
+        /// <summary>外から渡された相手</summary>
+        private Transform _target;
+
         private Transform _cachedTarget;
         private readonly List<Renderer> _renderers = new List<Renderer>();
 
@@ -98,12 +101,18 @@ namespace ProjectKMP.UI
         }
 
         /// <summary>
-        /// いま狙っている相手を返す。
-        /// 用意された状態から読むので、カメラを探し回る必要がない。
+        /// 狙っている相手を外から渡す。
+        /// 空を渡せば印は消える。
         /// </summary>
+        public void SetTarget(Transform target)
+        {
+            _target = target;
+        }
+
+        /// <summary>いま狙っている相手</summary>
         private Transform ResolveLockTarget()
         {
-            return Core.PlayerStatusHub.Local.LockTarget.CurrentValue;
+            return _target;
         }
 
         /// <summary>相手を囲むように照準を置く。画面の外へ出たら隠す</summary>

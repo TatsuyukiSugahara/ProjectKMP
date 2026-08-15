@@ -37,6 +37,9 @@ namespace ProjectKMP.UI
         private Image _image;
         private float _onAmount;
 
+        /// <summary>外から渡された、入っているかどうか</summary>
+        private bool _lockedOn;
+
         // ---- 内部処理 ------------------------------------
 
         private void Awake()
@@ -60,10 +63,15 @@ namespace ProjectKMP.UI
             transform.localScale = Vector3.one * pulse;
         }
 
-        /// <summary>用意された状態から読む。カメラを探し回る必要がない</summary>
+        /// <summary>入っているかを外から渡す</summary>
+        public void SetLockedOn(bool lockedOn)
+        {
+            _lockedOn = lockedOn;
+        }
+
         private bool IsLockedOn()
         {
-            return Core.PlayerStatusHub.Local.LockTarget.CurrentValue != null;
+            return _lockedOn;
         }
     }
 }

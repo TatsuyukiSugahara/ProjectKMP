@@ -37,8 +37,8 @@ namespace ProjectKMP.UI
         [SerializeField, Tooltip("押したときの大きさ倍率")]
         private float _pressedScale = 0.96f;
 
-        [SerializeField, Tooltip("押したときにキバが閉じる量(ピクセル)")]
-        private float _fangCloseDistance = 26f;
+        [SerializeField, Range(0f, 0.4f), Tooltip("押したときにキバが閉じる量。枠の高さに対する割合")]
+        private float _fangCloseRatio = 0.12f;
 
         [SerializeField, Tooltip("動きの速さ。大きいほどキビキビする")]
         private float _animateSpeed = 18f;
@@ -56,9 +56,6 @@ namespace ProjectKMP.UI
         [SerializeField, Tooltip("クールタイム中の暗さ(0〜1)"), Range(0f, 1f)]
         private float _dimAlpha = 0.45f;
 
-        [SerializeField, Tooltip("操作中のプレイヤーのクールタイムを自動で拾う")]
-        private bool _followLocalPlayer = true;
-
         [SerializeField, Tooltip("ジャスト入力の受付中にゲージを塗る色。押しどきを見せる")]
         private Color _justWindowColor = new Color(1f, 0.9f, 0.35f);
 
@@ -73,6 +70,13 @@ namespace ProjectKMP.UI
         private Vector3 _visualHomeScale = Vector3.one;
         private Vector2 _fangTopHome;
         private Vector2 _fangBottomHome;
+
+        /// <summary>牙の高さ(割合)。動かしても厚みが変わらないように控えておく</summary>
+        /// <summary>指以外の操作で押されているか</summary>
+        private bool _externalPressed;
+
+        private float _fangTopHeight;
+        private float _fangBottomHeight;
         private int _activePointerId = INVALID_POINTER_ID;
         private bool _pressPending;
         private float _pressAmount;
@@ -99,6 +103,21 @@ namespace ProjectKMP.UI
             _cooldownRatio = Mathf.Clamp01(ratio01);
         }
 
+        /// <summary>
+        /// 押されている状態を外から渡す。
+        /// キーやパッドで攻撃したときも、画面のボタンを噛ませるために使う。
+        /// </summary>
+        public void SetPressed(bool pressed)
+        {
+            _externalPressed = pressed;
+        }
+
+        /// <summary>押しどきの受付中かを外から設定する。ゲージの色に使う</summary>
+        public void SetJustWindow(bool inWindow)
+        {
+            _isJustWindow = inWindow;
+        }
+
         /// <summary>表示を切り替える</summary>
         public void SetVisible(bool visible)
         {
@@ -120,8 +139,19 @@ namespace ProjectKMP.UI
 
             _visualHomePos = _visual.anchoredPosition;
             _visualHomeScale = _visual.localScale;
-            if (_fangTop != null) _fangTopHome = _fangTop.anchoredPosition;
-            if (_fangBottom != null) _fangBottomHome = _fangBottom.anchoredPosition;
+            // 牙は割合で置いてあるので、位置ではなく縁の割合を控える。
+            // 位置を足す方式では、割合で置かれた物は動かない
+            if (_fangTop != null)
+            {
+                _fangTopHome = _fangTop.anchorMin;
+                _fangTopHeight = _fangTop.anchorMax.y - _fangTop.anchorMin.y;
+            }
+
+            if (_fangBottom != null)
+            {
+                _fangBottomHome = _fangBottom.anchorMax;
+                _fangBottomHeight = _fangBottom.anchorMax.y - _fangBottom.anchorMin.y;
+            }
             if (_cooldownFill != null) _cooldownFillHomeColor = _cooldownFill.color;
         }
 
@@ -154,18 +184,12 @@ namespace ProjectKMP.UI
 
         // ---- 内部処理 ------------------------------------
 
-        /// <summary>クールタイム中はゲージを一周させ、ボタンを暗くする</summary>
+        /// <summary>
+        /// クールタイム中はゲージを一周させ、ボタンを暗くする。
+        /// 値は外から渡されたものだけを使う。自分で状態を見に行かない。
+        /// </summary>
         private void UpdateCooldown()
         {
-            if (_followLocalPlayer)
-            {
-                // 用意された状態から読む。技を探しに行く必要がない
-                Core.PlayerStatus status = Core.PlayerStatusHub.Local;
-
-                _cooldownRatio = status.AttackCooldown01.CurrentValue;
-                _isJustWindow = status.IsInJustWindow.CurrentValue;
-            }
-
             bool isCooling = _cooldownRatio > 0f;
 
             if (_cooldownFill != null)
@@ -192,20 +216,28 @@ namespace ProjectKMP.UI
         /// <summary>押し込みの見た目をなめらかに近づける</summary>
         private void UpdatePressVisual()
         {
-            float target = IsHeld ? 1f : 0f;
+            // 指で押していなくても、キーやパッドで攻撃したときは噛ませる。
+            // ボタンを押した人にしか動きが出ないと、機器によって手応えが変わってしまう
+            float target = IsHeld || _externalPressed ? 1f : 0f;
             _pressAmount = Mathf.MoveTowards(_pressAmount, target, Time.unscaledDeltaTime * _animateSpeed);
 
             _visual.anchoredPosition = _visualHomePos + new Vector2(0f, _pressedSinkY * _pressAmount);
             _visual.localScale = _visualHomeScale * Mathf.Lerp(1f, _pressedScale, _pressAmount);
 
-            // キバは押し込みに合わせて内側へ寄る
+            // キバは押し込みに合わせて内側へ寄る。
+            // 割合で置いてあるので、位置ではなく割合のほうを動かす
+            float close = _fangCloseRatio * _pressAmount;
+
             if (_fangTop != null)
             {
-                _fangTop.anchoredPosition = _fangTopHome + new Vector2(0f, -_fangCloseDistance * _pressAmount);
+                _fangTop.anchorMin = new Vector2(_fangTop.anchorMin.x, _fangTopHome.y - close);
+                _fangTop.anchorMax = new Vector2(_fangTop.anchorMax.x, _fangTopHome.y - close + _fangTopHeight);
             }
+
             if (_fangBottom != null)
             {
-                _fangBottom.anchoredPosition = _fangBottomHome + new Vector2(0f, _fangCloseDistance * _pressAmount);
+                _fangBottom.anchorMin = new Vector2(_fangBottom.anchorMin.x, _fangBottomHome.y + close - _fangBottomHeight);
+                _fangBottom.anchorMax = new Vector2(_fangBottom.anchorMax.x, _fangBottomHome.y + close);
             }
 
             if (_shadow != null)

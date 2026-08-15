@@ -40,6 +40,9 @@ namespace ProjectKMP.UI
 
         private float _visibility;
 
+        /// <summary>外から渡された呼びかけの相手</summary>
+        private Transform _target;
+
         // ---- 公開API -------------------------------------
 
         /// <summary>合図を出せるようにする。すでにあれば何もしない</summary>
@@ -62,6 +65,15 @@ namespace ProjectKMP.UI
             Build();
         }
 
+        /// <summary>いま出ている合図。渡す側が使う</summary>
+        public static FriendBeamSignal Instance => _instance;
+
+        /// <summary>呼びかけている相手を外から渡す。空なら合図を消す</summary>
+        public void SetTarget(Transform target)
+        {
+            _target = target;
+        }
+
         private void OnDestroy()
         {
             if (_instance == this) _instance = null;
@@ -69,8 +81,8 @@ namespace ProjectKMP.UI
 
         private void Update()
         {
-            // 呼びかけの有無は技の側で判断済み。ここは受け取って出すだけ
-            Transform target = Core.PlayerStatusHub.Local.FriendBeamCallTarget.CurrentValue;
+            // 呼びかけの相手は外から渡される。ここは受け取って出すだけ
+            Transform target = _target;
 
             float goal = target != null ? 1.0f : 0.0f;
             _visibility = Mathf.MoveTowards(_visibility, goal, FADE_SPEED * Time.unscaledDeltaTime);

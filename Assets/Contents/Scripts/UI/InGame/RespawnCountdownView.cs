@@ -7,7 +7,7 @@ namespace ProjectKMP.UI.InGame
     /// <summary>
     /// 死亡中に画面中央へ出す、リスポーンまでのカウントダウン表示。
     /// 数字は切り上げ秒(5→1)、円ゲージは残り時間の割合で減っていく。
-    /// 表示のオン・オフと値の更新だけを受け持ち、PlayerHpHud から呼ばれる。
+    /// 表示のオン・オフと値の更新だけを受け持ち、PlayerHpPresenter から呼ばれる。
     /// </summary>
     public class RespawnCountdownView : MonoBehaviour
     {
