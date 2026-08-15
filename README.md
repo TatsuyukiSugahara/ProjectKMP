@@ -61,12 +61,24 @@ Player / UI / Battle / Attack / ...   ← ゲーム本体(Assembly-CSharp)
 InputSystem の `InputAction` を1箇所で持ち、使う側は結果だけを見る。
 キーボード・パッド・画面タッチのどれで操作されたかを、各所が知らなくてよくなる。
 
-### 状態は R3 で受け渡す
+### 状態は R3 で受け渡す(Model)
 
-`Core/PlayerStatus.cs` が HP・クールダウン・死亡などを `ReactiveProperty` で持つ。
+`Core/PlayerStatus.cs` が操作している人の状態を `ReactiveProperty` で持つ。
 外へは `ReadOnlyReactiveProperty` として公開するので、**書き換えられるのは持ち主だけ**。
-UI は購読するだけでよく、`Update()` で毎フレーム見に行かなくてよい。
+見る側は購読するだけでよく、`Update()` で毎フレーム見に行かなくてよい。
 置き場は `Core/PlayerStatusHub.cs`。
+
+| 持っているもの | 中身 |
+|---|---|
+| 体力 | `CurrentHp` `MaxHp` `IsDead` |
+| 技の待ち時間 | `AttackCooldown01` `BeamCooldown01` `DiveCooldown01` `EnergyBallCooldown01` |
+| 押しどき | `IsInJustWindow` `IsAimingBeam` |
+| 復活 | `RespawnRemainingSec` `RespawnDelaySec` |
+| 相手 | `LockTarget` `FriendBeamCallTarget` |
+
+`LockTarget` などは**位置を写し取らず `Transform` のまま持たせる**。
+写し取ると誰かが毎フレーム更新しなければならないが、`Transform` のままなら
+画面側が必要になった時に自分で位置を測ればよい。
 
 ### 演出は Presentation へ出す
 
@@ -74,21 +86,42 @@ UI は購読するだけでよく、`Update()` で毎フレーム見に行かな
 `Presentation/` にまとめた。もともと `UI/` にあった物も移してある。
 演出は「ゲームの都合を知らないまま呼ばれるだけ」の立場にしたいため。
 
-### Player と UI の循環をほどいた
+### Player と UI の循環をほどいた(MVP)
 
 以前は `Player` と `UI` が互いを直接参照していた(Player→UI が5型、UI→Player が4型)。
-状態を Core の Model 経由にしたことで、**どちらも相手を知らない**関係になった。
+調べてみると **本当に要る依存は5行だけ** で、残りは使っていない `using` だった。
+その5行も、技の側が表示の用意をしていたことが原因だったので、画面側へ移した(`UI/InGame/InGameHudBootstrap.cs`)。
+
+いまは Model を挟んだ三者の関係になっている。
+
+| 役 | 担当 | 相手を知っているか |
+|---|---|---|
+| Model | `Core/PlayerStatus` | 誰も知らない |
+| Presenter | `UI/Presenters/` `UI/InGame/PlayerHpPresenter.cs` | Model と View を知る |
+| View | `UI/` のボタンや HUD | 何も知らない。渡された値で見た目を作るだけ |
 
 ```
-Player/PlayerHealth.cs                  UI/InGame/PlayerHpHud.cs
-  Core.PlayerStatusHub.Local              PlayerStatus status = PlayerStatusHub.Local;
-    .SetHp(hp, maxHp)          ──→        status.CurrentHp.Subscribe(...)
-    .SetDead(isDead)           ──→        status.IsDead.Subscribe(...)
-    .SetRespawn(...)           ──→        status.RespawnRemainingSec.Subscribe(...)
+Player/PlayerHealth.cs              Core/PlayerStatus          UI/Presenters/…
+  PlayerStatusHub.Local              ReadOnlyReactiveProperty    status.X.Subscribe(...)
+    .SetHp(hp, maxHp)        ──→        CurrentHp        ──→       → View へ値を渡す
 ```
 
 書く側は誰が見ているか知らない。見る側は誰が書いたか知らない。
 間に立つ `PlayerStatus` だけが両方から見える。HUD を増やしても `Player` 側は変更不要になる。
+
+### Presenter の一覧
+
+| Presenter | 何をつなぐか |
+|---|---|
+| `SkillButtonPresenter` | 3つの技の待ち時間 → ボタン |
+| `AttackButtonPresenter` | 待ち時間・押しどき・押下状態 → 攻撃ボタン |
+| `DangerVignettePresenter` | 体力から危険度を求める → 赤い縁 |
+| `LockOnPresenter` | 注目先 → 印とターゲットボタン |
+| `FriendBeamSignalPresenter` | 呼びかけ先 → 合図 |
+| `PlayerHpPresenter` | 体力・死亡・復活 → HPバー |
+
+判断(危険度の計算など)は Presenter が持ち、View には結果だけを渡す。
+View が状態を知らないので、見た目を差し替えても計算側に触らなくてよい。
 
 ### 残っている循環
 
@@ -104,9 +137,11 @@ Player/PlayerHealth.cs                  UI/InGame/PlayerHpHud.cs
 | `Dog` ↔ `Player` |
 | `Gorilla` ↔ `Player` |
 
-これらは担当が分かれている領域なので、同じやりかた(状態を Core の Model へ出し、
-互いを直接呼ばない)で順に解いていく方針。
+これらは担当が分かれている領域なので未着手。`Player` と `UI` と同じやりかた
+(状態を Core の Model へ出し、互いを直接呼ばない)で順に解いていく方針。
 解けた組から `Player` `UI` などにも asmdef を切り、向きを仕組みとして固定する。
+
+現状の詳細と解決方針は `Assets/Contents/Scripts/依存関係のメモ.md` に置いてある。
 
 ## Photon App ID の扱い
 
