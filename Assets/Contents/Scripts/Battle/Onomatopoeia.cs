@@ -1,3 +1,4 @@
+using ProjectKMP.Core;
 using TMPro;
 using UnityEngine;
 
@@ -12,7 +13,8 @@ namespace ProjectKMP.Battle
     /// 文字は世界の中に置いてカメラの方を向かせる。
     /// 画面に貼り付けると、どこで起きたことなのか分からなくなるため。
     ///
-    /// 出したら自分で消えるので、呼ぶ側は後始末を気にしなくてよい。
+    /// 一度作った物は使い回す。連鎖で一度に何個も出るので、
+    /// そのたびに作って捨てると、その瞬間だけ処理が跳ね上がる。
     /// </summary>
     public class Onomatopoeia : MonoBehaviour
     {
@@ -28,6 +30,9 @@ namespace ProjectKMP.Battle
         private const float FADE_START = 0.55f;
 
         // ---- 内部状態 ------------------------------------
+
+        /// <summary>使い回しの置き場。全員で1つを共有する</summary>
+        private static GameObjectPool _pool;
 
         /// <summary>一度見つけた日本語フォント。作るたびに探し直さないための控え</summary>
         private static TMP_FontAsset _sharedFont;
@@ -50,13 +55,15 @@ namespace ProjectKMP.Battle
         {
             if (string.IsNullOrEmpty(label)) return;
 
-            var go = new GameObject("Onomatopoeia");
+            if (_pool == null) _pool = new GameObjectPool(CreateOne, 8);
+
+            GameObject go = _pool.Rent();
 
             // 同じ場所に重ならないよう、少しだけ散らす
-            Vector3 jitter = new Vector3(Random.Range(-0.5f, 0.5f), Random.Range(-0.2f, 0.4f), Random.Range(-0.5f, 0.5f));
+            var jitter = new Vector3(Random.Range(-0.5f, 0.5f), Random.Range(-0.2f, 0.4f), Random.Range(-0.5f, 0.5f));
             go.transform.position = position + jitter;
 
-            var popup = go.AddComponent<Onomatopoeia>();
+            var popup = go.GetComponent<Onomatopoeia>();
             popup._baseScale = Mathf.Max(0.1f, scale);
             popup._duration = Mathf.Max(0.1f, durationSec);
             popup._startPosition = go.transform.position;
@@ -64,78 +71,45 @@ namespace ProjectKMP.Battle
             // 上へ真っすぐだと単調なので、少し斜めへ逃がす
             popup._riseDirection = (Vector3.up + new Vector3(jitter.x, 0.0f, jitter.z) * 0.6f).normalized;
 
-            popup.Setup(label, color);
+            popup.Begin(label, color);
         }
 
         // ---- 内部処理 ------------------------------------
 
-        /// <summary>
-        /// 日本語が出せるフォントを探す。
-        ///
-        /// 実行時に作る文字なので、手で割り当てる先が無い。
-        /// プロジェクトの既定を先に見て、無ければ画面に出ている文字から借りる。
-        /// 一度見つけたら覚えておき、毎回探し回らない。
-        /// </summary>
-        private static TMP_FontAsset ResolveJapaneseFont()
+        /// <summary>1つぶんの入れ物を作る。足りなくなったときだけ通る</summary>
+        private static GameObject CreateOne()
         {
-            if (_sharedFont != null) return _sharedFont;
+            var go = new GameObject("Onomatopoeia", typeof(Onomatopoeia));
 
-            // 画面に出ている文字を片っ端から見て、日本語を持っているものを選ぶ。
-            // 『最初に見つかったもの』では英字だけのフォントを掴んで化ける
-            TMP_FontAsset firstFound = null;
-
-            foreach (TMP_Text text in FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            {
-                if (text == null || text.font == null) continue;
-
-                if (firstFound == null) firstFound = text.font;
-                if (!HasJapanese(text.font)) continue;
-
-                _sharedFont = text.font;
-                return _sharedFont;
-            }
-
-            // どれも確かめられなければ、最初に見つけたものを使う。
-            // 既定のフォントは英字だけのことが多く、そちらへ落とすと必ず化ける
-            _sharedFont = firstFound != null ? firstFound : TMP_Settings.defaultFontAsset;
-            return _sharedFont;
-        }
-
-        /// <summary>
-        /// 擬音に使う文字を出せるフォントか。
-        ///
-        /// 引数を付けずに調べると『いま焼き込まれている文字』しか見ないため、
-        /// 日本語を出せるフォントでも、まだ使っていない文字は無いと判定されてしまう。
-        /// 予備のフォントもたどり、必要なら焼き込ませたうえで確かめる。
-        /// </summary>
-        private static bool HasJapanese(TMP_FontAsset font)
-        {
-            return font.HasCharacter('ガ', true, true)
-                && font.HasCharacter('ッ', true, true)
-                && font.HasCharacter('ー', true, true);
-        }
-
-        private void Setup(string label, Color color)
-        {
             var textObject = new GameObject("Label");
-            textObject.transform.SetParent(transform, false);
+            textObject.transform.SetParent(go.transform, false);
 
-            _text = textObject.AddComponent<TextMeshPro>();
-
-            // 何も指定しないと英字だけのフォントが割り当てられ、日本語が化ける
-            TMP_FontAsset font = ResolveJapaneseFont();
-            if (font != null) _text.font = font;
-
-            _text.text = label;
-            _text.fontSize = 8.0f;
-            _text.alignment = TextAlignmentOptions.Center;
-            _text.color = color;
-            _text.fontStyle = FontStyles.Bold | FontStyles.Italic;
+            var text = textObject.AddComponent<TextMeshPro>();
+            text.fontSize = 8.0f;
+            text.alignment = TextAlignmentOptions.Center;
+            text.fontStyle = FontStyles.Bold | FontStyles.Italic;
 
             // 太い縁を付ける。背景が明るくても暗くても読めるようにする
-            _text.outlineWidth = 0.28f;
-            _text.outlineColor = new Color32(30, 20, 10, 255);
+            text.outlineWidth = 0.28f;
+            text.outlineColor = new Color32(30, 20, 10, 255);
 
+            TMP_FontAsset font = ResolveJapaneseFont();
+            if (font != null) text.font = font;
+
+            go.GetComponent<Onomatopoeia>()._text = text;
+
+            return go;
+        }
+
+        private void Begin(string label, Color color)
+        {
+            if (_text != null)
+            {
+                _text.text = label;
+                _text.color = color;
+            }
+
+            _elapsed = 0.0f;
             Apply(0.0f);
         }
 
@@ -145,7 +119,7 @@ namespace ProjectKMP.Battle
             _elapsed += Time.unscaledDeltaTime;
 
             float t = _elapsed / _duration;
-            if (t >= 1.0f) { Destroy(gameObject); return; }
+            if (t >= 1.0f) { _pool.Return(gameObject); return; }
 
             Apply(t);
         }
@@ -170,6 +144,48 @@ namespace ProjectKMP.Battle
             float alpha = t < FADE_START ? 1.0f : 1.0f - (t - FADE_START) / (1.0f - FADE_START);
             Color color = _text.color;
             _text.color = new Color(color.r, color.g, color.b, alpha);
+        }
+
+        /// <summary>
+        /// 日本語が出せるフォントを探す。
+        ///
+        /// 実行時に作る文字なので、手で割り当てる先が無い。
+        /// 画面に出ている文字から借りるが、英字だけのフォントを掴むと化ける。
+        /// </summary>
+        private static TMP_FontAsset ResolveJapaneseFont()
+        {
+            if (_sharedFont != null) return _sharedFont;
+
+            TMP_FontAsset firstFound = null;
+
+            foreach (TMP_Text text in FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (text == null || text.font == null) continue;
+
+                if (firstFound == null) firstFound = text.font;
+                if (!HasJapanese(text.font)) continue;
+
+                _sharedFont = text.font;
+                return _sharedFont;
+            }
+
+            // どれも確かめられなければ、最初に見つけたものを使う。
+            // 既定のフォントは英字だけのことが多く、そちらへ落とすと必ず化ける
+            _sharedFont = firstFound != null ? firstFound : TMP_Settings.defaultFontAsset;
+            return _sharedFont;
+        }
+
+        /// <summary>
+        /// 擬音に使う文字を出せるフォントか。
+        ///
+        /// 引数を付けずに調べると『いま焼き込まれている文字』しか見ないため、
+        /// 日本語を出せるフォントでも、まだ使っていない文字は無いと判定されてしまう。
+        /// </summary>
+        private static bool HasJapanese(TMP_FontAsset font)
+        {
+            return font.HasCharacter('ガ', true, true)
+                && font.HasCharacter('ッ', true, true)
+                && font.HasCharacter('ー', true, true);
         }
     }
 }

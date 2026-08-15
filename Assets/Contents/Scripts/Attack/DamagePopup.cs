@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
+using ProjectKMP.Core;
 using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
@@ -71,11 +73,50 @@ namespace ProjectKMP.Attack
 
         // ---- 内部状態 ------------------------------------
 
+        /// <summary>元になる物ごとの置き場。技によって見た目が違うので分けて持つ</summary>
+        private static readonly Dictionary<GameObject, GameObjectPool> _pools =
+            new Dictionary<GameObject, GameObjectPool>();
+
+        private GameObjectPool _pool;
+
         private Camera _camera;
         private Vector3 _startPosition;
         private Vector3 _baseScale;
 
+        /// <summary>元の大きさ。使い回すと前回の拡大が残るので、最初に控えておく</summary>
+        private Vector3 _originalScale = Vector3.one;
+        private bool _hasOriginalScale;
+
         // ---- 公開API -------------------------------------
+
+        /// <summary>
+        /// 元になる物を指定して1つ出す。使い終わったら自分で戻る。
+        ///
+        /// 数字は当たるたびに出るので、多人数と連鎖が重なると一度に何十個も湧く。
+        /// そのたびに作って捨てると、その瞬間だけ処理が跳ね上がる。
+        ///
+        /// 元になる物ごとに置き場を分ける。技によって見た目が違うことがあるため。
+        /// </summary>
+        public static DamagePopup Spawn(GameObject prefab, Vector3 position)
+        {
+            if (prefab == null) return null;
+
+            if (!_pools.TryGetValue(prefab, out GameObjectPool pool))
+            {
+                GameObject source = prefab;
+                pool = new GameObjectPool(() => Instantiate(source), 8);
+
+                _pools.Add(prefab, pool);
+            }
+
+            GameObject go = pool.Rent();
+            go.transform.position = position;
+
+            var popup = go.GetComponent<DamagePopup>();
+            if (popup != null) popup._pool = pool;
+
+            return popup;
+        }
 
         /// <summary>数字を出して、上に浮きながら消えるまでを再生する</summary>
         public void Play(int damage)
@@ -110,7 +151,15 @@ namespace ProjectKMP.Attack
 
             LayoutComboIcon(showComboIcon);
 
-            _baseScale = transform.localScale;
+            // 使い回すと、前回の『出た瞬間の拡大』が残ったまま始まってしまう
+            if (!_hasOriginalScale)
+            {
+                _originalScale = transform.localScale;
+                _hasOriginalScale = true;
+            }
+
+            _baseScale = _originalScale;
+            transform.localScale = _originalScale;
             _camera = Camera.main;
 
             Vector3 right = _camera != null ? _camera.transform.right : Vector3.right;
@@ -199,7 +248,9 @@ namespace ProjectKMP.Attack
                 return;
             }
 
-            Destroy(gameObject);
+            // 借りた物なら戻す。そうでなければ今までどおり消す
+            if (_pool != null) _pool.Return(gameObject);
+            else Destroy(gameObject);
         }
 
         /// <summary>

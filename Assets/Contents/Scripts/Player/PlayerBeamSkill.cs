@@ -1144,8 +1144,7 @@ namespace ProjectKMP.Player
 
             if (_damagePopupPrefab != null)
             {
-                GameObject popup = Instantiate(_damagePopupPrefab, hitPoint, Quaternion.identity);
-                DamagePopup component = popup.GetComponent<DamagePopup>();
+                DamagePopup component = DamagePopup.Spawn(_damagePopupPrefab, hitPoint);
                 if (component != null) component.Play(damage, combo);
             }
 

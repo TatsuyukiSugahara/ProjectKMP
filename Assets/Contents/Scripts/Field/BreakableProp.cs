@@ -236,36 +236,16 @@ namespace ProjectKMP.Field
             }
         }
 
-        // 壊れた場所から鳴らす。
-        //
-        // Unity 標準の PlayClipAtPoint は距離による減り方がきつく、
-        // 10m も離れるとほとんど聞こえない。戦っている距離では届かないので、
-        // 鳴らす側を自分で用意して、減り方と広がり方を決める。
+        // 壊れた場所から鳴らす。鳴らし役は使い回すので、
+        // 連鎖で一度に何個も壊れても作り直しは起きない
         private void PlayBreakSound()
         {
             if (_breakClip == null) return;
 
-            var go = new GameObject("BreakSound");
-            go.transform.position = transform.position + Vector3.up * (_hitHeight * 0.5f);
-
-            var source = go.AddComponent<AudioSource>();
-            source.clip = _breakClip;
-            source.volume = _breakVolume;
-
-            // 完全に位置へ寄せると遠くで聞こえなくなる。
-            // 半分だけ位置に寄せて、どちらで起きたかは分かる程度に留める
-            source.spatialBlend = 0.55f;
-            source.rolloffMode = AudioRolloffMode.Linear;
-            source.minDistance = 12.0f;
-            source.maxDistance = 90.0f;
-            source.dopplerLevel = 0.0f;
-
-            // 連鎖で同じ音が重なると、うなりが出て濁る。少しずらして厚みに変える
-            source.pitch = UnityEngine.Random.Range(0.9f, 1.1f);
-
-            source.Play();
-
-            Destroy(go, _breakClip.length / Mathf.Max(0.1f, source.pitch) + 0.1f);
+            ProjectKMP.Core.OneShotSound.Play(
+                _breakClip,
+                transform.position + Vector3.up * (_hitHeight * 0.5f),
+                _breakVolume);
         }
 
         private void PlayBreakEffects()

@@ -1,3 +1,4 @@
+using ProjectKMP.Core;
 using UnityEngine;
 
 namespace ProjectKMP.Player
@@ -8,10 +9,8 @@ namespace ProjectKMP.Player
     /// 技を出していない時間がいちばん長いので、
     /// ただ走っているだけの場面が良くなると全体の印象が上がる。
     ///
-    /// 地面に触れた反応があるかどうかで『重さ』が変わる。
-    /// 何も出ないと、地面の上を滑っているように見えてしまう。
-    ///
-    /// 砂埃は自分で作って自分で消える。画像もプレハブも要らない。
+    /// 砂埃は使い回す。1人あたり毎秒10個ほど出るので、20人なら毎秒200個。
+    /// 作って捨てを繰り返すと片付けの処理が積み上がり、時々画面が引っかかる。
     /// </summary>
     public class RunDust : MonoBehaviour
     {
@@ -68,6 +67,7 @@ namespace ProjectKMP.Player
             {
                 _lastPosition = current;
                 _hasLastPosition = true;
+
                 return 0.0f;
             }
 
@@ -82,34 +82,34 @@ namespace ProjectKMP.Player
 
         private void Spawn()
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            go.name = "RunDust";
-
-            // 当たり判定は要らない。付いたままだと自分の足を蹴ってしまう
-            Collider collider = go.GetComponent<Collider>();
-            if (collider != null) Destroy(collider);
-
             // 足元の少し後ろへ置く。進んだ跡として残したい
             Vector3 position = transform.position - transform.forward * 0.3f;
             position += new Vector3(Random.Range(-0.15f, 0.15f), 0.06f, Random.Range(-0.15f, 0.15f));
 
-            go.transform.position = position;
-            go.transform.rotation = Quaternion.Euler(90.0f, Random.Range(0.0f, 360.0f), 0.0f);
-            go.transform.localScale = Vector3.one * _startSize;
-
-            var puff = go.AddComponent<DustPuff>();
-            puff.Setup(_color, _lifeSec, _startSize, _startSize * _growth);
+            DustPuff.Play(position, _color, _lifeSec, _startSize, _startSize * _growth);
         }
     }
 
-    /// <summary>砂埃ひとつぶん。広がりながら薄くなって消える</summary>
+    /// <summary>砂埃ひとつぶん。広がりながら薄くなって消え、終わったら次の人へ回る</summary>
     public class DustPuff : MonoBehaviour
     {
-        /// <summary>ぼかした丸の絵。全員で使い回す</summary>
-        private static Texture2D _softTexture;
+        // ---- 定数 ----------------------------------------
+
+        private static readonly int BASE_COLOR_ID = Shader.PropertyToID("_BaseColor");
+        private static readonly int COLOR_ID = Shader.PropertyToID("_Color");
+
+        // ---- 内部状態 ------------------------------------
+
+        /// <summary>使い回しの置き場。全員で1つを共有する</summary>
+        private static GameObjectPool _pool;
+
+        /// <summary>形と材質は全員で共有する。1つずつ作ると数が増えるほど重くなる</summary>
+        private static UnityEngine.Mesh _sharedMesh;
+        private static Material _sharedMaterial;
+        private static Texture2D _sharedTexture;
 
         private Renderer _renderer;
-        private Material _materialInstance;
+        private MaterialPropertyBlock _block;
 
         private float _elapsed;
         private float _life = 0.45f;
@@ -117,13 +117,140 @@ namespace ProjectKMP.Player
         private float _endSize;
         private Color _color = Color.white;
 
+        // ---- 公開API -------------------------------------
+
+        /// <summary>砂埃を1つ出す。使い終わったら自分で戻る</summary>
+        public static void Play(Vector3 position, Color color, float lifeSec, float startSize, float endSize)
+        {
+            if (_pool == null) _pool = new GameObjectPool(CreateOne, 16);
+
+            GameObject go = _pool.Rent();
+            go.transform.SetPositionAndRotation(
+                position, Quaternion.Euler(90.0f, Random.Range(0.0f, 360.0f), 0.0f));
+
+            var puff = go.GetComponent<DustPuff>();
+            puff.Begin(color, lifeSec, startSize, endSize);
+        }
+
+        // ---- 内部処理 ------------------------------------
+
+        /// <summary>1つぶんの入れ物を作る。ここは足りなくなったときだけ通る</summary>
+        private static GameObject CreateOne()
+        {
+            var go = new GameObject("DustPuff", typeof(MeshFilter), typeof(MeshRenderer), typeof(DustPuff));
+
+            go.GetComponent<MeshFilter>().sharedMesh = ResolveMesh();
+
+            var renderer = go.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = ResolveMaterial();
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            return go;
+        }
+
+        private void Awake()
+        {
+            _renderer = GetComponent<Renderer>();
+            _block = new MaterialPropertyBlock();
+        }
+
+        private void Begin(Color color, float lifeSec, float startSize, float endSize)
+        {
+            _color = color;
+            _life = Mathf.Max(0.05f, lifeSec);
+            _startSize = startSize;
+            _endSize = endSize;
+            _elapsed = 0.0f;
+
+            Apply(0.0f);
+        }
+
+        private void Update()
+        {
+            _elapsed += Time.deltaTime;
+
+            float t = _elapsed / _life;
+            if (t >= 1.0f) { _pool.Return(gameObject); return; }
+
+            Apply(t);
+        }
+
+        private void Apply(float t)
+        {
+            // 最初に一気に広がってから緩む。等速だと煙ではなく円が育つだけに見える
+            float eased = 1.0f - (1.0f - t) * (1.0f - t);
+            transform.localScale = Vector3.one * Mathf.Lerp(_startSize, _endSize, eased);
+
+            var color = new Color(_color.r, _color.g, _color.b, _color.a * (1.0f - t));
+
+            // 材質は共有しているので、濃さだけを1つずつ上書きする
+            _renderer.GetPropertyBlock(_block);
+            _block.SetColor(BASE_COLOR_ID, color);
+            _block.SetColor(COLOR_ID, color);
+            _renderer.SetPropertyBlock(_block);
+        }
+
+        // ---- 共有する材料 --------------------------------
+
+        /// <summary>板1枚ぶんの形。作りかけの部品を使うより軽い</summary>
+        private static UnityEngine.Mesh ResolveMesh()
+        {
+            if (_sharedMesh != null) return _sharedMesh;
+
+            _sharedMesh = new UnityEngine.Mesh { name = "DustQuad" };
+
+            _sharedMesh.SetVertices(new System.Collections.Generic.List<Vector3>
+            {
+                new Vector3(-0.5f, -0.5f, 0.0f), new Vector3(0.5f, -0.5f, 0.0f),
+                new Vector3(0.5f, 0.5f, 0.0f), new Vector3(-0.5f, 0.5f, 0.0f),
+            });
+
+            _sharedMesh.SetUVs(0, new System.Collections.Generic.List<Vector2>
+            {
+                new Vector2(0.0f, 0.0f), new Vector2(1.0f, 0.0f),
+                new Vector2(1.0f, 1.0f), new Vector2(0.0f, 1.0f),
+            });
+
+            _sharedMesh.SetTriangles(new int[] { 0, 2, 1, 0, 3, 2 }, 0);
+            _sharedMesh.RecalculateNormals();
+            _sharedMesh.RecalculateBounds();
+
+            return _sharedMesh;
+        }
+
+        private static Material ResolveMaterial()
+        {
+            if (_sharedMaterial != null) return _sharedMaterial;
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+
+            _sharedMaterial = new Material(shader) { name = "DustPuff" };
+
+            // 半透明として描く。不透明のままだと四角い板が見えてしまう
+            if (_sharedMaterial.HasProperty("_Surface")) _sharedMaterial.SetFloat("_Surface", 1.0f);
+            if (_sharedMaterial.HasProperty("_SrcBlend")) _sharedMaterial.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (_sharedMaterial.HasProperty("_DstBlend")) _sharedMaterial.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            if (_sharedMaterial.HasProperty("_ZWrite")) _sharedMaterial.SetInt("_ZWrite", 0);
+
+            _sharedMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            _sharedMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
+            Texture2D texture = ResolveSoftTexture();
+            if (_sharedMaterial.HasProperty("_BaseMap")) _sharedMaterial.SetTexture("_BaseMap", texture);
+            if (_sharedMaterial.HasProperty("_MainTex")) _sharedMaterial.SetTexture("_MainTex", texture);
+
+            return _sharedMaterial;
+        }
+
         /// <summary>中心が濃く、縁へ向かってぼける丸。一度作ったら使い回す</summary>
         private static Texture2D ResolveSoftTexture()
         {
-            if (_softTexture != null) return _softTexture;
+            if (_sharedTexture != null) return _sharedTexture;
 
             const int SIZE = 64;
-            _softTexture = new Texture2D(SIZE, SIZE, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            _sharedTexture = new Texture2D(SIZE, SIZE, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
 
             for (int y = 0; y < SIZE; y++)
             {
@@ -137,76 +264,12 @@ namespace ProjectKMP.Player
                     float alpha = Mathf.Clamp01(1.0f - distance);
 
                     // 二乗して縁を柔らかくする。そのままだと輪郭が硬く残る
-                    _softTexture.SetPixel(x, y, new Color(1.0f, 1.0f, 1.0f, alpha * alpha));
+                    _sharedTexture.SetPixel(x, y, new Color(1.0f, 1.0f, 1.0f, alpha * alpha));
                 }
             }
 
-            _softTexture.Apply();
-            return _softTexture;
-        }
-
-        public void Setup(Color color, float lifeSec, float startSize, float endSize)
-        {
-            _color = color;
-            _life = Mathf.Max(0.05f, lifeSec);
-            _startSize = startSize;
-            _endSize = endSize;
-
-            _renderer = GetComponent<Renderer>();
-
-            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (shader == null) shader = Shader.Find("Sprites/Default");
-
-            _materialInstance = new Material(shader);
-
-            // 半透明として描く。不透明のままだと四角い板が見えてしまう
-            if (_materialInstance.HasProperty("_Surface")) _materialInstance.SetFloat("_Surface", 1.0f);
-            if (_materialInstance.HasProperty("_SrcBlend")) _materialInstance.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            if (_materialInstance.HasProperty("_DstBlend")) _materialInstance.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            if (_materialInstance.HasProperty("_ZWrite")) _materialInstance.SetInt("_ZWrite", 0);
-
-            _materialInstance.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            _materialInstance.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-
-            // 何も貼らないと四角い板がそのまま見える。中心が濃く縁がぼけた丸を貼る
-            Texture2D texture = ResolveSoftTexture();
-            if (_materialInstance.HasProperty("_BaseMap")) _materialInstance.SetTexture("_BaseMap", texture);
-            if (_materialInstance.HasProperty("_MainTex")) _materialInstance.SetTexture("_MainTex", texture);
-
-            _renderer.sharedMaterial = _materialInstance;
-            _renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            _renderer.receiveShadows = false;
-
-            Apply(0.0f);
-        }
-
-        private void Update()
-        {
-            _elapsed += Time.deltaTime;
-
-            float t = _elapsed / _life;
-            if (t >= 1.0f) { Destroy(gameObject); return; }
-
-            Apply(t);
-        }
-
-        private void Apply(float t)
-        {
-            // 最初に一気に広がってから緩む。等速だと煙ではなく円が育つだけに見える
-            float eased = 1.0f - (1.0f - t) * (1.0f - t);
-            transform.localScale = Vector3.one * Mathf.Lerp(_startSize, _endSize, eased);
-
-            var color = new Color(_color.r, _color.g, _color.b, _color.a * (1.0f - t));
-
-            if (_materialInstance == null) return;
-
-            if (_materialInstance.HasProperty("_BaseColor")) _materialInstance.SetColor("_BaseColor", color);
-            if (_materialInstance.HasProperty("_Color")) _materialInstance.SetColor("_Color", color);
-        }
-
-        private void OnDestroy()
-        {
-            if (_materialInstance != null) Destroy(_materialInstance);
+            _sharedTexture.Apply();
+            return _sharedTexture;
         }
     }
 }
