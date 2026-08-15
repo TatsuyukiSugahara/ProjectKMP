@@ -30,11 +30,208 @@
 | 本番シーン | `Assets/Build/Scenes/`(Title / Lobby / InGame / Result) |
 | 作業用シーン | `Assets/_Sandbox/<担当者名>/` |
 
+**フォルダ名と名前空間は一致させる。** `Scripts/Core/` に置くなら `namespace ProjectKMP.Core`。
+ずれていても動くが、型を探すときにフォルダを頼りにできなくなる。
+
+## 設計(層の分けかた)
+
+入力・演出・状態を層として切り出し、依存の向きを一方通行に揃えている。
+層の境目は asmdef(アセンブリ定義)で区切ってあるので、**逆向きの参照はコンパイルの時点で通らない**。
+口約束ではなく、仕組みとして守られる。
+
+```
+Player / UI / Battle / Attack / ...   ← ゲーム本体(Assembly-CSharp)
+              ↓
+      ProjectKMP.Presentation         ← 演出
+              ↓
+      ProjectKMP.Core                 ← 入力・状態・共通の道具
+              ↓
+      Unity.InputSystem / R3
+```
+
+| 層 | asmdef | 置くもの | 参照してよい先 |
+|---|---|---|---|
+| Core | `ProjectKMP.Core` | 入力・状態・共通の道具 | InputSystem / R3 のみ |
+| Presentation | `ProjectKMP.Presentation` | 画面演出・音演出 | Core / UniTask |
+| ゲーム本体 | (なし) | 犬・ボス・UI・通信など | どちらも可 |
+
+### 入力は Core に集める
+
+操作の読み取りは `Core/GameInput.cs` にまとめてある。
+InputSystem の `InputAction` を1箇所で持ち、使う側は結果だけを見る。
+キーボード・パッド・画面タッチのどれで操作されたかを、各所が知らなくてよくなる。
+
+### 状態は R3 で受け渡す
+
+`Core/PlayerStatus.cs` が HP・クールダウン・死亡などを `ReactiveProperty` で持つ。
+外へは `ReadOnlyReactiveProperty` として公開するので、**書き換えられるのは持ち主だけ**。
+UI は購読するだけでよく、`Update()` で毎フレーム見に行かなくてよい。
+置き場は `Core/PlayerStatusHub.cs`。
+
+### 演出は Presentation へ出す
+
+`HitStop` `ScreenFlash` `ImpactFrame` `SkillCutin` `FriendBeamCutin` `BgmPlayer` `UiSoundPlayer` などは
+`Presentation/` にまとめた。もともと `UI/` にあった物も移してある。
+演出は「ゲームの都合を知らないまま呼ばれるだけ」の立場にしたいため。
+
+### Player と UI の循環をほどいた
+
+以前は `Player` と `UI` が互いを直接参照していた(Player→UI が5型、UI→Player が4型)。
+状態を Core の Model 経由にしたことで、**どちらも相手を知らない**関係になった。
+
+```
+Player/PlayerHealth.cs                  UI/InGame/PlayerHpHud.cs
+  Core.PlayerStatusHub.Local              PlayerStatus status = PlayerStatusHub.Local;
+    .SetHp(hp, maxHp)          ──→        status.CurrentHp.Subscribe(...)
+    .SetDead(isDead)           ──→        status.IsDead.Subscribe(...)
+    .SetRespawn(...)           ──→        status.RespawnRemainingSec.Subscribe(...)
+```
+
+書く側は誰が見ているか知らない。見る側は誰が書いたか知らない。
+間に立つ `PlayerStatus` だけが両方から見える。HUD を増やしても `Player` 側は変更不要になる。
+
+### 残っている循環
+
+層として切り出した `Core` と `Presentation` は、`ProjectKMP` 配下のどこも参照していない(参照は0)。
+一方、ゲーム本体の機能フォルダ同士には循環が残っている。
+
+| 組 |
+|---|
+| `Attack` ↔ `Player` |
+| `Battle` ↔ `Player` |
+| `Battle` ↔ `UI` |
+| `Battle` ↔ `Monster` |
+| `Dog` ↔ `Player` |
+| `Gorilla` ↔ `Player` |
+
+これらは担当が分かれている領域なので、同じやりかた(状態を Core の Model へ出し、
+互いを直接呼ばない)で順に解いていく方針。
+解けた組から `Player` `UI` などにも asmdef を切り、向きを仕組みとして固定する。
+
 ## Photon App ID の扱い
 
 このリポジトリは public のため、**Photon の App ID はコミットしない**。
 `PhotonServerSettings` に直接書かず、ローカルの設定から読み込む / ビルド時に注入する運用にしている。
 誤ってコミットしてしまった場合は、Photon 側で App ID を再発行すること(履歴からは消えない)。
+
+## 負荷対策(オブジェクトプール)
+
+砂埃のように何度も出る物は、毎回作って捨てると片付けの処理が積み上がり、時々画面が引っかかる。
+`Assets/Contents/Scripts/Core/GameObjectPool.cs` で使い回す仕組みを用意した。
+借りる側は `Rent()` と `Return()` を呼ぶだけで、足りなければ勝手に増える。
+
+### 使っている場所
+
+| 場所 | 使い回すもの | 先に用意する数 |
+|---|---|---|
+| `Player/RunDust.cs`(`DustPuff`) | 走ったときの砂埃 | 16 |
+| `Battle/Onomatopoeia.cs` | 「ガブッ！」などの擬音 | 8 |
+| `Battle/ShockwaveRing.cs` | 着地・爆発の衝撃波の輪 | 4 |
+| `Attack/DamagePopup.cs` | ダメージの数字 | 8 |
+| `Core/OneShotSound.cs` | 場所を指定して鳴らす音 | 8 |
+
+どれも「連鎖でまとめて出る」物。多人数と連鎖が重なると一度に何十個も湧くので、
+そのたびに作って捨てると、その瞬間だけ処理が跳ね上がる。
+
+`DamagePopup` だけは置き場を1つではなく **元になるプレハブごとに分けて持つ**(`Dictionary`)。
+技によって数字の見た目が違うため。借りた物でなければ今までどおり `Destroy` する作りにしてあるので、
+プレハブから直接置いた分と混ざっても壊れない。
+
+`OneShotSound` は Unity 標準の `PlayClipAtPoint` の置きかえでもある。
+標準のものは距離による減衰がきつく戦闘距離で聞こえないうえ、毎回 GameObject を作って捨てる。
+
+### 直したこと(砂埃を例に)
+
+以下は砂埃(`DustPuff`)の場合。他の4つも考えかたは同じ。
+
+| | 前 | 今 |
+|---|---|---|
+| 作りかた | `GameObject.CreatePrimitive` | 板1枚のメッシュを自前で組む |
+| コライダー | 毎回ついてくるので毎回消していた | そもそも作らない |
+| 材質 | 1つずつ持つ | 1つを共有し、濃さだけ `MaterialPropertyBlock` で上書き |
+| 使い終わり | `Destroy` | プールへ返す |
+
+材質を共有にしたことで、描画をまとめる効果も出ている(見た目の負荷も下がる)。
+
+### CreatePrimitive をやめた理由
+
+前はこう書いていた。
+
+```csharp
+var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
+go.name = "RunDust";
+
+// 当たり判定は要らない。付いたままだと自分の足を蹴ってしまう
+Collider collider = go.GetComponent<Collider>();
+if (collider != null) Destroy(collider);
+```
+
+`CreatePrimitive` は板を1枚作る手軽な関数だが、メッシュ・マテリアル・コライダーをまとめて付けてくる。
+自分でメッシュを組む手間を省く近道として使ったものの、砂埃のように何度も出る物には向いていなかった。
+
+コライダーは要らないだけではない。付いたままだと自分の足を蹴ってしまう。
+つまり **作ると壊れる物を、毎回作ってから消していた**。作ってすぐ消すのは一番無駄な流れになる。
+
+いまは頂点4つの板を自分で組んで1枚だけ共有しているので、コライダーは最初から存在しない。
+
+> **消しているコードがあったら、そもそも作らない方法を探す。**
+> 速くする工夫より、要らない処理を見つけるほうが効くことが多い。
+
+### CreatePrimitive の使い分け
+
+| 向いている | 向いていない |
+|---|---|
+| 試作や動作確認で1つ2つ置く | 実行中に繰り返し作る |
+| 当たり判定も欲しい | いらない部品まで付いてくると困る |
+
+`Assets/Contents/Scripts/Field/FieldBuilder.cs` の地面生成は前者にあたる。
+エディタ上で1回だけ作り、当たり判定も要るので `CreatePrimitive` のままでよい。ここは直さないこと。
+
+### 効果
+
+Profiler での比較(ひとりで計測)。
+
+| | 前 | 今 |
+|---|---|---|
+| GC Allocated In Frame(件数) | 74 | 1 |
+| GC Allocated In Frame(量) | 3.1 KB | 34 B |
+| Materials | 210 | 197 |
+
+エディタ上の計測なので、Managed Heap や Total Memory はエディタと Profiler 自身の使用分が大半を占める。
+そのため比較として意味があるのは **GC Allocated In Frame** の欄だけ。
+
+### 20人での試算
+
+砂埃は 0.09 秒ごとに1つなので、1人あたり毎秒およそ11個。20人なら毎秒220個になる。
+
+- 前: 毎秒220個の作成と破棄
+- 今: 最初の数十個だけ作り、あとは作成ゼロ
+
+### 使いかた
+
+同じように何度も出る物(当たった跡、はじけた粒など)を足すときは、
+新しく `Destroy` を書かず、このプールを使うこと。
+
+```csharp
+// 最初の1回だけ用意する。prewarm しておくと出はじめで引っかからない
+_pool = new GameObjectPool(CreateOne, 16);
+
+GameObject go = _pool.Rent();   // 借りる
+_pool.Return(go);               // 使い終わったら返す
+```
+
+参考にする実例は、作る物によって選ぶ。
+
+| 作る物 | 参考にするもの |
+|---|---|
+| コードで形から組む物 | `Player/RunDust.cs`(`DustPuff`) |
+| 線を並べて描く物 | `Battle/ShockwaveRing.cs` |
+| 文字を出す物 | `Battle/Onomatopoeia.cs` |
+| プレハブから出す物 | `Attack/DamagePopup.cs` |
+| 音を鳴らす物 | `Core/OneShotSound.cs` |
+
+使い回すときは **前回の状態が残る** ことに注意する。
+`DamagePopup` が元の大きさを最初に控えているのは、前回の拡大が残ったまま次に貸し出されるのを防ぐため。
 
 ## クレジット
 
