@@ -140,10 +140,20 @@ namespace ProjectKMP.UI
             }
         }
 
+        /// <summary>
+        /// いま選んでいる項目を外から選び直させる。
+        /// 何かを選んで戻ってきたとき、先頭に戻らず元の場所を保つために使う。
+        /// </summary>
+        public void SelectCurrent()
+        {
+            DropMissing();
+            Apply(true);
+            SelectCenter();
+        }
+
         private void OnEnable()
         {
             DropMissing();
-            _index = 0;
             Apply(true);
         }
 

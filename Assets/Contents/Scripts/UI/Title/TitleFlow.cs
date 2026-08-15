@@ -34,6 +34,9 @@ namespace ProjectKMP.UI.Title
         [SerializeField] private CanvasGroup _pressAnyKeyGroup;
         [SerializeField] private CanvasGroup _menuGroup;
         [SerializeField] private CanvasGroup _nameInputGroup;
+
+        [SerializeField, Tooltip("メニューの並び。戻ってきたときに元の位置を保つのに使う")]
+        private TitleMenuList _menuList;
         [SerializeField] private CanvasGroup _loadingGroup;
 
         [Header("メニュー")]
@@ -129,7 +132,12 @@ namespace ProjectKMP.UI.Title
             while (true)
             {
                 SetVisible(_menuGroup, true);
-                await GuardAsync(_menuGroup, _singlePlayButton, ct);
+
+                // 戻ってきたときは、選んでいた項目のままにする。
+                // 毎回いちばん上へ戻されると、同じ所へ行き直すのが面倒になる
+                await GuardAsync(_menuGroup, null, ct);
+
+                if (_menuList != null) _menuList.SelectCurrent();
 
                 MenuChoice choice = await WaitForMenuChoiceAsync(ct);
                 SetVisible(_menuGroup, false);
@@ -148,10 +156,36 @@ namespace ProjectKMP.UI.Title
 
                 // みんなで遊ぶ: なまえを入れてからマッチングへ
                 SetVisible(_nameInputGroup, true);
-                await GuardAsync(_nameInputGroup, _nameOkButton, ct);
-                if (_nameInputField != null) _nameInputField.ActivateInputField();
 
-                bool decided = await WaitForTwoChoiceAsync(_nameOkButton, _nameBackButton, ct);
+                // 名前を入れている間は、後ろのメニューに選択を奪わせない。
+                // 奪われると、入力欄も五十音のキーも選んだそばから外れてしまう
+                TitleOverlay.Push();
+
+                bool decided;
+
+                try
+                {
+                    await GuardAsync(_nameInputGroup, _nameOkButton, ct);
+
+                    // キーボードのときはそのまま打てるようにする。
+                    // パッドは五十音パネルを使うので、ここで入力欄を起こすと
+                    // カーソルだけ出て何も入らない状態になる
+                    if (_nameInputField != null && UI.InputModeTracker.Current != UI.InputMode.Gamepad)
+                    {
+                        UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(
+                            _nameInputField.gameObject);
+
+                        _nameInputField.ActivateInputField();
+                    }
+
+                    decided = await WaitForTwoChoiceAsync(_nameOkButton, _nameBackButton, ct);
+                }
+                finally
+                {
+                    // 途中で抜けても必ず戻す。戻し忘れるとメニューが動かなくなる
+                    TitleOverlay.Pop();
+                }
+
                 SetVisible(_nameInputGroup, false);
                 if (!decided) continue;
 

@@ -158,7 +158,31 @@ namespace ProjectKMP.UI
 
             if (_display != null && _nameField != null) _display.text = FormatDisplay(_nameField.text);
 
+            KeepSelectionInside();
             UpdateDeleteInput();
+        }
+
+        /// <summary>
+        /// 開いている間は、選択をパネルの中へ留める。
+        ///
+        /// 入力欄や後ろのボタンへ選択が移ると、パネルのキーを動かせなくなる。
+        /// 誰が奪ったかを追いかけるより、開いている側が取り返すほうが確実。
+        ///
+        /// マウスや指のときは何もしない。選択枠を出さない決まりと衝突するため。
+        /// </summary>
+        private void KeepSelectionInside()
+        {
+            if (InputModeTracker.Current != InputMode.Gamepad) return;
+            if (EventSystem.current == null || _root == null) return;
+
+            GameObject selected = EventSystem.current.currentSelectedGameObject;
+
+            // パネルの中のものが選ばれていれば、そのままでよい
+            if (selected != null && selected.transform.IsChildOf(_root.transform)) return;
+
+            if (_firstKey == null) return;
+
+            EventSystem.current.SetSelectedGameObject(_firstKey.gameObject);
         }
 
         private bool IsNameInputOpen()
@@ -216,11 +240,11 @@ namespace ProjectKMP.UI
 
             if (!shown) return;
 
-            // 開いた瞬間に最初の文字を選ぶ。選ばれていないとパッドで動かせない
-            if (_firstKey != null && EventSystem.current != null)
-            {
-                EventSystem.current.SetSelectedGameObject(_firstKey.gameObject);
-            }
+            if (EventSystem.current == null) return;
+
+            // 開いた時点で五十音の左上を選ぶ。
+            // このパネルはパッドのためのものなので、キーを選んでおけばすぐ動かせる
+            if (_firstKey != null) EventSystem.current.SetSelectedGameObject(_firstKey.gameObject);
         }
 
         // ---- 文字の出し入れ ------------------------------
@@ -303,6 +327,7 @@ namespace ProjectKMP.UI
             BuildGrid(rootRect, gridWidth);
             BuildTools(rootRect, gridWidth);
             WireNavigation();
+            WireOutside();
         }
 
         private void BuildGrid(RectTransform parent, float gridWidth)
@@ -428,13 +453,49 @@ namespace ProjectKMP.UI
                 navigation.selectOnLeft = _tools[(i - 1 + _tools.Count) % _tools.Count];
                 navigation.selectOnRight = _tools[(i + 1) % _tools.Count];
 
-                // 道具の列からは、対応するあたりの列へ戻る
+                // 道具は文字の列より数が多い。対応する列だけへ戻すと、
+                // はみ出したぶん(もどる・けってい)へ上下で行き来できなくなる。
+                //
+                // 上は近い列の一番下、下は同じ道具の列を一周させる。
+                // 下でも動けるようにしておくと、行き止まりに感じない
                 int column = NearestColumn(i);
                 navigation.selectOnUp = LastInColumn(column);
+
+                // 下は道具の列の中で一周させる。
+                // パネルの外へ抜けると、閉じ忘れたまま先へ進めてしまう
                 navigation.selectOnDown = FirstInColumn(column);
 
                 _tools[i].navigation = navigation;
             }
+
+            // 文字の一番下の行からは、真下の道具ではなく
+            // 左端の道具から順に届くようにする。
+            // こうしておけば、右へたどるだけで『けってい』まで必ず行ける
+            for (int column = 0; column < COLUMNS; column++)
+            {
+                var last = LastInColumn(column) as Button;
+                if (last == null) continue;
+
+                Navigation navigation = last.navigation;
+                navigation.selectOnDown = NearestTool(column);
+                last.navigation = navigation;
+            }
+        }
+
+        /// <summary>
+        /// 名前入力の部品と、五十音のパネルをつなぐ。
+        ///
+        /// この2つは別々に組まれているので、そのままでは行き来する道が無い。
+        /// 入力欄から下、決定と取り消しから上、それぞれの行き先を決めておく。
+        /// </summary>
+        private void WireOutside()
+        {
+            // パネルが閉じているときの行き来は、シーンで決めてある。
+            //
+            //   入力欄 ↓ もどる ←→ けってい
+            //
+            // ここで上書きすると、開いていない五十音のキーへ繋がってしまい、
+            // 行った先で何も選べなくなる。触らない。
         }
 
         /// <summary>同じ行を左右にたどる。端まで来たら反対の端から続ける</summary>

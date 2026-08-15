@@ -32,22 +32,35 @@ namespace ProjectKMP.UI
             EventSystem eventSystem = EventSystem.current;
             if (eventSystem == null) return;
 
-            // 遊び方が開いている間は口を出さない。後ろのボタンを選び直してしまう
-            if (TitleOverlay.IsOpen) return;
-
             if (InputModeTracker.Current != InputMode.Gamepad)
             {
-                // パッド以外では選択枠を出さない
-                if (eventSystem.currentSelectedGameObject != null) eventSystem.SetSelectedGameObject(null);
+                // パッド以外では選択枠を出さない。
+                //
+                // ただし文字を打つ欄は外さない。外すと打ち込みが止まり、
+                // キーボードで名前を入れられなくなる
+                if (eventSystem.currentSelectedGameObject == null) return;
+                if (IsTextField(eventSystem.currentSelectedGameObject)) return;
+
+                eventSystem.SetSelectedGameObject(null);
                 return;
             }
 
+            // すでに何かが選ばれていれば触らない。
+            // 前に出ている画面(遊び方・きろく・なまえ入力)が自分で選んだものを、
+            // ここで奪い返さないようにするため
             if (IsSelectionValid(eventSystem)) return;
 
             Selectable next = FindFirstUsable();
             if (next == null) return;
 
             eventSystem.SetSelectedGameObject(next.gameObject);
+        }
+
+        /// <summary>文字を打つ欄かどうか。打っている最中に選択を外さないために見る</summary>
+        private static bool IsTextField(GameObject selected)
+        {
+            return selected.GetComponent<TMPro.TMP_InputField>() != null
+                || selected.GetComponent<InputField>() != null;
         }
 
         /// <summary>いま選ばれているものが、まだ押せる状態で画面に出ているか</summary>
