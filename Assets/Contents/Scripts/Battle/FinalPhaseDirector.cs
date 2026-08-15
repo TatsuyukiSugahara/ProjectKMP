@@ -318,13 +318,8 @@ namespace ProjectKMP.Battle
             _banner.raycastTarget = false;
 
             // 画面のどこかに出ている文字からフォントを借りる
-            foreach (TMP_Text sample in FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            {
-                if (sample == null || sample.font == null) continue;
-
-                _banner.font = sample.font;
-                break;
-            }
+            TMP_FontAsset font = Presentation.RuntimeFont.Japanese();
+            if (font != null) _banner.font = font;
 
             _banner.fontMaterial.EnableKeyword("OUTLINE_ON");
             _banner.outlineWidth = 0.26f;

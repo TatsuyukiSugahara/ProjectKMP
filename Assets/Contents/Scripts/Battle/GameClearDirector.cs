@@ -45,6 +45,9 @@ namespace ProjectKMP.Battle
         [SerializeField, Min(0.0f), Tooltip("撃破からゲームクリア表示までの間(秒)。ボスが倒れるのを見せる時間")]
         private float _delayBeforeShowSec = 1.2f;
 
+        [SerializeField, Min(0.0f), Tooltip("締めのカットシーンの長さ(秒)。この後ゲームクリア表示へ移る")]
+        private float _cutinSeconds = 2.4f;
+
         [SerializeField, Min(0.0f), Tooltip("ゲームクリアを見せる時間(秒)。この後リザルトへ遷移する")]
         private float _showSeconds = 4.0f;
 
@@ -164,6 +167,17 @@ namespace ProjectKMP.Battle
 
             await UniTask.Delay(TimeSpan.FromSeconds(_delayBeforeShowSec), cancellationToken: ct);
 
+            // まず締めのカットシーン。題字をもう一度見せて、遊び終わりを締める
+            Vector3 bossPosition = gorillaAI != null ? gorillaAI.transform.position : Vector3.zero;
+            Presentation.FinishCutin.Play(bossPosition, ct);
+
+            // カットシーンが終わるまで待つ。
+            // 遅くしている最中なので実時間で数える。ゲーム内の時間だと待ちが伸びてしまう
+            await UniTask.Delay(
+                TimeSpan.FromSeconds(_cutinSeconds), DelayType.UnscaledDeltaTime, PlayerLoopTiming.Update, ct);
+
+            // そのあと『ゲームクリア』の表示へ移る。
+            // 題字と同時に出すと、二つの見せ場が重なって散らかる
             if (_ui != null) await _ui.ShowAsync(ct);
 
             await UniTask.Delay(TimeSpan.FromSeconds(_showSeconds), cancellationToken: ct);
@@ -171,6 +185,9 @@ namespace ProjectKMP.Battle
             // 全クライアントが自分の画面を黒にしてから遷移する。ゲストは暗転のままマスターの遷移を待つので、
             // 切り替わりの瞬間が見えず、リザルト側のフェードインへ自然につながる
             if (_ui != null) await _ui.FadeOutAsync(ct);
+
+            // 暗転してから片付ける。見えている間に消すと、途中で切れたように見える
+            Presentation.FinishCutin.Clear();
 
             // ルームに入っていればマスターの遷移に全員が追従する。オフライン確認時は自分で遷移する
             if (PhotonNetwork.InRoom)

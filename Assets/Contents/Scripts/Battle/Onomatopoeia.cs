@@ -34,9 +34,6 @@ namespace ProjectKMP.Battle
         /// <summary>使い回しの置き場。全員で1つを共有する</summary>
         private static GameObjectPool _pool;
 
-        /// <summary>一度見つけた日本語フォント。作るたびに探し直さないための控え</summary>
-        private static TMP_FontAsset _sharedFont;
-
         private TMP_Text _text;
         private float _elapsed;
         private float _duration = 0.6f;
@@ -93,7 +90,7 @@ namespace ProjectKMP.Battle
             text.outlineWidth = 0.28f;
             text.outlineColor = new Color32(30, 20, 10, 255);
 
-            TMP_FontAsset font = ResolveJapaneseFont();
+            TMP_FontAsset font = Presentation.RuntimeFont.Japanese();
             if (font != null) text.font = font;
 
             go.GetComponent<Onomatopoeia>()._text = text;
@@ -146,46 +143,5 @@ namespace ProjectKMP.Battle
             _text.color = new Color(color.r, color.g, color.b, alpha);
         }
 
-        /// <summary>
-        /// 日本語が出せるフォントを探す。
-        ///
-        /// 実行時に作る文字なので、手で割り当てる先が無い。
-        /// 画面に出ている文字から借りるが、英字だけのフォントを掴むと化ける。
-        /// </summary>
-        private static TMP_FontAsset ResolveJapaneseFont()
-        {
-            if (_sharedFont != null) return _sharedFont;
-
-            TMP_FontAsset firstFound = null;
-
-            foreach (TMP_Text text in FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            {
-                if (text == null || text.font == null) continue;
-
-                if (firstFound == null) firstFound = text.font;
-                if (!HasJapanese(text.font)) continue;
-
-                _sharedFont = text.font;
-                return _sharedFont;
-            }
-
-            // どれも確かめられなければ、最初に見つけたものを使う。
-            // 既定のフォントは英字だけのことが多く、そちらへ落とすと必ず化ける
-            _sharedFont = firstFound != null ? firstFound : TMP_Settings.defaultFontAsset;
-            return _sharedFont;
-        }
-
-        /// <summary>
-        /// 擬音に使う文字を出せるフォントか。
-        ///
-        /// 引数を付けずに調べると『いま焼き込まれている文字』しか見ないため、
-        /// 日本語を出せるフォントでも、まだ使っていない文字は無いと判定されてしまう。
-        /// </summary>
-        private static bool HasJapanese(TMP_FontAsset font)
-        {
-            return font.HasCharacter('ガ', true, true)
-                && font.HasCharacter('ッ', true, true)
-                && font.HasCharacter('ー', true, true);
-        }
     }
 }

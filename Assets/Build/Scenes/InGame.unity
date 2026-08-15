@@ -12737,11 +12737,12 @@ MonoBehaviour:
   _ui: {fileID: 2003179227}
   _enableFinishBlow: 1
   _finishTimeScale: 0.18
-  _finishSlowSec: 1.1
-  _finishRecoverSec: 0.5
+  _finishSlowSec: 1.7
+  _finishRecoverSec: 0.6
   _finishCameraPull: 3
-  _delayBeforeShowSec: 1.2
-  _showSeconds: 4
+  _delayBeforeShowSec: 0.1
+  _cutinSeconds: 2.2
+  _showSeconds: 2.2
   _resultSceneName: Result
 --- !u!4 &872934963
 Transform:
@@ -14870,6 +14871,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 134396327767117298, guid: 63ffd3b3697e246b8a7098a5e601d455, type: 3}
+      propertyPath: _finishLocalOffset.x
+      value: -0.6
+      objectReference: {fileID: 0}
     - target: {fileID: 5042047328410014477, guid: 63ffd3b3697e246b8a7098a5e601d455, type: 3}
       propertyPath: m_Name
       value: PF_UI_SkillCutin

@@ -67,6 +67,13 @@ namespace ProjectKMP.Presentation
         [SerializeField, Tooltip("集中線が流れる速さ")]
         private float _speedLineScrollSpeed = 2.2f;
 
+        [Header("締めの演出")]
+        [SerializeField, Tooltip("締めのときに犬を回す角度。90で横を向く")]
+        private float _finishYawDeg = 90.0f;
+
+        [SerializeField, Tooltip("締めのときに犬をずらす量。回すと枠から外れるので、見える位置へ寄せる")]
+        private Vector3 _finishLocalOffset = new Vector3(-0.6f, 0.0f, 0.0f);
+
         [Header("アニメ")]
         [SerializeField, Tooltip("カットインで再生するステート名")]
         private string _attackStateName = "Attack";
@@ -83,6 +90,9 @@ namespace ProjectKMP.Presentation
         private float _durationSec;
         private bool _playing;
 
+        /// <summary>ずらす前の犬の位置</summary>
+        private Vector3 _dogHomeLocalPosition;
+
         // ---- 公開API -------------------------------------
 
         /// <summary>シーンに置かれているカットイン。無ければ null</summary>
@@ -97,7 +107,20 @@ namespace ProjectKMP.Presentation
         /// </summary>
         public static void Play(float durationSec = 0f)
         {
-            if (_instance != null) _instance.PlayInternal(durationSec);
+            if (_instance != null) _instance.PlayInternal(durationSec, 0.0f, Vector3.zero);
+        }
+
+        /// <summary>
+        /// 向きを指定して出す。
+        ///
+        /// 締めの演出では横から噛みつく姿を見せたい。
+        /// カメラを動かすと画角の調整がやり直しになるので、犬のほうを回す。
+        /// </summary>
+        public static void PlayFinish(float durationSec)
+        {
+            if (_instance == null) return;
+
+            _instance.PlayInternal(durationSec, _instance._finishYawDeg, _instance._finishLocalOffset);
         }
 
         /// <summary>カットインをすぐ引っ込める(技がキャンセルされたときなど)</summary>
@@ -113,6 +136,9 @@ namespace ProjectKMP.Presentation
             _instance = this;
 
             if (_panel != null) _shownAnchoredPosition = _panel.anchoredPosition;
+
+            // ずらす前の位置を控える。毎回ここから測らないと、呼ぶたびにずれていく
+            if (_dogAnimator != null) _dogHomeLocalPosition = _dogAnimator.transform.localPosition;
             Hide();
         }
 
@@ -138,7 +164,7 @@ namespace ProjectKMP.Presentation
 
         // ---- 内部処理 ------------------------------------
 
-        private void PlayInternal(float durationSec)
+        private void PlayInternal(float durationSec, float yawDeg, Vector3 localOffset)
         {
             _durationSec = durationSec > 0f ? durationSec : _defaultDurationSec;
             _elapsedSec = 0f;
@@ -150,6 +176,12 @@ namespace ProjectKMP.Presentation
 
             if (_dogAnimator != null)
             {
+                // 指定された向きへ回す。横を向けると、噛みつく動きが分かりやすい
+                _dogAnimator.transform.localRotation = Quaternion.Euler(0.0f, yawDeg, 0.0f);
+
+                // 回すと体が枠から外れる。見える位置まで寄せ直す
+                _dogAnimator.transform.localPosition = _dogHomeLocalPosition + localOffset;
+
                 // 時間が止まっていてもモーションは動かしたい
                 _dogAnimator.updateMode = AnimatorUpdateMode.UnscaledTime;
                 _dogAnimator.speed = _animatorSpeed;

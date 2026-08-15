@@ -3,7 +3,8 @@
     "rootNamespace": "ProjectKMP",
     "references": [
         "ProjectKMP.Core",
-        "UniTask"
+        "UniTask",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
