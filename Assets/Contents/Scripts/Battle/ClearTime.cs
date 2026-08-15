@@ -80,11 +80,9 @@ namespace ProjectKMP.Battle
         /// <summary>1:23.45 の形にする。記録が無ければダッシュ表示</summary>
         public static string Format(double seconds)
         {
-            if (seconds < 0.0) return "-:--.--";
-
-            int minutes = (int)(seconds / 60.0);
-            double rest = seconds - minutes * 60.0;
-            return $"{minutes}:{rest:00.00}";
+            // 見せ方の計算は通信と関係がないので、切り出した側へ任せる。
+            // そちらは部屋へ入らなくても正しさを確かめられる
+            return ClearTimeText.Format(seconds);
         }
 
         // ---- 内部処理 ------------------------------------

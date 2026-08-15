@@ -406,10 +406,8 @@ namespace ProjectKMP.UI.InGame
         /// </summary>
         private int SegmentIndex(float total01)
         {
-            if (_segmentCount <= 1) return 1;
-            if (total01 <= 0.0f) return 0;
-
-            return Mathf.Clamp(Mathf.CeilToInt(total01 * _segmentCount), 1, _segmentCount);
+            // 計算は切り出した側にある。画面が無くても正しさを確かめられる
+            return ProjectKMP.Battle.BossSegments.Remaining(total01, _segmentCount);
         }
 
         /// <summary>
@@ -418,14 +416,7 @@ namespace ProjectKMP.UI.InGame
         /// </summary>
         private float SegmentRatio(float total01)
         {
-            if (_segmentCount <= 1) return Mathf.Clamp01(total01);
-            if (total01 <= 0.0f) return 0.0f;
-            if (total01 >= 1.0f) return 1.0f;
-
-            float scaled = total01 * _segmentCount;
-
-            // 切れ目のちょうど上は、削り切った側ではなく満タン側として見せる
-            return Mathf.Clamp01(scaled - (Mathf.CeilToInt(scaled) - 1));
+            return ProjectKMP.Battle.BossSegments.Ratio(total01, _segmentCount);
         }
 
         /// <summary>残りの本数を印に反映する</summary>

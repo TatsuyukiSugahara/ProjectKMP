@@ -67,9 +67,42 @@ jobs:
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "### 出すバージョン: ${tag}" >> "$GITHUB_STEP_SUMMARY"
 
+  # 配るものこそテストを通してから。落ちていれば Release は作られない
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-Test-${{ hashFiles('Assets/**','Packages/**','ProjectSettings/**') }}
+          restore-keys: |
+            Library-Test-
+            Library-
+
+      - uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          testMode: editmode
+          artifactsPath: test-results
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TestResults
+          path: test-results
+
   build:
     name: Build ${{ matrix.targetPlatform }}
-    needs: version
+    needs: [ version, test ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

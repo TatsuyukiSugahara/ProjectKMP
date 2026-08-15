@@ -41,9 +41,45 @@ jobs:
           fi
           echo "AppId は登録済みです"
 
+  # 組む前にテストを通す。落ちていれば build へ進まない
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-Test-${{ hashFiles('Assets/**','Packages/**','ProjectSettings/**') }}
+          restore-keys: |
+            Library-Test-
+            Library-
+
+      - uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          # いまあるのは EditMode のテストだけ。
+          # PlayMode は実行に時間がかかるので、増やすときに分けて考える
+          testMode: editmode
+          artifactsPath: test-results
+
+      # 落ちたときこそ中身を見たいので、失敗しても必ず残す
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TestResults
+          path: test-results
+
   build:
     name: Build ${{ matrix.targetPlatform }} (${{ inputs.mode }})
-    needs: check
+    needs: [ check, test ]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
