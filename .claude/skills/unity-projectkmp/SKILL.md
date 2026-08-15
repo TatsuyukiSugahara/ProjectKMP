@@ -1,11 +1,12 @@
 ---
 name: unity-projectkmp
-description: Unityプロジェクト「ProjectKMP」(Photon PUN2オンラインマルチ・オープンキャンパス教材)のコンテンツ作成ルール&C#コーディング規約。Unity MCP(Unity_RunCommand・Unity_AssetGeneration等)でスクリプト作成・アセット生成・プレハブ作成・シーン操作・フォルダ作成など、Unityプロジェクトに何かを追加・変更するときは、「ルール」と明示されていなくても必ず参照する。ファイルの作成場所・命名・Photon運用の規則を含む。
+description: Unityプロジェクト「ProjectKMP」(Photon PUN2オンラインマルチ・オープンキャンパス教材)のコンテンツ作成ルール&C#コーディング規約。Unity MCP(Unity_RunCommand・Unity_AssetGeneration等)でスクリプト作成・アセット生成・プレハブ作成・シーン操作・フォルダ作成など、Unityプロジェクトに何かを追加・変更するときは、「ルール」と明示されていなくても必ず参照する。ファイルの作成場所・命名・Photon運用・設計(MVP/プール)の規則を含む。
 ---
 
 # ProjectKMP コンテンツ作成 & コーディングルール
 
 ProjectKMP(Unity / Photon PUN2 / UniTask / R3)での作業規約。Unity MCP経由の操作はすべてこのルールに従う。
+**絶対ルール(編集禁止フォルダ・Photon AppId・依存の向きなど)はリポジトリ直下の `CLAUDE.md` にある。必ず併読する。**
 
 ---
 
@@ -24,7 +25,10 @@ ProjectKMP(Unity / Photon PUN2 / UniTask / R3)での作業規約。Unity MCP経�
 | 作成するもの | 作成場所 | 例 |
 |---|---|---|
 | C#スクリプト(機能) | `Assets/Contents/Scripts/<機能名>/` | `Scripts/Monster/MonsterAI.cs` |
-| C#スクリプト(共通基盤) | `Assets/Contents/Scripts/Core/` | SceneLoader, ServiceLocator, Sync系 |
+| C#スクリプト(共通基盤) | `Assets/Contents/Scripts/Core/` | GameInput, PlayerStatus, GameObjectPool |
+| 演出・音の部品 | `Assets/Contents/Scripts/Presentation/` | HitStop, ScreenFlash, BgmPlayer |
+| UI の Presenter | `Assets/Contents/Scripts/UI/Presenters/` | `SkillButtonPresenter.cs` |
+| EditModeテスト | `Assets/Tests/EditMode/` | `BossSegmentsTests.cs` |
 | プレハブ | `Assets/Contents/Prefabs/<機能名>/` | `Prefabs/Monster/PF_Monster_Slime.prefab` |
 | **ネットワーク生成プレハブ** | `Assets/Resources/NetworkPrefabs/` | `PhotonNetwork.Instantiate` 対象は**ここ必須** |
 | モデル・テクスチャ・マテリアル | `Assets/Contents/Art/<機能名>/` | `Art/Monster/TEX_Monster_Slime_Albedo.png` |
@@ -37,12 +41,13 @@ ProjectKMP(Unity / Photon PUN2 / UniTask / R3)での作業規約。Unity MCP経�
 | プロジェクト設定類 | `Assets/Settings/` | |
 
 - 機能名フォルダは種類をまたいで**同じ名前**を使う(`Scripts/Monster` と `Prefabs/Monsters` の揺れ禁止)
+- **フォルダ名と名前空間は一致させる**(`Scripts/Core/` なら `namespace ProjectKMP.Core`)
 - 機能名フォルダは中身ができるタイミングで作る。空フォルダの量産禁止
-- 現在の機能名: `Core`(=旧GameFlow/Sync/Utility) / `Network` / `Monster`。**新しい機能名を切る場合はユーザーに確認**
+- 現在の機能名: `Attack` `Battle` `Core` `Dog` `Field` `GameFlow` `Gorilla` `Monster` `Network` `Player` `Presentation` `Sync` `Turtle` `UI` `Utility`。**新しい機能名を切る場合はユーザーに確認**
 
 ### 編集禁止フォルダ
 
-`Assets/Photon/` `Assets/TextMesh Pro/` `Assets/Packages/` などサードパーティ製は**読み取りのみ・編集禁止**。
+`Assets/Photon/` `Assets/TextMesh Pro/` `Assets/Packages/` などサードパーティ製は**読み取りのみ・編集禁止**(詳細は CLAUDE.md)。
 
 ## 2. アセット命名
 
@@ -69,7 +74,7 @@ ProjectKMP(Unity / Photon PUN2 / UniTask / R3)での作業規約。Unity MCP経�
 - asyncメソッド: `Async` サフィックス + `CancellationToken` を受け取る。`async void` 禁止(`UniTask` / `UniTaskVoid` を使う)
 - publicクラス・publicメソッドに日本語 `<summary>` コメント必須。実装内コメントは「なぜ」を書く
 - ログ: `Debug.Log($"[機能名] メッセージ")` 形式
-- namespace: 新規ファイルは `namespace ProjectKMP.<機能名>`
+- namespace: 新規ファイルは `namespace ProjectKMP.<機能名>`(フォルダ名と一致させる)
 - セクション区切り: `// ---- 公開API -------------` スタイル(NetworkManager準拠)
 - 非同期は UniTask、イベント購読は R3(`ReactiveProperty` / `Subscribe`)。コルーチンより UniTask を優先
 - `Update()` でのポーリングより、R3 の購読ベースを優先
@@ -101,21 +106,67 @@ namespace ProjectKMP.Monster
 }
 ```
 
-## 4. Photon(PUN2)運用
+## 4. 設計パターン(作るものに応じて従う)
+
+依存の向きの全体像と禁止事項は CLAUDE.md。ここでは「作るときの手順」を示す。
+
+### 状態を増やすとき(Model)
+
+1. `Core/PlayerStatus.cs` に `ReactiveProperty` を足し、外へは `ReadOnlyReactiveProperty` で公開する
+2. 書き込み用の `SetXxx()` を用意し、**書くのは状態の持ち主(Player側)だけ**
+3. 位置が要る相手は値を写し取らず `Transform` のまま持たせる(写すと毎フレーム更新係が要る)
+
+### UI を増やすとき(MVP)
+
+- **View**(`UI/` のボタン・HUD): 渡された値で見た目を作るだけ。状態を知らない
+- **Presenter**(`UI/Presenters/`): `PlayerStatusHub.Local` を購読し、判断(計算・分岐)をして View へ結果を渡す
+- 表示の起動・配線は `UI/InGame/InGameHudBootstrap.cs` に集める
+- **UI から Player を、Player から UI を直接参照しない**。必要になったら状態を Model へ足す
+
+### 何度も出る物を作るとき(オブジェクトプール)
+
+作って `Destroy` の繰り返しは書かず、`Core/GameObjectPool` で使い回す。
+
+```csharp
+_pool = new GameObjectPool(CreateOne, 16);  // 最初の1回。prewarm で出はじめの引っかかりを防ぐ
+GameObject go = _pool.Rent();               // 借りる
+_pool.Return(go);                           // 使い終わったら返す
+```
+
+| 作る物 | 参考にする実例 |
+|---|---|
+| コードで形から組む物 | `Player/RunDust.cs`(`DustPuff`) |
+| 線を並べて描く物 | `Battle/ShockwaveRing.cs` |
+| 文字を出す物 | `Battle/Onomatopoeia.cs` |
+| プレハブから出す物 | `Attack/DamagePopup.cs` |
+| 音を鳴らす物 | `Core/OneShotSound.cs` |
+
+- `GameObject.CreatePrimitive` を繰り返し生成に使わない(コライダーが付いてきて、消す手間と無駄が出る)。試作で1つ2つ置くのは可
+- マテリアルは共有し、個体差は `MaterialPropertyBlock` で上書きする
+- **使い回しは前回の状態が残る**。大きさ・色などは貸し出し時に初期化する(`DamagePopup` の `_originalScale` が前例)
+
+### テストを書くとき
+
+- 場所は `Assets/Tests/EditMode/`。asmdef は `ProjectKMP.Core` 参照・`includePlatforms: ["Editor"]`・`defineConstraints: ["UNITY_INCLUDE_TESTS"]`
+- **テストしたいロジックは Core に置く**(計算・整形・記録など、Unity のシーンに依存しない形に切り出す)
+- 実行はユーザーに Test Runner(Window > General > Test Runner)での Run All を依頼する。CI でも editmode テストが走る
+
+## 5. Photon(PUN2)運用
 
 - `PhotonNetwork.Instantiate` するプレハブは `Assets/Resources/NetworkPrefabs/` に置く(PUN2の仕様。それ以外の場所では実行時に生成失敗する)
 - Resources の用途は上記のみ。他のアセットを Resources に置かない
 - ゲーム状態の変更(HP・生成・破壊)は **MasterClient のみ**。`SyncObject<T>.SetValue()` で全員に同期する
 - ゲスト側からの直接変更・独自RPCの追加は原則禁止。RPCが必要な設計を求められたら、まず SyncObject で実現できないかを検討し、ユーザーに相談する
 - 同期データクラスは `ISyncableData` を実装(`Serialize`/`Deserialize` で Hashtable 変換)
+- **AppId の扱いは CLAUDE.md**(コミット禁止・専用メニューから入力・PUN Wizard 使用禁止)
 
-## 5. シーン運用(Unity MCP操作時の特則)
+## 6. シーン運用(Unity MCP操作時の特則)
 
 - `Build/Scenes/` の4シーン(Title/Lobby/Battle/Result)は「1シーン=1担当者」制。**Unity MCP からこれらのシーンを変更する場合は、実行前に必ずユーザーへ確認する**(現在開いているシーンが Build/Scenes 配下かどうかを先に確認)
 - シーンへの機能追加はプレハブ経由が原則。オブジェクトを直接シーンに置くのではなく、プレハブ化して組み込む
 - 動作確認用のオブジェクト配置は `_Sandbox` のシーンで行う
 
-## 6. Unity MCP 操作手順
+## 7. Unity MCP 操作手順
 
 ### スクリプト作成(Unity_RunCommand)
 
@@ -133,6 +184,8 @@ namespace ProjectKMP.Monster
 ### 禁止事項
 
 - 編集禁止フォルダ(§1)配下への書き込み
-- `Build/Scenes/` の無断変更(§5)
+- `Build/Scenes/` の無断変更(§6)
 - 作成場所が不明なままの作成(§0)
-- `Resources` 直下へのネットワークプレハブ以外の配置(§4)
+- `Resources` 直下へのネットワークプレハブ以外の配置(§5)
+- Player ↔ UI の直接参照の追加(§4)
+- `PhotonServerSettings.asset` への AppId 書き込み(CLAUDE.md)
