@@ -1,7 +1,9 @@
-# ProjectKMP
+# がぶっとバスター (ProjectKMP)
 
-オープンキャンパス展示用の、オンラインマルチプレイ対戦ゲーム。
-犬になって、みんなでボスに立ち向かう。
+<!-- TODO: ここにプレイ全体が伝わる GIF を1枚 (docs/hero.gif を想定) -->
+
+オープンキャンパス展示用の、オンライン協力ボスバトル。
+犬になって、最大20人でボスに立ち向かう。Windows / Android 対応。
 
 ## ゲームの特徴
 
@@ -10,28 +12,42 @@
 - 元気玉やビームで木と草を巻き込み、連鎖破壊を起こせる
 - リザルトでは順位ではなく、必殺技への参加や攻撃など一人ひとりの活躍をほめる
 
+<!-- TODO: スクリーンショット 2〜3枚 (わんぱくバースト / 20人プレイ / リザルト。docs/ に置く) -->
+
+## 技術ハイライト
+
+- **層の分離を asmdef で強制** — 依存の向きが逆だとコンパイルが通らない。口約束にしない
+- **MVP + R3** — Player と UI の循環依存を解消。状態は Model 経由、View は値を受けるだけ
+- **オブジェクトプール** — 1フレームの GC 割り当てを 3.1 KB → 34 B(約1/90)に削減
+- **Photon AppId をリポジトリに置かない** — public リポジトリのため、エディタ注入 + CI 引数で運用
+- **GitHub Actions** — EditMode テスト25件 → マルチプラットフォームビルド → リリース作成まで自動化
+
+## 開発体制
+
+- 2人 / 約2週間(実働 約1週間)
+- 担当分け: ボス・敵まわり 1名 / それ以外(設計・通信・プレイヤー・UI・演出・負荷対策・CI) 1名
+
+## あそびかた
+
+### ひとりで遊ぶ(AppId 不要)
+
+1. Unity 6000.3.14f1 でプロジェクトを開く
+2. `Assets/Build/Scenes/Title.unity` を開いて再生
+3. メニューから「ひとりで遊ぶ」を選ぶ(通信しないのですぐ始まる)
+
+起動時に「AppId が入っていません」という警告が出るが、ひとり用では無視してよい。
+
+### みんなで遊ぶ(自分の AppId が必要)
+
+このリポジトリに AppId は含まれていない(理由は後述)。
+[Photon ダッシュボード](https://dashboard.photonengine.com/)で **Realtime** の App を無料作成し、
+Unity メニュー `ProjectKMP > Photon > AppId を いれる` から自分の AppId を保存すると、マルチプレイが有効になる。
+
 ## 開発環境
 
 - Unity 6000.3.14f1 / Universal Render Pipeline
 - Photon PUN2(通信) / UniTask(非同期) / R3(イベント) / TextMesh Pro(文字)
-
-## フォルダ構成
-
-「種類 → 機能」の順で分ける。種類フォルダの直下には置かず、必ず機能名のフォルダを1階層はさむ。
-
-| 置くもの | 場所 |
-|---|---|
-| C#スクリプト | `Assets/Contents/Scripts/<機能名>/` |
-| プレハブ | `Assets/Contents/Prefabs/<機能名>/` |
-| ネットワーク生成プレハブ | `Assets/Resources/NetworkPrefabs/` |
-| モデル・テクスチャ・マテリアル | `Assets/Contents/Art/<機能名>/` |
-| UIスプライト | `Assets/Contents/UI/Sprites/` |
-| 効果音・BGM | `Assets/Contents/Audio/SE/` `Assets/Contents/Audio/BGM/` |
-| 本番シーン | `Assets/Build/Scenes/`(Title / Lobby / InGame / Result) |
-| 作業用シーン | `Assets/_Sandbox/<担当者名>/` |
-
-**フォルダ名と名前空間は一致させる。** `Scripts/Core/` に置くなら `namespace ProjectKMP.Core`。
-ずれていても動くが、型を探すときにフォルダを頼りにできなくなる。
+- Unity Test Framework(EditModeテスト) / GitHub Actions(CI)
 
 ## 設計(層の分けかた)
 
@@ -142,12 +158,6 @@ View が状態を知らないので、見た目を差し替えても計算側に
 解けた組から `Player` `UI` などにも asmdef を切り、向きを仕組みとして固定する。
 
 現状の詳細と解決方針はリポジトリ直下の `CLAUDE.md`(設計の節)に置いてある。
-
-## Photon App ID の扱い
-
-このリポジトリは public のため、**Photon の App ID はコミットしない**。
-`PhotonServerSettings` に直接書かず、ローカルの設定から読み込む / ビルド時に注入する運用にしている。
-誤ってコミットしてしまった場合は、Photon 側で App ID を再発行すること(履歴からは消えない)。
 
 ## 負荷対策(オブジェクトプール)
 
@@ -267,6 +277,56 @@ _pool.Return(go);               // 使い終わったら返す
 
 使い回すときは **前回の状態が残る** ことに注意する。
 `DamagePopup` が元の大きさを最初に控えているのは、前回の拡大が残ったまま次に貸し出されるのを防ぐため。
+
+## テストと CI
+
+### テスト
+
+`Assets/Tests/EditMode/` に EditMode テストが25件(記録の保存・ボスHPの分割計算・タイム表示の整形)。
+**テストしたいロジックは `Core` へ切り出す**方針にしている。テスト用アセンブリから見えるのは
+`ProjectKMP.Core` だけなので、シーンや通信に依存しないロジックが自然と Core へ集まる。
+
+### CI(GitHub Actions)
+
+| ワークフロー | 起動 | 内容 |
+|---|---|---|
+| Build | 手動(Actions タブ) | あそびかた(ひとり用/通信あり)と機種(Windows/Android)を選んでビルド |
+| Release | 手動 or `v*` タグ | バージョンを決めてビルドし、GitHub Releases へ公開。**ひとり用固定** |
+
+- どちらも **EditMode テストが通らないとビルドへ進まない**
+- 通信ありビルドの AppId は GitHub Secret(`PHOTON_APP_ID`)から起動引数で注入する。リポジトリには置かない
+- Release は配布物がひとり用なので AppId 不要。Secret 未登録でも動く
+
+## Photon App ID の扱い
+
+このリポジトリは public のため、**Photon の App ID はコミットしない**。
+`PhotonServerSettings.asset` の AppId 欄は**空が正しい状態**。
+
+- 入力: Unity メニュー `ProjectKMP > Photon > AppId を いれる`(この端末だけに保存される)
+- 注入: 再生時とビルド時にエディタ拡張が自動で流し込み、終わったら消す
+- CI: 起動引数 `-kmpPhotonAppId` で渡す(上記の Secret)
+- PUN 標準の Setup Wizard は使わない(アセットへ直書きされ、自動で消されるため)
+
+誤ってコミットしてしまった場合は、Photon 側で App を作り直して AppId を差し替えること(履歴からは消えない)。
+
+## フォルダ構成
+
+「種類 → 機能」の順で分ける。種類フォルダの直下には置かず、必ず機能名のフォルダを1階層はさむ。
+
+| 置くもの | 場所 |
+|---|---|
+| C#スクリプト | `Assets/Contents/Scripts/<機能名>/` |
+| プレハブ | `Assets/Contents/Prefabs/<機能名>/` |
+| ネットワーク生成プレハブ | `Assets/Resources/NetworkPrefabs/` |
+| モデル・テクスチャ・マテリアル | `Assets/Contents/Art/<機能名>/` |
+| UIスプライト | `Assets/Contents/UI/Sprites/` |
+| 効果音・BGM | `Assets/Contents/Audio/SE/` `Assets/Contents/Audio/BGM/` |
+| EditModeテスト | `Assets/Tests/EditMode/` |
+| 本番シーン | `Assets/Build/Scenes/`(Title / Lobby / InGame / Result) |
+| 作業用シーン | `Assets/_Sandbox/<担当者名>/` |
+
+**フォルダ名と名前空間は一致させる。** `Scripts/Core/` に置くなら `namespace ProjectKMP.Core`。
+ずれていても動くが、型を探すときにフォルダを頼りにできなくなる。
 
 ## クレジット
 
