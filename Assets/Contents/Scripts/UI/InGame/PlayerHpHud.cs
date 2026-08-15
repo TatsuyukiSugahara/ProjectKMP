@@ -1,18 +1,19 @@
 using System.Collections.Generic;
-using System.Threading;
-using Cysharp.Threading.Tasks;
 using ProjectKMP.Battle;
-using ProjectKMP.Player;
+using ProjectKMP.Core;
 using R3;
 using UnityEngine;
 
 namespace ProjectKMP.UI.InGame
 {
     /// <summary>
-    /// 自分のプレイヤーが生成されるのを待って、HPゲージとリスポーンカウントダウンをつなぐ。
-    /// 他プレイヤーのHPは表示しない(自分が所有する PlayerHealth だけを購読する)。
-    /// リスポーンしてもプレイヤーのオブジェクトは作り直されないため、購読は一度だけでよい。
-    /// カットシーン中(BattlePlayGate が false の間)はHUD全体を隠す。
+    /// 自分のHPと、倒れたときの復活待ちを表示する。
+    ///
+    /// プレイヤーの部品を探しに行かず、用意された状態だけを見る。
+    /// ネットワークで遅れて生まれる相手を待つ必要がなく、
+    /// 遊びの処理が変わっても、この表示は影響を受けない。
+    ///
+    /// カットシーン中は表示ごと隠す。
     /// </summary>
     public class PlayerHpHud : MonoBehaviour
     {
@@ -40,7 +41,7 @@ namespace ProjectKMP.UI.InGame
             // カットシーン中はHUDごと隠す(購読時に現在値も流れるので初期状態もそろう)
             _subscriptions.Add(BattlePlayGate.OnChanged.Subscribe(SetVisible));
 
-            BindAsync(destroyCancellationToken).Forget();
+            Bind();
         }
 
         private void OnDestroy()
@@ -54,47 +55,47 @@ namespace ProjectKMP.UI.InGame
         private void SetVisible(bool visible)
         {
             if (_group == null) return;
+
             _group.alpha = visible ? 1.0f : 0.0f;
         }
 
-        /// <summary>自分のキャラはネットワーク生成で遅れて現れるので、見つかるまで待ってからつなぐ</summary>
-        private async UniTaskVoid BindAsync(CancellationToken ct)
+        /// <summary>
+        /// 状態の変化を受け取るようにする。
+        /// 待つ必要が無いので、その場でつなげてしまえる。
+        /// </summary>
+        private void Bind()
         {
-            PlayerHealth local = null;
-            while (local == null)
-            {
-                await UniTask.Yield(PlayerLoopTiming.Update, ct);
-                local = FindLocalPlayerHealth();
-            }
+            PlayerStatus status = PlayerStatusHub.Local;
 
-            _subscriptions.Add(local.HpChanged.Subscribe(hp =>
-            {
-                if (_gauge != null) _gauge.SetHealth(hp, local.MaxHp);
-            }));
+            // 体力は現在値と上限のどちらが変わっても描き直す
+            _subscriptions.Add(status.CurrentHp.Subscribe(hp => ApplyHp(hp, status.MaxHp.CurrentValue)));
+            _subscriptions.Add(status.MaxHp.Subscribe(max => ApplyHp(status.CurrentHp.CurrentValue, max)));
 
-            _subscriptions.Add(local.Died.Subscribe(_ =>
-            {
-                if (_countdown != null) _countdown.Show(local.RespawnDelaySec);
-            }));
+            // 倒れた瞬間に数え始め、起き上がったら片付ける
+            _subscriptions.Add(status.IsDead.Subscribe(dead => ApplyDead(dead, status.RespawnDelaySec.CurrentValue)));
 
-            _subscriptions.Add(local.RespawnRemainingSec.Subscribe(sec =>
+            _subscriptions.Add(status.RespawnRemainingSec.Subscribe(sec =>
             {
-                if (_countdown != null && local.IsDead) _countdown.UpdateRemaining(sec);
-            }));
+                if (_countdown == null || !status.IsDead.CurrentValue) return;
 
-            _subscriptions.Add(local.Revived.Subscribe(_ =>
-            {
-                if (_countdown != null) _countdown.Hide();
+                _countdown.UpdateRemaining(sec);
             }));
         }
 
-        private PlayerHealth FindLocalPlayerHealth()
+        private void ApplyHp(int current, int max)
         {
-            foreach (var health in FindObjectsByType<PlayerHealth>(FindObjectsSortMode.None))
-            {
-                if (health.photonView != null && health.photonView.IsMine) return health;
-            }
-            return null;
+            // 上限が入る前は描かない。0/0 が一瞬映るのを避ける
+            if (_gauge == null || max <= 0) return;
+
+            _gauge.SetHealth(current, max);
+        }
+
+        private void ApplyDead(bool dead, float delaySec)
+        {
+            if (_countdown == null) return;
+
+            if (dead) _countdown.Show(delaySec);
+            else _countdown.Hide();
         }
     }
 }

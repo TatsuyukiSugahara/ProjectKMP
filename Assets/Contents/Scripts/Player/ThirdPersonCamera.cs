@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using ProjectKMP.UI;
 
 namespace ProjectKMP.Player
 {
@@ -61,12 +60,6 @@ namespace ProjectKMP.Player
         [Header("ターゲットカメラ")]
         [SerializeField, Tooltip("ボタンでボスの方向にカメラを固定できるようにする")]
         private bool _enableTargetCamera = true;
-
-        [SerializeField, Tooltip("Fキーで切り替える")]
-        private bool _useFKey = true;
-
-        [SerializeField, Tooltip("ゲームパッドの右スティック押し込みで切り替える")]
-        private bool _useGamepadStickPress = true;
 
         [SerializeField, Min(0.0f), Tooltip("狙いへ向き直る速さ(度/秒)。大きいほど機敏だが酔いやすい")]
         private float _lockTurnSpeedDeg = 360.0f;
@@ -267,28 +260,15 @@ namespace ProjectKMP.Player
         /// </summary>
         private void ReadRotationInput()
         {
-            float input = 0.0f;
-
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard != null)
-            {
-                if (keyboard.rightArrowKey.isPressed) input += 1.0f;
-                if (keyboard.leftArrowKey.isPressed) input -= 1.0f;
-            }
-
-            Gamepad gamepad = Gamepad.current;
-            if (gamepad != null)
-            {
-                Vector2 stick = gamepad.rightStick.ReadValue();
-                if (stick.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) input += stick.x;
-            }
+            // 左右だけを使う。見下ろし角は固定なので、縦の入力は捨てる
+            Vector2 look = Core.GameInput.Look;
+            float input = Mathf.Abs(look.x) > STICK_DEAD_ZONE ? look.x : 0.0f;
 
             // カメラの操作は、ゲームが遅くなっても同じ速さで効いたほうが素直
             _yawDeg += input * _yawSpeedDeg * Time.unscaledDeltaTime;
 
             // スマホは画面をなぞって回す。指の横移動だけを使い、縦のなぞりは無視する
-            TouchControls touch = TouchControls.Instance;
-            if (touch != null) _yawDeg += touch.LookDelta.x * _touchLookSensitivity;
+            _yawDeg += Core.GameInput.TouchLookDelta.x * _touchLookSensitivity;
 
             _pitchDeg = _fixedPitchDeg;
         }
@@ -298,21 +278,11 @@ namespace ProjectKMP.Player
         {
             if (!_enableTargetCamera) return;
 
-            bool pressed = false;
+            // 読み取り口が押した瞬間だけを返すので、こちらで見分ける必要はない
+            if (Core.GameInput.TargetPressed) ToggleLockOn();
 
-            Keyboard keyboard = Keyboard.current;
-            if (_useFKey && keyboard != null && keyboard.fKey.isPressed) pressed = true;
-
-            Gamepad gamepad = Gamepad.current;
-            if (_useGamepadStickPress && gamepad != null && gamepad.rightStickButton.isPressed) pressed = true;
-
-            TouchControls touch = TouchControls.Instance;
-            if (touch != null && touch.TargetHeld) pressed = true;
-
-            // 押しっぱなしで切り替わり続けないよう、離してから次を受け付ける
-            if (pressed && !_togglePressedLastFrame) ToggleLockOn();
-
-            _togglePressedLastFrame = pressed;
+            // 注目している相手を画面へ伝える。画面はカメラを探しに来なくてよくなる
+            Core.PlayerStatusHub.Local.SetLockTarget(IsLockedOn ? LockTarget : null);
 
             // 相手が倒れて消えたら自動で解く。見えないものを見続けても仕方がない
             if (_lockTarget != null && !_lockTarget.gameObject.activeInHierarchy) _lockTarget = null;

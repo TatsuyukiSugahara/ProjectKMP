@@ -187,6 +187,28 @@ namespace ProjectKMP.Player
             _isInvincible = false;
         }
 
+        /// <summary>
+        /// 自分の状態を、画面が見る場所へ流し込む。
+        ///
+        /// 画面がこの部品を探しに来ると、生まれる順番に左右されて不安定になる。
+        /// こちらから渡しておけば、画面は用意された場所を見るだけで済む。
+        ///
+        /// 流すのは操作している本人のぶんだけ。他の人の体力は画面に出さない。
+        /// </summary>
+        private void PublishStatus()
+        {
+            if (!photonView.IsMine) return;
+
+            Core.PlayerStatusHub.Local.SetHp(_hp.Value, _maxHp);
+            Core.PlayerStatusHub.Local.SetDead(_isDead);
+            Core.PlayerStatusHub.Local.SetRespawn(_respawnRemainingSec.Value, _respawnDelaySec);
+        }
+
+        private void Update()
+        {
+            PublishStatus();
+        }
+
         private void OnDestroy()
         {
             CancelKnockback();

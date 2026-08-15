@@ -95,9 +95,30 @@ namespace ProjectKMP.UI
             if (_diveButton != null) _diveButton.SetVisible(true);
         }
 
+        /// <summary>
+        /// 画面のボタンの状態を読み取り口へ渡す。
+        ///
+        /// 遊びの処理が画面のボタンを直接見に行くと、画面の作りに縛られてしまう。
+        /// こちらから渡す形にすれば、読む側はどこから来た入力かを知らなくてよい。
+        /// </summary>
+        private void Update()
+        {
+            Core.GameInput.PushTouch(
+                MoveValue,
+                LookDelta,
+                AttackHeld,
+                SkillHeld,
+                EnergyBallHeld,
+                DiveHeld,
+                TargetHeld);
+        }
+
         private void OnDestroy()
         {
             if (Instance == this) Instance = null;
+
+            // 場面を抜けたあとに押しっぱなしと見なされないよう、状態を消しておく
+            Core.GameInput.ClearTouch();
         }
     }
 }

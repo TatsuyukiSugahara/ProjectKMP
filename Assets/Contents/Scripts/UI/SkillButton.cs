@@ -1,4 +1,3 @@
-using ProjectKMP.Player;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -20,13 +19,13 @@ namespace ProjectKMP.UI
         /// <summary>クールタイム表示の参照元にするスキル</summary>
         public enum CooldownSource
         {
-            /// <summary>ビームスキル(PlayerBeamSkill)</summary>
+            /// <summary>ビーム</summary>
             Beam,
 
-            /// <summary>元気玉スキル(PlayerEnergyBallSkill)</summary>
+            /// <summary>必殺技(元気玉)</summary>
             EnergyBall,
 
-            /// <summary>とびこみ(PlayerDiveSkill)</summary>
+            /// <summary>とびこみ</summary>
             Dive,
         }
 
@@ -136,7 +135,7 @@ namespace ProjectKMP.UI
             UpdatePressVisual();
         }
 
-        /// <summary>押した瞬間。押している間の状態は PlayerBeamSkill が IsHeld で読み取る</summary>
+        /// <summary>押した瞬間。押している間の状態は IsHeld から読み取られる</summary>
         public void OnPointerDown(PointerEventData eventData)
         {
             if (_activePointerId != INVALID_POINTER_ID) return;
@@ -198,22 +197,21 @@ namespace ProjectKMP.UI
             }
         }
 
-        /// <summary>参照先のスキルからクールタイムの残り具合を拾う</summary>
+        /// <summary>
+        /// クールタイムの残り具合を拾う。
+        ///
+        /// 技そのものではなく、用意された状態から読む。
+        /// 技が生まれるのを待つ必要がなく、技の作りが変わっても影響を受けない。
+        /// </summary>
         private float ReadLocalCooldownRatio()
         {
+            Core.PlayerStatus status = Core.PlayerStatusHub.Local;
+
             switch (_cooldownSource)
             {
-                case CooldownSource.EnergyBall:
-                    PlayerEnergyBallSkill energyBall = PlayerEnergyBallSkill.Local;
-                    return energyBall != null ? energyBall.CooldownRatio01 : 0f;
-
-                case CooldownSource.Dive:
-                    PlayerDiveSkill dive = PlayerDiveSkill.Local;
-                    return dive != null ? dive.CooldownRatio01 : 0f;
-
-                default:
-                    PlayerBeamSkill beam = PlayerBeamSkill.Local;
-                    return beam != null ? beam.CooldownRatio01 : 0f;
+                case CooldownSource.EnergyBall: return status.EnergyBallCooldown01.CurrentValue;
+                case CooldownSource.Dive: return status.DiveCooldown01.CurrentValue;
+                default: return status.BeamCooldown01.CurrentValue;
             }
         }
 

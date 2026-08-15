@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace ProjectKMP.UI
+namespace ProjectKMP.Presentation
 {
     /// <summary>
     /// ボタンの音を、名前による自動判定ではなく明示的に決めたいときに付ける。

@@ -1,6 +1,5 @@
 using Photon.Pun;
 using ProjectKMP.Dog;
-using ProjectKMP.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -86,31 +85,9 @@ namespace ProjectKMP.Player
             // カットシーン中などは操作を受け付けない
             if (!Battle.BattlePlayGate.IsPlayable) return Vector2.zero;
 
-            Vector2 value = Vector2.zero;
-
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard != null)
-            {
-                if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed)    value.y += 1.0f;
-                if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed)  value.y -= 1.0f;
-                if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) value.x += 1.0f;
-                if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed)  value.x -= 1.0f;
-            }
-
-            Gamepad gamepad = Gamepad.current;
-            if (gamepad != null)
-            {
-                Vector2 stick = gamepad.leftStick.ReadValue();
-                if (stick.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) value += stick;
-            }
-
-            // タッチ端末では画面上の仮想スティックからも受け取る(未配置なら null が返る)
-            VirtualStick virtualStick = ServiceLocator.TryGet<VirtualStick>();
-            if (virtualStick != null)
-            {
-                Vector2 touch = virtualStick.Value;
-                if (touch.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) value += touch;
-            }
+            // 割り当ては表にまとめてある。機器ごとの分岐は要らない
+            Vector2 value = Core.GameInput.Move;
+            if (value.sqrMagnitude <= STICK_DEAD_ZONE * STICK_DEAD_ZONE) value = Vector2.zero;
 
             return Vector2.ClampMagnitude(value, 1.0f);
         }

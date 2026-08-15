@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using ProjectKMP.UI;
 
 namespace ProjectKMP.Player
 {
@@ -169,31 +168,9 @@ namespace ProjectKMP.Player
             // カットシーン中などは操作を受け付けない
             if (!Battle.BattlePlayGate.IsPlayable) return Vector2.zero;
 
-            Vector2 value = Vector2.zero;
-
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard != null)
-            {
-                if (keyboard.wKey.isPressed) value.y += 1.0f;
-                if (keyboard.sKey.isPressed) value.y -= 1.0f;
-                if (keyboard.dKey.isPressed) value.x += 1.0f;
-                if (keyboard.aKey.isPressed) value.x -= 1.0f;
-            }
-
-            Gamepad gamepad = Gamepad.current;
-            if (gamepad != null)
-            {
-                Vector2 stick = gamepad.leftStick.ReadValue();
-                if (stick.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) value += stick;
-            }
-
-            // スマホでは画面上のスティックからも受け取る
-            TouchControls touch = TouchControls.Instance;
-            if (touch != null)
-            {
-                Vector2 stick = touch.MoveValue;
-                if (stick.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) value += stick;
-            }
+            // 割り当ては表にまとめてある。機器ごとの分岐は要らない
+            Vector2 value = Core.GameInput.Move;
+            if (value.sqrMagnitude <= STICK_DEAD_ZONE * STICK_DEAD_ZONE) value = Vector2.zero;
 
             return Vector2.ClampMagnitude(value, 1.0f);
         }
@@ -203,11 +180,7 @@ namespace ProjectKMP.Player
         {
             if (!Battle.BattlePlayGate.IsPlayable) return false;
 
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.leftShiftKey.isPressed) return true;
-
-            Gamepad gamepad = Gamepad.current;
-            return gamepad != null && gamepad.leftStickButton.isPressed;
+            return Core.GameInput.SprintHeld;
         }
 
         /// <summary>入力をカメラ基準のワールド方向に変換する。カメラが無ければワールド軸をそのまま使う</summary>

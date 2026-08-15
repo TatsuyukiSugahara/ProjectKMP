@@ -13359,8 +13359,6 @@ MonoBehaviour:
   _followSmoothTime: 0.08
   _initialYawDeg: 0
   _enableTargetCamera: 1
-  _useFKey: 1
-  _useGamepadStickPress: 1
   _lockTurnSpeedDeg: 360
   _lockDistanceAdd: 1.5
   _avoidObstacles: 1
@@ -26428,6 +26426,7 @@ GameObject:
   - component: {fileID: 1809228239}
   - component: {fileID: 1809228240}
   - component: {fileID: 1809228241}
+  - component: {fileID: 1809228242}
   m_Layer: 0
   m_Name: TouchCanvas
   m_TagString: Untagged
@@ -26625,6 +26624,18 @@ MonoBehaviour:
   _showOnTouch: 1
   _showOnKeyboard: 0
   _showOnGamepad: 0
+--- !u!114 &1809228242
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1809228232}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08483581f80a54f52861999db9f824b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.UI.InGame.InGameHudBootstrap
 --- !u!1001 &1822014366
 PrefabInstance:
   m_ObjectHideFlags: 0

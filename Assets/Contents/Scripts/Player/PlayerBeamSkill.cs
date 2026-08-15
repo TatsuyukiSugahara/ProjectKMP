@@ -3,10 +3,10 @@ using Photon.Pun;
 using ProjectKMP.Attack;
 using ProjectKMP.Dog;
 using ProjectKMP.Gorilla;
-using ProjectKMP.UI;
 using R3;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ProjectKMP.Presentation;
 
 namespace ProjectKMP.Player
 {
@@ -265,13 +265,6 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("ヒットエフェクトを消すまでの秒数")]
         private float _hitEffectLifeSec = 1.5f;
 
-        [Header("入力")]
-        [SerializeField, Tooltip("Rキーの長押しで狙う")]
-        private bool _useRKey = true;
-
-        [SerializeField, Tooltip("ゲームパッドのRB(右肩ボタン)の長押しで狙う")]
-        private bool _useGamepadShoulder = true;
-
         [SerializeField, Tooltip("画面上のスキルボタンの長押しで狙う")]
         private bool _useTouchButton = true;
 
@@ -437,12 +430,6 @@ namespace ProjectKMP.Player
             if (!IsOwner) return;
 
             Local = this;
-
-            // 合図は自分の画面に出すものなので、操作している本人の側で用意する
-            if (_enableFriendBeam) FriendBeamSignal.Ensure();
-
-            // ピンチの合図も自分の画面だけのもの。ここでまとめて用意する
-            DangerVignette.Ensure();
         }
 
         private void OnDestroy()
@@ -494,6 +481,19 @@ namespace ProjectKMP.Player
         private void UpdateOwnerInput()
         {
             if (_cooldownRemainSec > 0f) _cooldownRemainSec -= Time.deltaTime;
+
+            // 待ち時間と狙いの状態を画面へ伝える。操作している本人のぶんだけでよい
+            if (IsOwner)
+            {
+                Core.PlayerStatusHub.Local.SetBeamCooldown(CooldownRatio01);
+                Core.PlayerStatusHub.Local.SetAimingBeam(_phase == Phase.Aiming);
+
+                // 呼びかけている相手を画面へ伝える。
+                // 自分が撃てない状態(技の最中・待ち時間中)なら合図を出しても仕方がない
+                bool canJoin = !IsBusy && CooldownRemainSec <= 0f;
+                Core.PlayerStatusHub.Local.SetFriendBeamCallTarget(
+                    canJoin ? FriendBeam.GetCallTarget(this) : null);
+            }
 
             bool held = ReadHoldInput();
             bool pressedNow = held && !_wasHeldLastFrame;
@@ -586,30 +586,15 @@ namespace ProjectKMP.Player
             return true;
         }
 
-        /// <summary>Rキー / ゲームパッドB / 画面のスキルボタンのいずれかが押されているか</summary>
+        /// <summary>
+        /// 押されているかを見る。
+        ///
+        /// キーとパッドの割り当ては表にまとめてあるので、機器ごとの分岐は要らない。
+        /// 画面のボタンだけは別の仕組みなので、いまはここで足している。
+        /// </summary>
         private bool ReadHoldInput()
         {
-            bool held = false;
-
-            if (_useRKey)
-            {
-                Keyboard keyboard = Keyboard.current;
-                if (keyboard != null && keyboard.rKey.isPressed) held = true;
-            }
-
-            if (_useGamepadShoulder)
-            {
-                Gamepad gamepad = Gamepad.current;
-                if (gamepad != null && gamepad.rightShoulder.isPressed) held = true;
-            }
-
-            if (_useTouchButton)
-            {
-                TouchControls touch = TouchControls.Instance;
-                if (touch != null && touch.SkillHeld) held = true;
-            }
-
-            return held;
+            return Core.GameInput.BeamHeld;
         }
 
         private void StartAiming()
@@ -1403,13 +1388,13 @@ namespace ProjectKMP.Player
                     SendBeamHit(target, collider, _initialDamage, true);
 
                     // 焼き始めの手応え。照射中はここが一番強く感じる場面
-                    if (IsOwner) Battle.HitStop.Play(_initialHitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
+                    if (IsOwner) Presentation.HitStop.Play(_initialHitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
 
                     // 焼き始めだけ周りを引かせる。照射中ずっと絞ると音が痩せて聞こえる
-                    UI.BgmPlayer.Duck(0.35f, 0.12f, 0.4f);
+                    Presentation.BgmPlayer.Duck(0.35f, 0.12f, 0.4f);
 
                     // 当たり始めの1回だけ決めゴマを出す。照射中ずっと出すと画面が点滅して見づらい
-                    UI.ImpactFrame.Play(new Color(0.75f, 0.9f, 1.0f, 0.55f), 0.045f);
+                    Presentation.ImpactFrame.Play(new Color(0.75f, 0.9f, 1.0f, 0.55f), 0.045f);
                 }
             }
 
@@ -1435,7 +1420,7 @@ namespace ProjectKMP.Player
                     SendBeamHit(state.Target, state.Collider, _tickDamage, false);
 
                     // 継続はごく短く。長く止めるとカクついて照射が途切れて見える
-                    if (IsOwner) Battle.HitStop.Play(_tickHitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
+                    if (IsOwner) Presentation.HitStop.Play(_tickHitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
                 }
             }
 

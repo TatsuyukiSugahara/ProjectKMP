@@ -1,7 +1,7 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 
-namespace ProjectKMP.UI
+namespace ProjectKMP.Presentation
 {
     /// <summary>
     /// 画面全体を一瞬だけ光らせる。専用の Canvas を自分で作るのでシーンへの事前配置は不要。

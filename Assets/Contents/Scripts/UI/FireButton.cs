@@ -5,7 +5,7 @@ namespace ProjectKMP.UI
 {
     /// <summary>
     /// タッチ操作用の発射ボタン。Android / iOS でのみ表示する。
-    /// 押しっぱなしを IsHeld で公開し、連射間隔の管理は PlayerShooter 側に任せる。
+    /// 押しっぱなしを IsHeld で公開し、連射間隔の管理は撃つ側に任せる。
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
     public class FireButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler

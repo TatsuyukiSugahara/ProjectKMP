@@ -1,4 +1,3 @@
-using ProjectKMP.Player;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -36,7 +35,6 @@ namespace ProjectKMP.UI
         // ---- 内部状態 ------------------------------------
 
         private Image _image;
-        private ThirdPersonCamera _cameraController;
         private float _onAmount;
 
         // ---- 内部処理 ------------------------------------
@@ -62,12 +60,10 @@ namespace ProjectKMP.UI
             transform.localScale = Vector3.one * pulse;
         }
 
-        /// <summary>カメラは後から現れることがあるので、見つかるまで探し直す</summary>
+        /// <summary>用意された状態から読む。カメラを探し回る必要がない</summary>
         private bool IsLockedOn()
         {
-            if (_cameraController == null) _cameraController = FindAnyObjectByType<ThirdPersonCamera>();
-
-            return _cameraController != null && _cameraController.IsLockedOn;
+            return Core.PlayerStatusHub.Local.LockTarget.CurrentValue != null;
         }
     }
 }

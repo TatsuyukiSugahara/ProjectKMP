@@ -297,7 +297,7 @@ namespace ProjectKMP.Monster
 
             HitFlash.Play(transform, color, segment == 1 ? 0.5f : 0.3f, 1.0f);
             ShockwaveRing.Play(transform.position, color, segment == 1 ? 13.0f : 9.0f, 0.6f, 0.9f);
-            UI.BgmPlayer.Duck(segment == 1 ? 0.65f : 0.4f, 0.16f, 0.5f);
+            Presentation.BgmPlayer.Duck(segment == 1 ? 0.65f : 0.4f, 0.16f, 0.5f);
         }
 
         private void CheckDefeated(int currentHp)

@@ -8,6 +8,7 @@ using ProjectKMP.UI;
 using ProjectKMP.UI.InGame;
 using R3;
 using UnityEngine;
+using ProjectKMP.Presentation;
 
 namespace ProjectKMP.Battle
 {
@@ -109,7 +110,7 @@ namespace ProjectKMP.Battle
             HitStop.Play(_finishSlowSec, _finishTimeScale, _finishRecoverSec);
 
             // 決着の瞬間はいちばん深く引かせる。静けさが見せ場を作る
-            UI.BgmPlayer.Duck(0.75f, _finishSlowSec, 0.8f);
+            Presentation.BgmPlayer.Duck(0.75f, _finishSlowSec, 0.8f);
 
             if (cameraController == null || _finishCameraPull <= 0.0f) return;
 
@@ -151,14 +152,14 @@ namespace ProjectKMP.Battle
 
             // 全画面を塗る演出が残っていると、撮った絵が一色に潰れる。
             // 協力技のように決着と同時に光る技だと、これが起きやすい
-            UI.ImpactFrame.Clear();
+            Presentation.ImpactFrame.Clear();
 
             // UIが消えた状態を1フレーム反映させてから、倒した瞬間の画面を撮っておく(リザルトの背景に使う)
             await UniTask.Yield(PlayerLoopTiming.Update, ct);
             await UniTask.WaitForEndOfFrame(this, ct);
 
             // 待っている間に新しく光ることがあるので、撮る直前にもう一度消す
-            UI.ImpactFrame.Clear();
+            Presentation.ImpactFrame.Clear();
             GameClearSnapshot.Set(ScreenCapture.CaptureScreenshotAsTexture());
 
             await UniTask.Delay(TimeSpan.FromSeconds(_delayBeforeShowSec), cancellationToken: ct);

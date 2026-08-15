@@ -1,4 +1,3 @@
-using ProjectKMP.Player;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -70,11 +69,8 @@ namespace ProjectKMP.UI
 
         private void Update()
         {
-            PlayerBeamSkill viewer = PlayerBeamSkill.Local;
-
-            // 自分が撃てない状態(技の最中・クールタイム中)なら合図を出しても仕方がない
-            bool canJoin = viewer != null && !viewer.IsBusy && viewer.CooldownRemainSec <= 0f;
-            Transform target = canJoin ? FriendBeam.GetCallTarget(viewer) : null;
+            // 呼びかけの有無は技の側で判断済み。ここは受け取って出すだけ
+            Transform target = Core.PlayerStatusHub.Local.FriendBeamCallTarget.CurrentValue;
 
             float goal = target != null ? 1.0f : 0.0f;
             _visibility = Mathf.MoveTowards(_visibility, goal, FADE_SPEED * Time.unscaledDeltaTime);

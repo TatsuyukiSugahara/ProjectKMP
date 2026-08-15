@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ProjectKMP.UI
+namespace ProjectKMP.Presentation
 {
     /// <summary>
     /// 決めの一撃で、ほんの数フレームだけ画面を塗りつぶす。

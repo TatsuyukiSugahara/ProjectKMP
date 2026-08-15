@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ProjectKMP.UI
+namespace ProjectKMP.Presentation
 {
     /// <summary>
     /// UIの効果音をまとめて鳴らす。シーンにひとつ置けば、そのシーンのボタンすべてに

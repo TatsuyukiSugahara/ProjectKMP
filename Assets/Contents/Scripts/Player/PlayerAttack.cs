@@ -4,7 +4,6 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using Photon.Pun;
 using ProjectKMP.Attack;
-using ProjectKMP.UI;
 using R3;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -66,16 +65,6 @@ namespace ProjectKMP.Player
         [Header("判定の基準")]
         [SerializeField, Tooltip("判定の位置と向きの基準。未設定なら自分自身")]
         private Transform _hitOrigin;
-
-        [Header("入力")]
-        [SerializeField, Tooltip("スペースキーで攻撃する")]
-        private bool _useSpaceKey = true;
-
-        [SerializeField, Tooltip("Kキーで攻撃する(頭突き)")]
-        private bool _useKKey = true;
-
-        [SerializeField, Tooltip("ゲームパッドのAボタン(下ボタン)で攻撃する")]
-        private bool _useGamepadSouth = true;
 
         [SerializeField, Tooltip("画面上の噛みつきボタンで攻撃する")]
         private bool _useTouchButton = true;
@@ -201,9 +190,9 @@ namespace ProjectKMP.Player
 
         private void PlayJustFeedback()
         {
-            if (_justClip == null || UI.UiSoundPlayer.Instance == null) return;
+            if (_justClip == null || Presentation.UiSoundPlayer.Instance == null) return;
 
-            UI.UiSoundPlayer.Instance.PlayOneShot(_justClip, _justVolume);
+            Presentation.UiSoundPlayer.Instance.PlayOneShot(_justClip, _justVolume);
         }
 
         /// <summary>番号を指定して攻撃する。クールタイム中や攻撃中は何も起きない</summary>
@@ -249,6 +238,9 @@ namespace ProjectKMP.Player
 
         private void Update()
         {
+            // 待ち時間と押しどきを画面へ伝える。操作している本人のぶんだけでよい
+            if (IsOwner) Core.PlayerStatusHub.Local.SetAttack(CooldownRatio01, IsInJustWindow);
+
             // 他人のキャラでは入力も判定も行わない
             if (!IsOwner) return;
 
@@ -378,7 +370,7 @@ namespace ProjectKMP.Player
         /// </summary>
         private void PlayHitFeedback()
         {
-            Battle.HitStop.Play(_hitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
+            Presentation.HitStop.Play(_hitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
 
             // 噛みついた瞬間に縦へ縮める。噛む力が入ったように見える
             SquashStretch squash = GetComponentInChildren<SquashStretch>(true);
@@ -390,9 +382,9 @@ namespace ProjectKMP.Player
                 if (playerCamera != null) playerCamera.Shake(_cameraShakeAmplitude, _cameraShakeSec);
             }
 
-            if (_hitClip != null && UI.UiSoundPlayer.Instance != null)
+            if (_hitClip != null && Presentation.UiSoundPlayer.Instance != null)
             {
-                UI.UiSoundPlayer.Instance.PlayOneShot(_hitClip, _hitVolume);
+                Presentation.UiSoundPlayer.Instance.PlayOneShot(_hitClip, _hitVolume);
             }
         }
 
@@ -513,34 +505,7 @@ namespace ProjectKMP.Player
             // カットシーン中は攻撃できない。スキップの長押しと取り違えないためでもある
             if (!Battle.BattlePlayGate.IsPlayable) return false;
 
-            bool pressed = false;
-
-            if (_useSpaceKey)
-            {
-                Keyboard keyboard = Keyboard.current;
-                if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame) pressed = true;
-            }
-
-            if (_useKKey)
-            {
-                Keyboard keyboard = Keyboard.current;
-                if (keyboard != null && keyboard.kKey.wasPressedThisFrame) pressed = true;
-            }
-
-            if (_useGamepadSouth)
-            {
-                Gamepad gamepad = Gamepad.current;
-                if (gamepad != null && gamepad.buttonSouth.wasPressedThisFrame) pressed = true;
-            }
-
-            if (_useTouchButton)
-            {
-                TouchControls touch = TouchControls.Instance;
-                // 押した瞬間を取りこぼさないよう、押されていなくても必ず読み取る
-                if (touch != null && touch.ConsumeAttackPress()) pressed = true;
-            }
-
-            return pressed;
+            return Core.GameInput.AttackPressed;
         }
 
         /// <summary>設定された時間だけ球の判定を出し、当たった相手を全員に伝える</summary>

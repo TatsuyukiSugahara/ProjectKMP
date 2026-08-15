@@ -2,10 +2,10 @@ using System.Collections.Generic;
 using Photon.Pun;
 using ProjectKMP.Attack;
 using ProjectKMP.Dog;
-using ProjectKMP.UI;
 using R3;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using ProjectKMP.Presentation;
 
 namespace ProjectKMP.Player
 {
@@ -299,13 +299,6 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("ダメージの数字のプレハブ。未設定なら数字を出さない")]
         private GameObject _damagePopupPrefab;
 
-        [Header("入力")]
-        [SerializeField, Tooltip("Qキーの長押しで狙う")]
-        private bool _useQKey = true;
-
-        [SerializeField, Tooltip("ゲームパッドの LT と RT の同時長押しで狙う")]
-        private bool _useGamepadTriggers = true;
-
         [SerializeField, Tooltip("画面上の元気玉ボタンの長押しで狙う")]
         private bool _useTouchButton = true;
 
@@ -473,7 +466,7 @@ namespace ProjectKMP.Player
             ReleaseNightMood();
 
             // 演出で時間をいじったまま破棄されても、遅いままにしない
-            Battle.HitStop.ClearSlow(this);
+            Presentation.HitStop.ClearSlow(this);
         }
 
         private void OnDisable()
@@ -506,6 +499,9 @@ namespace ProjectKMP.Player
         private void UpdateOwnerInput()
         {
             if (_cooldownRemainSec > 0f) _cooldownRemainSec -= Time.deltaTime;
+
+            // 待ち時間を画面へ伝える。操作している本人のぶんだけでよい
+            if (IsOwner) Core.PlayerStatusHub.Local.SetEnergyBallCooldown(CooldownRatio01);
 
             bool held = ReadHoldInput();
             bool pressedNow = held && !_wasHeldLastFrame;
@@ -585,33 +581,15 @@ namespace ProjectKMP.Player
             return true;
         }
 
-        /// <summary>Qキー / ゲームパッドY / 画面の元気玉ボタンのいずれかが押されているか</summary>
+        /// <summary>
+        /// 押されているかを見る。
+        ///
+        /// パッドの LT+RT 同時引きも読み取り口の側で扱う。
+        /// 画面のボタンだけは別の仕組みなので、いまはここで足している。
+        /// </summary>
         private bool ReadHoldInput()
         {
-            bool held = false;
-
-            if (_useQKey)
-            {
-                Keyboard keyboard = Keyboard.current;
-                if (keyboard != null && keyboard.qKey.isPressed) held = true;
-            }
-
-            if (_useGamepadTriggers)
-            {
-                Gamepad gamepad = Gamepad.current;
-
-                // 両方のトリガーを引いている間だけ。片方では出ないようにして、
-                // 必殺技が偶然出てしまうのを防ぐ
-                if (gamepad != null && gamepad.leftTrigger.isPressed && gamepad.rightTrigger.isPressed) held = true;
-            }
-
-            if (_useTouchButton)
-            {
-                TouchControls touch = TouchControls.Instance;
-                if (touch != null && touch.EnergyBallHeld) held = true;
-            }
-
-            return held;
+            return Core.GameInput.EnergyBallHeld;
         }
 
         private void StartAiming()
@@ -1211,7 +1189,7 @@ namespace ProjectKMP.Player
                 ApplyFovKick();
             }
 
-            Battle.HitStop.Play(_throwHitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
+            Presentation.HitStop.Play(_throwHitStopSec, _hitStopTimeScale, _hitStopRecoverSec);
         }
 
         /// <summary>広げた視野角をなめらかに戻す。時間が止まっている間も進むよう実時間で数える</summary>
@@ -1448,14 +1426,14 @@ namespace ProjectKMP.Player
                 if (playerCamera != null) playerCamera.Shake(_cameraShakeAmplitude, _cameraShakeDurationSec);
             }
 
-            Battle.HitStop.Play(_hitStopDurationSec, _hitStopTimeScale, _hitStopRecoverSec);
+            Presentation.HitStop.Play(_hitStopDurationSec, _hitStopTimeScale, _hitStopRecoverSec);
 
             // 周りの音を引かせて、爆発だけを前に出す。
             // 音量を上げるより、周りが引いたほうが大きく聞こえる
-            UI.BgmPlayer.Duck(0.55f, 0.18f, 0.5f);
+            Presentation.BgmPlayer.Duck(0.55f, 0.18f, 0.5f);
 
             // 一番強い技なので、決めゴマも輪も他より大きく長くする。技の格の差を絵で見せる
-            UI.ImpactFrame.PlayWhite(0.06f, 0.85f);
+            Presentation.ImpactFrame.PlayWhite(0.06f, 0.85f);
             Battle.ShockwaveRing.Play(transform.position, new Color(0.75f, 0.9f, 1.0f, 1.0f), 12.0f, 0.55f, 1.2f);
         }
 
@@ -1610,8 +1588,8 @@ namespace ProjectKMP.Player
 
             _chargeSlowActive = enabled;
 
-            if (enabled) Battle.HitStop.SetSlow(this, _chargeTimeScale);
-            else Battle.HitStop.ClearSlow(this);
+            if (enabled) Presentation.HitStop.SetSlow(this, _chargeTimeScale);
+            else Presentation.HitStop.ClearSlow(this);
         }
 
 
@@ -1757,30 +1735,9 @@ namespace ProjectKMP.Player
         /// <summary>WASD / 左スティック / 仮想スティックの入力を取る(照準マーカー移動用)</summary>
         private Vector2 ReadMoveInput()
         {
-            Vector2 value = Vector2.zero;
-
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard != null)
-            {
-                if (keyboard.wKey.isPressed) value.y += 1f;
-                if (keyboard.sKey.isPressed) value.y -= 1f;
-                if (keyboard.dKey.isPressed) value.x += 1f;
-                if (keyboard.aKey.isPressed) value.x -= 1f;
-            }
-
-            Gamepad gamepad = Gamepad.current;
-            if (gamepad != null)
-            {
-                Vector2 stick = gamepad.leftStick.ReadValue();
-                if (stick.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) value += stick;
-            }
-
-            TouchControls touch = TouchControls.Instance;
-            if (touch != null)
-            {
-                Vector2 stick = touch.MoveValue;
-                if (stick.sqrMagnitude > STICK_DEAD_ZONE * STICK_DEAD_ZONE) value += stick;
-            }
+            // 狙いの移動も、歩くときと同じ割り当てを使う
+            Vector2 value = Core.GameInput.Move;
+            if (value.sqrMagnitude <= STICK_DEAD_ZONE * STICK_DEAD_ZONE) value = Vector2.zero;
 
             return Vector2.ClampMagnitude(value, 1f);
         }

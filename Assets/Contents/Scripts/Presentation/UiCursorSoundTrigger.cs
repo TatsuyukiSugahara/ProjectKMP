@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace ProjectKMP.UI
+namespace ProjectKMP.Presentation
 {
     /// <summary>
     /// 選ばれた瞬間・マウスが乗った瞬間にカーソル移動音を鳴らす。

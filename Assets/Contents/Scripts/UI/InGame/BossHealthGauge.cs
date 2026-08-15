@@ -3,6 +3,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using ProjectKMP.Presentation;
 
 namespace ProjectKMP.UI.InGame
 {
@@ -348,7 +349,7 @@ namespace ProjectKMP.UI.InGame
 
         private void PlayBreakEffect(int remaining)
         {
-            ProjectKMP.Battle.HitStop.Play(_breakHitStopSec, 0.06f, 0.18f);
+            ProjectKMP.Presentation.HitStop.Play(_breakHitStopSec, 0.06f, 0.18f);
             ImpactFrame.Play(_breakColor, 0.05f);
             BgmPlayer.Duck(0.45f, 0.15f, 0.45f);
 

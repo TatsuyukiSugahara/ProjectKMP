@@ -6,7 +6,7 @@ namespace ProjectKMP.UI
 {
     /// <summary>
     /// タッチ操作用の仮想スティック。Android / iOS でのみ表示し、それ以外の環境では常に無入力を返す。
-    /// 入力値は ServiceLocator 経由で PlayerMover が取得する。
+    /// 入力値は TouchControls がまとめて入力の読み取り口へ渡す。
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
     [RequireComponent(typeof(CanvasGroup))]

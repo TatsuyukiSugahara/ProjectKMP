@@ -373,9 +373,6 @@ MonoBehaviour:
   _spinDurationSec: 0.45
   _spinJumpHeight: 0.9
   _hitOrigin: {fileID: 0}
-  _useSpaceKey: 1
-  _useKKey: 1
-  _useGamepadSouth: 1
   _useTouchButton: 1
   _hitStopSec: 0.05
   _hitStopTimeScale: 0.05
@@ -545,8 +542,6 @@ MonoBehaviour:
   _hitEffectPrefab: {fileID: 0}
   _hitEffectScale: 1
   _hitEffectLifeSec: 1.5
-  _useRKey: 1
-  _useGamepadShoulder: 1
   _useTouchButton: 1
   _targetLayers:
     serializedVersion: 2
@@ -645,8 +640,6 @@ MonoBehaviour:
   _zoneVisualPrefab: {fileID: 3169192961628982556, guid: f12e166f4833f42cda9f9a98cebd268c, type: 3}
   _aimIndicatorPrefab: {fileID: 3762744561026247363, guid: c00a353ffc58341cab6a76cc5ee4ab38, type: 3}
   _damagePopupPrefab: {fileID: 334619725715907676, guid: dc738a3d7ee4b430aab1e466091f1be0, type: 3}
-  _useQKey: 1
-  _useGamepadTriggers: 1
   _useTouchButton: 1
   _targetLayers:
     serializedVersion: 2
@@ -732,8 +725,6 @@ MonoBehaviour:
   _landClip: {fileID: 8300000, guid: d90495aec68684c1cbff68614c2eed9a, type: 3}
   _impactClip: {fileID: 8300000, guid: d7d35b24c7fe34d7e8e6a81eedf7f62b, type: 3}
   _volume: 0.7
-  _useEKey: 1
-  _useGamepadShoulder: 1
   _useTouchButton: 1
   _groundMask:
     serializedVersion: 2

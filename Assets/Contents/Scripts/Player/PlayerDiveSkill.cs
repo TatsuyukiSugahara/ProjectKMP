@@ -106,13 +106,6 @@ namespace ProjectKMP.Player
         [SerializeField, Range(0.0f, 1.0f), Tooltip("音量")]
         private float _volume = 0.7f;
 
-        [Header("入力")]
-        [SerializeField, Tooltip("Eキーで出す")]
-        private bool _useEKey = true;
-
-        [SerializeField, Tooltip("ゲームパッドの左肩ボタンで出す")]
-        private bool _useGamepadShoulder = true;
-
         [SerializeField, Tooltip("画面のとびこみボタンで出す")]
         private bool _useTouchButton = true;
 
@@ -210,6 +203,9 @@ namespace ProjectKMP.Player
 
             if (_cooldownRemainSec > 0.0f) _cooldownRemainSec -= Time.deltaTime;
 
+            // 待ち時間を画面へ伝える。操作している本人のぶんだけでよい
+            if (IsOwner) Core.PlayerStatusHub.Local.SetDiveCooldown(CooldownRatio01);
+
             bool held = ReadHoldInput();
             bool pressedNow = held && !_wasHeldLastFrame;
             _wasHeldLastFrame = held;
@@ -288,27 +284,15 @@ namespace ProjectKMP.Player
             return true;
         }
 
+        /// <summary>
+        /// 押されているかを見る。
+        ///
+        /// キーとパッドの割り当ては表にまとめてあるので、機器ごとの分岐は要らない。
+        /// 画面のボタンだけは別の仕組みなので、いまはここで足している。
+        /// </summary>
         private bool ReadHoldInput()
         {
-            if (_useEKey)
-            {
-                Keyboard keyboard = Keyboard.current;
-                if (keyboard != null && keyboard.eKey.isPressed) return true;
-            }
-
-            if (_useGamepadShoulder)
-            {
-                Gamepad gamepad = Gamepad.current;
-                if (gamepad != null && gamepad.leftShoulder.isPressed) return true;
-            }
-
-            if (_useTouchButton)
-            {
-                UI.TouchControls touch = UI.TouchControls.Instance;
-                if (touch != null && touch.DiveHeld) return true;
-            }
-
-            return false;
+            return Core.GameInput.DiveHeld;
         }
 
         // ---- 内部処理: 予測表示 ---------------------------
@@ -755,13 +739,13 @@ namespace ProjectKMP.Player
         {
             if (!IsOwner) return;
 
-            Battle.HitStop.Play(0.04f, 0.08f, 0.1f);
+            Presentation.HitStop.Play(0.04f, 0.08f, 0.1f);
 
             // 着地で潰す。伸びたぶんを潰しで受け止めると、動きが繋がって見える
             if (_squash != null) _squash.Squash(0.32f);
 
             // 着地の一瞬だけ周りを引かせる。踏みしめた重さが出る
-            UI.BgmPlayer.Duck(0.3f, 0.08f, 0.3f);
+            Presentation.BgmPlayer.Duck(0.3f, 0.08f, 0.3f);
 
             // 地面を走る輪。着地の重さは、キャラではなく地面の反応で伝わる
             Battle.ShockwaveRing.Play(transform.position, new Color(1.0f, 0.92f, 0.72f, 1.0f), 5.0f, 0.4f, 0.7f);
@@ -772,9 +756,9 @@ namespace ProjectKMP.Player
 
         private void PlayClip(AudioClip clip)
         {
-            if (clip == null || UI.UiSoundPlayer.Instance == null) return;
+            if (clip == null || Presentation.UiSoundPlayer.Instance == null) return;
 
-            UI.UiSoundPlayer.Instance.PlayOneShot(clip, _volume);
+            Presentation.UiSoundPlayer.Instance.PlayOneShot(clip, _volume);
         }
 
         /// <summary>

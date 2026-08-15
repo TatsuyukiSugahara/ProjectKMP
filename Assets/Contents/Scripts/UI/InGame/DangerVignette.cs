@@ -1,4 +1,3 @@
-using ProjectKMP.Player;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -40,7 +39,6 @@ namespace ProjectKMP.UI
         private static DangerVignette _instance;
 
         private Image _image;
-        private PlayerHealth _health;
         private float _danger;
 
         // ---- 公開API -------------------------------------
@@ -93,24 +91,16 @@ namespace ProjectKMP.UI
         /// <summary>いまの危なさ。0で安全、1で瀕死</summary>
         private float ResolveDanger()
         {
-            if (_health == null || _health.gameObject == null) _health = ResolveLocalHealth();
-            if (_health == null) return 0.0f;
+            Core.PlayerStatus status = Core.PlayerStatusHub.Local;
 
             // 死んでいる間は出さない。倒れた画面を赤く塗っても意味がない
-            if (_health.IsDead) return 0.0f;
-            if (_health.MaxHp <= 0) return 0.0f;
+            if (status.IsDead.CurrentValue) return 0.0f;
+            if (status.MaxHp.CurrentValue <= 0) return 0.0f;
 
-            float ratio = _health.CurrentHp / (float)_health.MaxHp;
+            float ratio = status.HpRatio01;
             if (ratio >= THRESHOLD) return 0.0f;
 
             return 1.0f - ratio / THRESHOLD;
-        }
-
-        private static PlayerHealth ResolveLocalHealth()
-        {
-            PlayerBeamSkill local = PlayerBeamSkill.Local;
-
-            return local != null ? local.GetComponent<PlayerHealth>() : null;
         }
 
         private void Build()

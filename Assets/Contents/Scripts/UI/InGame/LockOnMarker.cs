@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using ProjectKMP.Player;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -46,8 +45,6 @@ namespace ProjectKMP.UI
         private float _pulseScale = 0.05f;
 
         // ---- 内部状態 ------------------------------------
-
-        private ThirdPersonCamera _cameraController;
         private CanvasGroup _group;
         private float _visibility;
 
@@ -100,13 +97,13 @@ namespace ProjectKMP.UI
             PlaceOn(target);
         }
 
-        /// <summary>いま狙っている相手を返す。カメラは後から現れることがあるので都度探し直す</summary>
+        /// <summary>
+        /// いま狙っている相手を返す。
+        /// 用意された状態から読むので、カメラを探し回る必要がない。
+        /// </summary>
         private Transform ResolveLockTarget()
         {
-            if (_cameraController == null) _cameraController = FindAnyObjectByType<ThirdPersonCamera>();
-            if (_cameraController == null) return null;
-
-            return _cameraController.LockTarget;
+            return Core.PlayerStatusHub.Local.LockTarget.CurrentValue;
         }
 
         /// <summary>相手を囲むように照準を置く。画面の外へ出たら隠す</summary>

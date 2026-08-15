@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace ProjectKMP.Battle
+namespace ProjectKMP.Presentation
 {
     /// <summary>
     /// Time.timeScale をまとめて預かる係。

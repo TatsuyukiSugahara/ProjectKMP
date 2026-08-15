@@ -1,9 +1,9 @@
 {
-    "name": "ProjectKMP.Core",
+    "name": "ProjectKMP.Presentation",
     "rootNamespace": "ProjectKMP",
     "references": [
-        "Unity.InputSystem",
-        "R3.Unity"
+        "ProjectKMP.Core",
+        "UniTask"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

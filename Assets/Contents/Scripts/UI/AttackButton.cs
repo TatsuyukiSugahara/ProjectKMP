@@ -1,4 +1,3 @@
-using ProjectKMP.Player;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -137,7 +136,7 @@ namespace ProjectKMP.UI
             UpdatePressVisual();
         }
 
-        /// <summary>押した瞬間。ここで立てたフラグを PlayerAttack が読み取る</summary>
+        /// <summary>押した瞬間。ここで立てたフラグを入力の読み取り口が拾う</summary>
         public void OnPointerDown(PointerEventData eventData)
         {
             if (_activePointerId != INVALID_POINTER_ID) return;
@@ -160,9 +159,11 @@ namespace ProjectKMP.UI
         {
             if (_followLocalPlayer)
             {
-                PlayerAttack local = PlayerAttack.Local;
-                _cooldownRatio = local != null ? local.CooldownRatio01 : 0f;
-                _isJustWindow = local != null && local.IsInJustWindow;
+                // 用意された状態から読む。技を探しに行く必要がない
+                Core.PlayerStatus status = Core.PlayerStatusHub.Local;
+
+                _cooldownRatio = status.AttackCooldown01.CurrentValue;
+                _isJustWindow = status.IsInJustWindow.CurrentValue;
             }
 
             bool isCooling = _cooldownRatio > 0f;

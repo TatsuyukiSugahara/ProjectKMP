@@ -47,7 +47,7 @@ public class SceneLoader : MonoBehaviour
 
         // BGMを消しながら読み込む。読み込みには時間がかかるので、
         // 切り替わるころには鳴り終わっていて、場面がぶつ切りにならない
-        ProjectKMP.UI.BgmPlayer.FadeOutCurrent();
+        ProjectKMP.Presentation.BgmPlayer.FadeOutCurrent();
 
         var op = SceneManager.LoadSceneAsync(sceneName);
         op.allowSceneActivation = false;

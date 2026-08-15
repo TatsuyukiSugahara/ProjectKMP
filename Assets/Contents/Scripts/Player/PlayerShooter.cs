@@ -1,6 +1,5 @@
 using Photon.Pun;
 using ProjectKMP.Battle;
-using ProjectKMP.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -80,14 +79,8 @@ namespace ProjectKMP.Player
         {
             if (!Battle.BattlePlayGate.IsPlayable) return false;
 
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard != null && keyboard.spaceKey.isPressed) return true;
-
-            Gamepad gamepad = Gamepad.current;
-            if (gamepad != null && gamepad.rightShoulder.isPressed) return true;
-
-            FireButton fireButton = ServiceLocator.TryGet<FireButton>();
-            if (fireButton != null && fireButton.IsHeld) return true;
+            // 撃つ操作は『がぶっ』と同じ割り当てを使う
+            if (Core.GameInput.AttackHeld) return true;
 
             return false;
         }
