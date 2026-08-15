@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using NUnit.Framework;
-using ProjectKMP.Battle;
+using ProjectKMP.Core;
 
 namespace ProjectKMP.Tests
 {

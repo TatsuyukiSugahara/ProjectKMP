@@ -1,4 +1,4 @@
-namespace ProjectKMP.Battle
+namespace ProjectKMP.Core
 {
     /// <summary>
     /// クリアタイムを人が読む形に直す。

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace ProjectKMP.Battle
+namespace ProjectKMP.Core
 {
     /// <summary>
     /// その日のクリアタイムの記録。

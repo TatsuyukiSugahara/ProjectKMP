@@ -408,7 +408,7 @@ namespace ProjectKMP.UI.InGame
         private int SegmentIndex(float total01)
         {
             // 計算は切り出した側にある。画面が無くても正しさを確かめられる
-            return ProjectKMP.Battle.BossSegments.Remaining(total01, _segmentCount);
+            return ProjectKMP.Core.BossSegments.Remaining(total01, _segmentCount);
         }
 
         /// <summary>
@@ -417,7 +417,7 @@ namespace ProjectKMP.UI.InGame
         /// </summary>
         private float SegmentRatio(float total01)
         {
-            return ProjectKMP.Battle.BossSegments.Ratio(total01, _segmentCount);
+            return ProjectKMP.Core.BossSegments.Ratio(total01, _segmentCount);
         }
 
         /// <summary>残りの本数を印に反映する</summary>

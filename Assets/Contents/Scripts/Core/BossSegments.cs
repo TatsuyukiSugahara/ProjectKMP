@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace ProjectKMP.Battle
+namespace ProjectKMP.Core
 {
     /// <summary>
     /// ボスのHPを何本かに分けて見せるための計算。

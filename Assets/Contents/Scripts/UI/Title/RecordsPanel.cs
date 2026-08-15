@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using ProjectKMP.Battle;
+using ProjectKMP.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
