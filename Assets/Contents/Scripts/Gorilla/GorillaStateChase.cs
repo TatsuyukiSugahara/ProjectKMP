@@ -31,13 +31,20 @@ namespace ProjectKMP.Gorilla
                 owner.MoveTowards(owner.Target.position, owner.ChaseSpeed);
             }
 
-            // 近距離(攻撃範囲内)？（距離判定）
+            // 近距離(攻撃範囲内)？（距離判定） = 犬がゴリラの周りに近寄ってきた状態
             if (owner.IsPlayerInAttackRange())
             {
-                // 攻撃タイプ判定（タイマー / 確率）
+                // 攻撃タイプ判定（タイマー / 確率 / 角度）
                 if (owner.ShouldUseStampAttack())
                 {
                     owner.ChangeState(new GorillaStateStampAttack());
+                }
+                else if (owner.IsTargetOutsideNormalAttackCone() || owner.ShouldUseSweepAttack())
+                {
+                    // 通常攻撃(頭突き)の正面扇形からは外れているが、薙ぎ払いの広い扇形には
+                    // まだ届く側面・斜め後方にいる場合は、確実に薙ぎ払い攻撃で捉える。
+                    // 正面にいる場合は確率で薙ぎ払いを混ぜる
+                    owner.ChangeState(new GorillaStateSweepAttack());
                 }
                 else
                 {

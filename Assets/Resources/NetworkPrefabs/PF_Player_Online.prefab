@@ -428,9 +428,13 @@ MonoBehaviour:
   _deathAnimationSec: 0
   _disableWhileDead:
   - {fileID: 8189920735579963244}
+  - {fileID: 34820962685949999}
   _biteVfxPrefab: {fileID: 0}
   _biteVfxHeight: 1.1
   _bodyRoot: {fileID: 4628211592738385048}
+  _crushDurationSec: 0.15
+  _crushSquashScaleX: 0.05
+  _crushSquashScaleYZMultiplier: 1.5
 --- !u!114 &7589652690637285504
 MonoBehaviour:
   m_ObjectHideFlags: 0

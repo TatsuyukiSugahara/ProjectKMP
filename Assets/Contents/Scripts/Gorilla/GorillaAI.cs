@@ -20,12 +20,15 @@ namespace ProjectKMP.Gorilla
         public const string ANIM_JUMP          = "Jump";
         public const string ANIM_STAMP_ATTACK  = "Bounce"; // @todo 専用の踏みつけモーションがあれば差し替える
         public const string ANIM_NORMAL_ATTACK = "Attack";
+        public const string ANIM_SWEEP_ATTACK  = "Attack"; // @todo 専用の薙ぎ払いモーションがあれば差し替える
         public const string ANIM_HIT           = "Hit";
         public const string ANIM_DEATH         = "Death";
         private const float ANIM_CROSSFADE = 0.15f;
 
         // @todo 動作確認用デバッグ入力を許可するシーン名。モデル確認用のサンドボックスシーンでのみ有効にする
-        private const string DEBUG_INPUT_SCENE_NAME = "ModelCheck";
+        // デバッグ入力(1/K/O/P/Lキーなど)を有効にするシーン名一覧。
+        // 誤操作でモーションが暴発しないよう、モデル確認用サンドボックス(ModelCheck)のみで有効にする
+        private static readonly string[] DEBUG_INPUT_SCENE_NAMES = { "ModelCheck" };
 
         // ---- 索敵 ----
         [Header("索敵")]
@@ -41,6 +44,9 @@ namespace ProjectKMP.Gorilla
         [SerializeField, Range(0f, 1f)] private float _stampAttackProbability = 0.3f;
         [SerializeField] private float _normalAttackStaggerTime = 0.6f;
         [SerializeField] private float _stampAttackStaggerTime = 1.2f;
+        [SerializeField] private float _sweepAttackStaggerTime = 0.8f;
+        [SerializeField, Range(0f, 1f), Tooltip("スタンプ攻撃以外が選ばれたとき、通常攻撃(頭突き)ではなく薙ぎ払い攻撃を選ぶ確率")]
+        private float _sweepAttackProbability = 0.7f;
 
         // ---- 攻撃の当たり判定・ダメージ ----
         [Header("攻撃の当たり判定・ダメージ")]
@@ -58,6 +64,30 @@ namespace ProjectKMP.Gorilla
 
         [SerializeField, Min(0f), Tooltip("スタンプ攻撃の衝撃波が届く半径(メートル、着地点から)")]
         private float _stampAttackRadius = 3.5f;
+
+        [SerializeField, Min(0), Tooltip("薙ぎ払い攻撃のダメージ")]
+        private int _sweepAttackDamage = 25;
+
+        [SerializeField, Min(0f), Tooltip("薙ぎ払い攻撃の当たり判定が届く距離(メートル、体の中心から)")]
+        private float _sweepAttackHitRange = 6.0f;
+
+        [SerializeField, Range(0f, 360f), Tooltip("薙ぎ払い攻撃の当たり判定の角度(度)。正面を中心とした扇形。通常攻撃より広く取る")]
+        private float _sweepAttackHitAngle = 220.0f;
+
+        [SerializeField, Min(0f), Tooltip("薙ぎ払い攻撃が命中したときの吹き飛び距離(メートル)。通常の被弾よりずっと大きく吹き飛ばす")]
+        private float _sweepAttackKnockbackDistance = 10.0f;
+
+        [SerializeField, Min(0.01f), Tooltip("薙ぎ払い攻撃の吹き飛びにかける時間(秒)。距離が大きいぶん、通常の被弾より長めにして自然に見せる")]
+        private float _sweepAttackKnockbackDurationSec = 0.6f;
+
+        [SerializeField, Min(0f), Tooltip("薙ぎ払い攻撃で吹き飛ぶときに、上空へ浮き上がる高さ(メートル)。0だと水平にしか吹き飛ばない。正の値で放物線を描いて宙を巻き込むように吹き飛ぶ")]
+        private float _sweepAttackKnockbackArcHeight = 4.0f;
+
+        [SerializeField, Min(0f), Tooltip("薙ぎ払い攻撃の当たり判定(SweepAttackHitRange)のうち、ゴリラ本体からこの距離以内で命中した相手は挟み潰し候補になる(SweepAttackPalmCrushAngleの角度条件も参照)。これより遠く(当たり判定の外縁)でギリギリ当たった場合は、挟みきれず吹き飛ぶだけになる")]
+        private float _sweepAttackPalmCrushRadius = 5.5f;
+
+        [SerializeField, Range(0f, 180f), Tooltip("薙ぎ払い攻撃で挟み潰し(ぺっちゃんこ)になるために許容する、正面からの角度(度)。両手のひらが閉じるのは正面付近だけなので、これより横にズレて当たった場合(=片手だけ当たった場合)は挟み潰さず吹き飛ばすだけにする")]
+        private float _sweepAttackPalmCrushAngleDeg = 30.0f;
 
         // ---- 移動 ----
         [Header("移動")]
@@ -118,6 +148,41 @@ namespace ProjectKMP.Gorilla
         private float _normalAttackHitEffectScale = 5f;
         [SerializeField, Tooltip("ヒットエフェクトを出す前方オフセット(メートル)")]
         private float _normalAttackHitEffectForwardOffset = 2f;
+
+        // ---- 薙ぎ払い攻撃の予備動作・エフェクト ----
+        [Header("薙ぎ払い攻撃")]
+        [SerializeField, Tooltip("振りかぶり中に体に出すチャージエフェクト。未設定なら出さない")]
+        private GameObject _sweepAttackChargeEffectPrefab;
+        [SerializeField, Tooltip("チャージエフェクトを出す高さ(足元からのオフセット、メートル)")]
+        private float _sweepAttackChargeEffectHeight = 1.2f;
+        [SerializeField, Tooltip("振りかぶり中に出す「力を溜めている感」のあるオーラエフェクト(パーティクル不使用、メッシュ+加算シェーダーで表現)。未設定なら出さない")]
+        private GameObject _sweepAttackChargeAuraEffectPrefab;
+        [SerializeField, Min(0.01f), Tooltip("チャージオーラエフェクトの大きさ倍率。1で原寸")]
+        private float _sweepAttackChargeAuraEffectScale = 1.0f;
+        [SerializeField, Tooltip("チャージオーラエフェクトを出す高さ(足元からのオフセット、メートル)。体を包み込むように中心付近に出す")]
+        private float _sweepAttackChargeAuraHeight = 1.2f;
+        [SerializeField, Min(0.01f), Tooltip("チャージオーラエフェクトを手のひらにも重ねて出すときの大きさ倍率。体用のSweepAttackChargeAuraEffectScaleとは別に、手のひらを包む小さめのサイズを指定する")]
+        private float _sweepAttackHandAuraEffectScale = 0.25f;
+        [SerializeField, Tooltip("チャージオーラエフェクト内の「上昇する光の線」部分だけ、さらに上へずらす高さ(メートル)。魔法陣本体の位置は変えない")]
+        private float _sweepAttackChargeAuraRiseLineHeightOffset = 0.5f;
+        [SerializeField, Tooltip("薙ぎ払いエフェクト代わりに使う拳モデル(SimpleHandsのプレハブ)。振り切り中、正面から反対側まで弧を描くように動かす")]
+        private GameObject _sweepFistEffectPrefab;
+        [SerializeField, Tooltip("拳モデルを出す高さ(足元からのオフセット、メートル)")]
+        private float _sweepFistEffectHeight = 0.3f;
+        [SerializeField, Tooltip("拳モデルを出す前方オフセット(メートル)")]
+        private float _sweepFistEffectForwardOffset = 2.0f;
+        [SerializeField, Min(0.01f), Tooltip("拳モデルの大きさ倍率。1で原寸")]
+        private float _sweepFistEffectScale = 1.0f;
+        [SerializeField, Min(0.01f), Tooltip("拳モデルの厚み(高さ方向)だけにかける追加倍率。SimpleHandsの元モデルが平たいため、SweepFistEffectScaleとは別に厚みだけ膨らませる用")]
+        private float _sweepFistEffectThicknessScale = 3.0f;
+        [SerializeField, Tooltip("両拳が正面で当たる瞬間(命中タイミング)に、両拳の間へ出すインパクトエフェクト。未設定なら出さない")]
+        private GameObject _sweepImpactEffectPrefab;
+        [SerializeField, Min(0.01f), Tooltip("インパクトエフェクトの大きさ倍率。1で原寸")]
+        private float _sweepImpactEffectScale = 1.0f;
+        [SerializeField, Tooltip("命中エフェクトに重ねて出す、より衝撃感のある2つ目のインパクトエフェクト。未設定なら出さない")]
+        private GameObject _sweepImpactEffectPrefab2;
+        [SerializeField, Min(0.01f), Tooltip("2つ目のインパクトエフェクトの大きさ倍率。1で原寸")]
+        private float _sweepImpactEffectScale2 = 1.0f;
 
         // ---- スタンプ攻撃の予備動作 ----
         [Header("スタンプ攻撃の予備動作")]
@@ -217,6 +282,7 @@ namespace ProjectKMP.Gorilla
         public float PatrolWaitTimeMax => _patrolWaitTimeMax;
         public float NormalAttackStaggerTime => _normalAttackStaggerTime;
         public float StampAttackStaggerTime => _stampAttackStaggerTime;
+        public float SweepAttackStaggerTime => _sweepAttackStaggerTime;
 
         // ---- 攻撃の当たり判定・ダメージの公開API ----
         public int NormalAttackDamage => _normalAttackDamage;
@@ -224,6 +290,30 @@ namespace ProjectKMP.Gorilla
         public float NormalAttackHitAngle => _normalAttackHitAngle;
         public int StampAttackDamage => _stampAttackDamage;
         public float StampAttackRadius => _stampAttackRadius;
+        public int SweepAttackDamage => _sweepAttackDamage;
+        public float SweepAttackHitRange => _sweepAttackHitRange;
+        public float SweepAttackHitAngle => _sweepAttackHitAngle;
+        public float SweepAttackKnockbackDistance => _sweepAttackKnockbackDistance;
+        public float SweepAttackKnockbackDurationSec => _sweepAttackKnockbackDurationSec;
+        public float SweepAttackKnockbackArcHeight => _sweepAttackKnockbackArcHeight;
+        public float SweepAttackPalmCrushRadius => _sweepAttackPalmCrushRadius;
+        public float SweepAttackPalmCrushAngleDeg => _sweepAttackPalmCrushAngleDeg;
+        public GameObject SweepAttackChargeEffectPrefab => _sweepAttackChargeEffectPrefab;
+        public float SweepAttackChargeEffectHeight => _sweepAttackChargeEffectHeight;
+        public GameObject SweepAttackChargeAuraEffectPrefab => _sweepAttackChargeAuraEffectPrefab;
+        public float SweepAttackChargeAuraEffectScale => _sweepAttackChargeAuraEffectScale;
+        public float SweepAttackChargeAuraHeight => _sweepAttackChargeAuraHeight;
+        public float SweepAttackHandAuraEffectScale => _sweepAttackHandAuraEffectScale;
+        public float SweepAttackChargeAuraRiseLineHeightOffset => _sweepAttackChargeAuraRiseLineHeightOffset;
+        public GameObject SweepFistEffectPrefab => _sweepFistEffectPrefab;
+        public float SweepFistEffectHeight => _sweepFistEffectHeight;
+        public float SweepFistEffectForwardOffset => _sweepFistEffectForwardOffset;
+        public float SweepFistEffectScale => _sweepFistEffectScale;
+        public float SweepFistEffectThicknessScale => _sweepFistEffectThicknessScale;
+        public GameObject SweepImpactEffectPrefab => _sweepImpactEffectPrefab;
+        public float SweepImpactEffectScale => _sweepImpactEffectScale;
+        public GameObject SweepImpactEffectPrefab2 => _sweepImpactEffectPrefab2;
+        public float SweepImpactEffectScale2 => _sweepImpactEffectScale2;
 
         // ---- 破壊光線攻撃の公開API ----
         public float BeamAttackRange => _beamAttackRange;
@@ -402,7 +492,13 @@ namespace ProjectKMP.Gorilla
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             // @todo 動作確認用デバッグ入力。ModelCheckシーン(モデル確認用のサンドボックス)でのみ有効にする。
             // 他のシーン(InGameなど)では誤操作でモーションが暴発しないようにする
-            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != DEBUG_INPUT_SCENE_NAME)
+            string activeSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            bool isDebugInputAllowedScene = false;
+            foreach (var sceneName in DEBUG_INPUT_SCENE_NAMES)
+            {
+                if (activeSceneName == sceneName) { isDebugInputAllowedScene = true; break; }
+            }
+            if (!isDebugInputAllowedScene)
             {
                 return;
             }
@@ -438,6 +534,18 @@ namespace ProjectKMP.Gorilla
             if (keyboard != null && keyboard.lKey.wasPressedThisFrame && !_isDead)
             {
                 ChangeState(new GorillaStateStampAttack());
+            }
+
+            // @todo 動作確認用デバッグ入力。Kキーで薙ぎ払い攻撃モーションを再生する
+            if (keyboard != null && keyboard.kKey.wasPressedThisFrame && !_isDead)
+            {
+                ChangeState(new GorillaStateSweepAttack());
+            }
+
+            // @todo 動作確認用デバッグ入力。1キーでも薙ぎ払い攻撃モーションを再生する(テスト用の別キー)
+            if (keyboard != null && keyboard.digit1Key.wasPressedThisFrame && !_isDead)
+            {
+                ChangeState(new GorillaStateSweepAttack());
             }
 #endif
         }
@@ -560,7 +668,10 @@ namespace ProjectKMP.Gorilla
                 return true;
             }
 
-            if (IsTargetOutsideNormalAttackCone())
+            // 薙ぎ払い(側面まで届く広い扇形)でも捉えられないほど真後ろにいるときだけ、
+            // スタンプ攻撃(向き不問)を強制する。側面(通常攻撃の外・薙ぎ払いの内)は
+            // GorillaStateChase側で薙ぎ払い攻撃を強制するため、ここでは弾かない
+            if (IsTargetOutsideSweepAttackCone())
             {
                 return true;
             }
@@ -568,8 +679,14 @@ namespace ProjectKMP.Gorilla
             return Random.value < _stampAttackProbability;
         }
 
+        /// <summary>スタンプ攻撃以外が選ばれたとき、通常攻撃(頭突き)ではなく薙ぎ払い攻撃を選ぶかどうかの確率判定</summary>
+        public bool ShouldUseSweepAttack()
+        {
+            return Random.value < _sweepAttackProbability;
+        }
+
         /// <summary>対象が通常攻撃の命中扇形(正面 ±NormalAttackHitAngle/2)の外にいるか</summary>
-        private bool IsTargetOutsideNormalAttackCone()
+        public bool IsTargetOutsideNormalAttackCone()
         {
             if (_target == null) return false;
 
@@ -579,6 +696,19 @@ namespace ProjectKMP.Gorilla
 
             float angle = Vector3.Angle(transform.forward, toTarget.normalized);
             return angle > _normalAttackHitAngle * 0.5f;
+        }
+
+        /// <summary>対象が薙ぎ払い攻撃の命中扇形(正面 ±SweepAttackHitAngle/2)の外(=ほぼ真後ろ)にいるか</summary>
+        private bool IsTargetOutsideSweepAttackCone()
+        {
+            if (_target == null) return false;
+
+            Vector3 toTarget = _target.position - transform.position;
+            toTarget.y = 0f;
+            if (toTarget.sqrMagnitude < 0.0001f) return false;
+
+            float angle = Vector3.Angle(transform.forward, toTarget.normalized);
+            return angle > _sweepAttackHitAngle * 0.5f;
         }
 
         /// <summary>破壊光線を使うかどうかの確率判定(射程・クールタイムは呼び出し側で確認済みの前提)</summary>
