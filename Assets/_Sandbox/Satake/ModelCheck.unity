@@ -166,11 +166,21 @@ MonoBehaviour:
   _stampAttackProbability: 0.3
   _normalAttackStaggerTime: 0.6
   _stampAttackStaggerTime: 1.2
+  _sweepAttackStaggerTime: 0.8
+  _sweepAttackProbability: 0.7
   _normalAttackDamage: 20
   _normalAttackHitRange: 3
   _normalAttackHitAngle: 120
   _stampAttackDamage: 30
   _stampAttackRadius: 3.5
+  _sweepAttackDamage: 25
+  _sweepAttackHitRange: 6
+  _sweepAttackHitAngle: 220
+  _sweepAttackKnockbackDistance: 10
+  _sweepAttackKnockbackDurationSec: 0.6
+  _sweepAttackKnockbackArcHeight: 4
+  _sweepAttackPalmCrushRadius: 5.5
+  _sweepAttackPalmCrushAngleDeg: 30
   _patrolSpeed: 1.5
   _chaseSpeed: 2.5
   _turnSpeedDeg: 180
@@ -180,8 +190,9 @@ MonoBehaviour:
   _patrolWaitTimeMin: 1
   _patrolWaitTimeMax: 2.5
   _animationSpeed: 0.5
-  _target: {fileID: 2000000004}
+  _target: {fileID: 0}
   _targetSearchIntervalSec: 0.5
+  _hitReactionTurnSpeedDeg: 240
   _stampImpactEffectPrefab: {fileID: 100012, guid: a905d8e5159ffeb46baa8d2a7624717f, type: 3}
   _stampImpactEffectScale: 0.25
   _stampDecalPrefab: {fileID: 0}
@@ -192,6 +203,22 @@ MonoBehaviour:
   _normalAttackHitEffectPrefab: {fileID: 5024009746357069194, guid: ec3f674830402cc45bce805cf6493db7, type: 3}
   _normalAttackHitEffectScale: 2.5
   _normalAttackHitEffectForwardOffset: 2
+  _sweepAttackChargeEffectPrefab: {fileID: 0}
+  _sweepAttackChargeEffectHeight: 1.2
+  _sweepAttackChargeAuraEffectPrefab: {fileID: 3027563389077156308, guid: 5013266742d904210a97d36e3717a050, type: 3}
+  _sweepAttackChargeAuraEffectScale: 1
+  _sweepAttackChargeAuraHeight: 1.2
+  _sweepAttackHandAuraEffectScale: 0.6
+  _sweepAttackChargeAuraRiseLineHeightOffset: 0.5
+  _sweepFistEffectPrefab: {fileID: 6454320195760751793, guid: f98192abfe71241679b924b29c3a1297, type: 3}
+  _sweepFistEffectHeight: 0.3
+  _sweepFistEffectForwardOffset: 2
+  _sweepFistEffectScale: 1
+  _sweepFistEffectThicknessScale: 1
+  _sweepImpactEffectPrefab: {fileID: 5024009746357069194, guid: ec3f674830402cc45bce805cf6493db7, type: 3}
+  _sweepImpactEffectScale: 0.48000002
+  _sweepImpactEffectPrefab2: {fileID: 100012, guid: a905d8e5159ffeb46baa8d2a7624717f, type: 3}
+  _sweepImpactEffectScale2: 0.16000001
   _stampAttackChargeEffectPrefab: {fileID: 3526373135642884375, guid: 9c3c4cf28e1304cc199ca4022dcc1ecc, type: 3}
   _stampAttackChargeEffectHeight: 1.2
   _beamAttackRange: 6
@@ -322,6 +349,7 @@ MonoBehaviour:
   _respawnHeight: 1
   _knockbackDistance: 2.5
   _knockbackDurationSec: 0.25
+  _blockKnockbackWhileBeam: 1
   _deathKnockbackDistance: 16
   _deathKnockbackDurationSec: 0.7
   _deathKnockbackArcHeight: 3
@@ -330,6 +358,9 @@ MonoBehaviour:
   _biteVfxPrefab: {fileID: 0}
   _biteVfxHeight: 1.1
   _bodyRoot: {fileID: 0}
+  _crushDurationSec: 0.15
+  _crushSquashScaleX: 0.05
+  _crushSquashScaleYZMultiplier: 1.5
 --- !u!95 &460156481
 Animator:
   serializedVersion: 7
@@ -558,6 +589,63 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 101158242}
   m_SourcePrefab: {fileID: 100100000, guid: 939cb10c88ca52a45871b215bd6d8595, type: 3}
+--- !u!1001 &1391422361
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 5969955239984586251, guid: a5fbc14968d1347c08e1b897b6273f90, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5969955239984586251, guid: a5fbc14968d1347c08e1b897b6273f90, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5969955239984586251, guid: a5fbc14968d1347c08e1b897b6273f90, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5969955239984586251, guid: a5fbc14968d1347c08e1b897b6273f90, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5969955239984586251, guid: a5fbc14968d1347c08e1b897b6273f90, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5969955239984586251, guid: a5fbc14968d1347c08e1b897b6273f90, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5969955239984586251, guid: a5fbc14968d1347c08e1b897b6273f90, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5969955239984586251, guid: a5fbc14968d1347c08e1b897b6273f90, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5969955239984586251, guid: a5fbc14968d1347c08e1b897b6273f90, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5969955239984586251, guid: a5fbc14968d1347c08e1b897b6273f90, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6454320195760751793, guid: a5fbc14968d1347c08e1b897b6273f90, type: 3}
+      propertyPath: m_Name
+      value: PF_Gorilla_FistEffect
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: a5fbc14968d1347c08e1b897b6273f90, type: 3}
 --- !u!1 &1455423054
 GameObject:
   m_ObjectHideFlags: 0
@@ -970,7 +1058,7 @@ MonoBehaviour:
   OwnershipTransfer: 0
   observableSearch: 2
   ObservedComponents: []
-  sceneViewId: 1
+  sceneViewId: 4
   InstantiationId: 0
   isRuntimeInstantiated: 0
 --- !u!114 &2000000003
@@ -992,11 +1080,6 @@ MonoBehaviour:
   _crossFadeSec: 0.15
   _attackDurationSec: 0.4166667
   _speedSmoothing: 12
---- !u!4 &2000000004 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 399bd93a31143ac40b6b02b55d31d423, type: 3}
-  m_PrefabInstance: {fileID: 1983199294}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2000000010
 GameObject:
   m_ObjectHideFlags: 0
@@ -1052,3 +1135,4 @@ SceneRoots:
   - {fileID: 1983199294}
   - {fileID: 1162545738}
   - {fileID: 2000000011}
+  - {fileID: 1391422361}

@@ -76,6 +76,16 @@ namespace ProjectKMP.Player
         [SerializeField, Tooltip("死亡時にひっくり返す見た目のルート。未設定なら子の\"Body\"を自動で探す")]
         private Transform _bodyRoot;
 
+        [Header("ぺっちゃんこ演出(手のひらで挟み潰されたとき)")]
+        [SerializeField, Min(0.01f), Tooltip("挟み潰されてぺっちゃんこになるまでの時間(秒)")]
+        private float _crushDurationSec = 0.15f;
+
+        [SerializeField, Min(0f), Tooltip("ぺっちゃんこになったときのX(左右、手のひらに挟まれる方向)のスケール倍率。0に近いほど横に薄く潰れる")]
+        private float _crushSquashScaleX = 0.05f;
+
+        [SerializeField, Min(1f), Tooltip("ぺっちゃんこになったときのYZ(高さ・前後)方向のスケール倍率。横に潰れたぶん、これらの方向へ広がる")]
+        private float _crushSquashScaleYZMultiplier = 1.5f;
+
         // ---- 内部状態 ------------------------------------
 
         private CharacterController _controller;
@@ -83,7 +93,9 @@ namespace ProjectKMP.Player
         private bool _isDead;
         private bool _isInvincible;
         private Quaternion _bodyDefaultLocalRotation;
+        private Vector3 _bodyDefaultLocalScale;
         private CancellationTokenSource _knockbackCts;
+        private CancellationTokenSource _crushCts;
 
         private readonly ReactiveProperty<int> _hp = new ReactiveProperty<int>(0);
         private readonly ReactiveProperty<float> _respawnRemainingSec = new ReactiveProperty<float>(0.0f);
@@ -149,6 +161,16 @@ namespace ProjectKMP.Player
         }
 
         /// <summary>
+        /// 発生源の座標つきの即死。ただし吹き飛ばさず、その場でぺっちゃんこに潰れる演出で倒す。
+        /// (例: 薙ぎ払い攻撃で両手のひらの間に挟み込まれた場合など)
+        /// </summary>
+        public void ApplyCrushKill(int killerActorNumber, Vector3 sourcePosition)
+        {
+            if (_isDead || _isInvincible) return;
+            photonView.RPC(nameof(RpcOnCrushed), RpcTarget.All, killerActorNumber, sourcePosition);
+        }
+
+        /// <summary>
         /// ダメージ源のクライアントから呼ぶ。指定ぶんHPを減らし、全員に伝える。吹き飛びなし。
         /// HPが0になった時点で ApplyKill と同じ死亡処理が走る。
         /// attackerActorNumber はプレイヤーによる攻撃でなければ -1 を渡してよい(撃破数の加算対象にならない)。
@@ -164,6 +186,34 @@ namespace ProjectKMP.Player
             if (_isDead || _isInvincible) return;
             if (damage <= 0) return;
             photonView.RPC(nameof(RpcOnDamaged), RpcTarget.All, damage, attackerActorNumber, sourcePosition);
+        }
+
+        /// <summary>
+        /// 発生源の座標つきのダメージ。吹き飛び距離を通常の被弾より強く(または弱く)指定したいときに使う。
+        /// (例: 薙ぎ払い攻撃のように、通常の被弾よりずっと大きく吹き飛ばしたい攻撃)
+        /// 死亡した場合はこの値を無視し、通常通り死亡時の大きな吹き飛びになる
+        /// </summary>
+        public void ApplyDamage(int damage, int attackerActorNumber, Vector3 sourcePosition, float knockbackDistanceOverride)
+        {
+            ApplyDamage(damage, attackerActorNumber, sourcePosition, knockbackDistanceOverride, _knockbackDurationSec);
+        }
+
+        /// <summary>吹き飛び距離に加えて、吹き飛びにかける時間も指定できる版。距離を大きくする場合は時間も伸ばすと自然に見える</summary>
+        public void ApplyDamage(int damage, int attackerActorNumber, Vector3 sourcePosition, float knockbackDistanceOverride, float knockbackDurationOverrideSec)
+        {
+            ApplyDamage(damage, attackerActorNumber, sourcePosition, knockbackDistanceOverride, knockbackDurationOverrideSec, 0.0f);
+        }
+
+        /// <summary>
+        /// 吹き飛び距離・時間に加えて、放物線を描いて浮き上がる高さ(arcHeight)も指定できる版。
+        /// 0なら死亡時以外の通常の被弾と同じく水平にしか吹き飛ばない。正の値を渡すと、死亡時の吹き飛びと同じように
+        /// 上空へ浮き上がりながら吹き飛ぶようになる(例: 薙ぎ払い攻撃で上空を巻き込むように吹き飛ばしたい場合)
+        /// </summary>
+        public void ApplyDamage(int damage, int attackerActorNumber, Vector3 sourcePosition, float knockbackDistanceOverride, float knockbackDurationOverrideSec, float knockbackArcHeightOverride)
+        {
+            if (_isDead || _isInvincible) return;
+            if (damage <= 0) return;
+            photonView.RPC(nameof(RpcOnDamagedWithKnockback), RpcTarget.All, damage, attackerActorNumber, sourcePosition, knockbackDistanceOverride, knockbackDurationOverrideSec, knockbackArcHeightOverride);
         }
 
         // ---- Unityイベント -------------------------------
@@ -184,6 +234,7 @@ namespace ProjectKMP.Player
                 _bodyRoot = found != null ? found : transform;
             }
             _bodyDefaultLocalRotation = _bodyRoot.localRotation;
+            _bodyDefaultLocalScale = _bodyRoot.localScale;
             _isInvincible = false;
         }
 
@@ -212,6 +263,8 @@ namespace ProjectKMP.Player
         private void OnDestroy()
         {
             CancelKnockback();
+            _crushCts?.Cancel();
+            _crushCts?.Dispose();
             _hp.Dispose();
             _respawnRemainingSec.Dispose();
             _damaged.Dispose();
@@ -244,6 +297,28 @@ namespace ProjectKMP.Player
             }
         }
 
+        /// <summary>RpcOnDamagedの、吹き飛び距離を指定できる版。ロジックはRpcOnDamagedと同じで、吹き飛び距離だけ引数で上書きする</summary>
+        [PunRPC]
+        private void RpcOnDamagedWithKnockback(int damage, int attackerActorNumber, Vector3 sourcePosition, float knockbackDistanceOverride, float knockbackDurationOverrideSec, float knockbackArcHeightOverride, PhotonMessageInfo info)
+        {
+            if (_isDead) return;
+
+            _hp.Value = Mathf.Max(0, _hp.Value - damage);
+            _damaged.OnNext(damage);
+
+            if (_hp.Value <= 0)
+            {
+                Die(attackerActorNumber, sourcePosition);
+            }
+            else
+            {
+                if (!IsKnockbackBlocked())
+                {
+                    StartKnockback(sourcePosition, knockbackDistanceOverride, knockbackDurationOverrideSec, knockbackArcHeightOverride);
+                }
+            }
+        }
+
         [PunRPC]
         private void RpcOnKilled(int killerActorNumber, Vector3 sourcePosition)
         {
@@ -254,10 +329,25 @@ namespace ProjectKMP.Player
             Die(killerActorNumber, sourcePosition);
         }
 
+        /// <summary>RpcOnKilledの、吹き飛ばさずぺっちゃんこに潰れる版</summary>
+        [PunRPC]
+        private void RpcOnCrushed(int killerActorNumber, Vector3 sourcePosition)
+        {
+            if (_isDead) return;
+
+            _hp.Value = 0;
+            _damaged.OnNext(_maxHp);
+            Die(killerActorNumber, sourcePosition, isCrushed: true);
+        }
+
         [PunRPC]
         private void RpcRevive(Vector3 position)
         {
             CancelKnockback();
+            _crushCts?.Cancel();
+            _crushCts?.Dispose();
+            _crushCts = null;
+            _bodyRoot.localScale = _bodyDefaultLocalScale;
             _isDead = false;
             _hp.Value = _maxHp;
             _respawnRemainingSec.Value = 0.0f;
@@ -274,15 +364,31 @@ namespace ProjectKMP.Player
         // ---- 内部処理 ------------------------------------
 
         /// <summary>死亡処理本体。ApplyKill(即死)・ApplyDamage(HP0到達)のどちらからも呼ばれる</summary>
-        private void Die(int killerActorNumber, Vector3 sourcePosition)
+        private void Die(int killerActorNumber, Vector3 sourcePosition, bool isCrushed = false)
         {
             _isDead = true;
             SetAlive(false);
-            SetDeathPose(true);
             _died.OnNext(Unit.Default);
 
-            // 死亡時は当たり判定が切れているので、放物線を描く大きな吹き飛びになる
-            StartKnockback(sourcePosition, _deathKnockbackDistance, _deathKnockbackDurationSec, _deathKnockbackArcHeight);
+            if (isCrushed)
+            {
+                // 挟み潰された場合、通常死亡の"お腹が上"ポーズ(ローカルZ軸90度回転)を適用すると
+                // ローカルY軸が世界の上方向からズレてしまい、後段のスケール潰しが縦(上下)に効かなくなる。
+                // そのため通常の死亡ポーズは適用せず、直立姿勢のまま真上から押し潰したような見た目にする
+                SetDeathPose(false);
+
+                _crushCts?.Cancel();
+                _crushCts?.Dispose();
+                _crushCts = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
+                PlayCrushVisualAsync(_crushCts.Token).Forget();
+            }
+            else
+            {
+                SetDeathPose(true);
+
+                // 死亡時は当たり判定が切れているので、放物線を描く大きな吹き飛びになる
+                StartKnockback(sourcePosition, _deathKnockbackDistance, _deathKnockbackDurationSec, _deathKnockbackArcHeight);
+            }
 
             // 被弾エフェクトは全員のクライアントで出す。この RPC が全員に届くので追加の通信は不要
             if (_biteVfxPrefab != null)
@@ -352,6 +458,38 @@ namespace ProjectKMP.Player
             _knockbackCts.Cancel();
             _knockbackCts.Dispose();
             _knockbackCts = null;
+        }
+
+        /// <summary>
+        /// 手のひらで挟み潰されたときの演出。体のスケールを短時間で押し潰した形に変形させる。
+        /// 潰れたままリスポーンまで維持し、RpcRevive で元のスケールに戻す。
+        /// </summary>
+        private async UniTaskVoid PlayCrushVisualAsync(CancellationToken ct)
+        {
+            // 手のひらで左右から挟まれるイメージなので、体の左右(ローカルX)方向を潰し、
+            // 潰れたぶん高さ(Y)と前後(Z)へ広がるようにする
+            Vector3 targetScale = new Vector3(
+                _bodyDefaultLocalScale.x * _crushSquashScaleX,
+                _bodyDefaultLocalScale.y * _crushSquashScaleYZMultiplier,
+                _bodyDefaultLocalScale.z * _crushSquashScaleYZMultiplier);
+
+            try
+            {
+                float elapsed = 0.0f;
+                while (elapsed < _crushDurationSec)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    elapsed += Time.deltaTime;
+                    float t = Mathf.Clamp01(elapsed / _crushDurationSec);
+                    _bodyRoot.localScale = Vector3.Lerp(_bodyDefaultLocalScale, targetScale, t);
+                    await UniTask.Yield(PlayerLoopTiming.Update, ct);
+                }
+                _bodyRoot.localScale = targetScale;
+            }
+            catch (System.OperationCanceledException)
+            {
+                // キャンセル時(リスポーン等)は呼び出し元でスケールを戻すので何もしない
+            }
         }
 
         /// <summary>
