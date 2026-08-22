@@ -74,6 +74,7 @@ namespace ProjectKMP.Gorilla
         private GameObject _leftHandAuraEffectInstance;
         private GameObject _rightFistEffectInstance;
         private GameObject _leftFistEffectInstance;
+        private GorillaAttackTelegraph _telegraph;
 
         public void Enter(GorillaAI owner)
         {
@@ -90,6 +91,13 @@ namespace ProjectKMP.Gorilla
             // 振りかぶりの予備動作として見せる(通常攻撃と同じ手法)
             owner.PlayAnimation(GorillaAI.ANIM_SWEEP_ATTACK);
             owner.Animator.speed = _baseAnimatorSpeed * WINDUP_SPEED_MULTIPLIER;
+
+            // 当たる範囲(横に広い扇形)を地面に出す。振りかぶりに入った時点で向きは固定されているので、
+            // 最初から「もう曲がらない」色で出して、逃げる方向をすぐ判断できるようにする
+            _telegraph = GorillaAttackTelegraph.SpawnSector(
+                owner.MeleeTelegraphPrefab, owner.transform.position, owner.transform.eulerAngles.y,
+                owner.SweepAttackHitRange, owner.SweepAttackHitAngle);
+            if (_telegraph != null) _telegraph.SetLocked(true);
 
             // チャージ中のエフェクトを体に出す
             if (owner.SweepAttackChargeEffectPrefab != null)
@@ -192,6 +200,10 @@ namespace ProjectKMP.Gorilla
                 _hasSwungYet = true;
                 owner.Animator.speed = _baseAnimatorSpeed;
 
+                // 振り切りに入ったら予測は役目を終える
+                GorillaAttackTelegraph.Dismiss(_telegraph);
+                _telegraph = null;
+
                 if (_chargeEffectInstance != null)
                 {
                     Object.Destroy(_chargeEffectInstance);
@@ -246,6 +258,9 @@ namespace ProjectKMP.Gorilla
             owner.Animator.speed = _baseAnimatorSpeed;
             owner.transform.position = _originalPosition;
             owner.transform.rotation = _originalRotation;
+
+            GorillaAttackTelegraph.Dismiss(_telegraph);
+            _telegraph = null;
 
             if (_chargeEffectInstance != null)
             {

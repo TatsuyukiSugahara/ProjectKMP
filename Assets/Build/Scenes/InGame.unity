@@ -20881,21 +20881,37 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 0}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
-      propertyPath: _beamWidth
-      value: 1.8
+      propertyPath: _viewAngle
+      value: 200
       objectReference: {fileID: 0}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _searchRadius
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _wanderRadius
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _grabHandScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _grabHandPrefab
+      value: 
+      objectReference: {fileID: 115356708113076229, guid: 867c1d0ebe368432986b817c84195a1d, type: 3}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamDecalPrefab
       value: 
       objectReference: {fileID: 3723947236444742271, guid: f847b4c4183974e25aa3a4547d6059c6, type: 3}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _loseSightRadius
+      value: 32
+      objectReference: {fileID: 0}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamEffectPrefab
       value: 
       objectReference: {fileID: 3475012728955560632, guid: 3a708620c79cc78ef87f93cb8b5b495b, type: 3}
-    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
-      propertyPath: _beamGrowDuration
-      value: 2.4
-      objectReference: {fileID: 0}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamOriginHeight
       value: 1.7
@@ -20909,6 +20925,14 @@ PrefabInstance:
       value: 30
       objectReference: {fileID: 0}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _fissureSpikePrefab
+      value: 
+      objectReference: {fileID: 1953974168946280306, guid: d5df295ebb72f412ba81779e8dc8d3fd, type: 3}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _pounceDebrisPrefab
+      value: 
+      objectReference: {fileID: 7929803193729299115, guid: 13fa9e178b6f24216b15f817fe62ebbb, type: 3}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _stampDecalDiameter
       value: 7
       objectReference: {fileID: 0}
@@ -20921,21 +20945,33 @@ PrefabInstance:
       value: 0.8
       objectReference: {fileID: 0}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _rockThrowRockPrefab
+      value: 
+      objectReference: {fileID: 7929803193729299115, guid: 13fa9e178b6f24216b15f817fe62ebbb, type: 3}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _rushPunchFistPrefab
+      value: 
+      objectReference: {fileID: 7869767160817476056, guid: d45153595d93a49f5a8e888cefbf5b97, type: 3}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamContinuousDamage
       value: 10
       objectReference: {fileID: 0}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _attackTelegraphPrefab
+      value: 
+      objectReference: {fileID: 3758525269229967768, guid: 2ef7a39037cbe4f35be50c5966cee085, type: 3}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamChargeEffectPrefab
       value: 
       objectReference: {fileID: 3526373135642884375, guid: 9c3c4cf28e1304cc199ca4022dcc1ecc, type: 3}
     - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
-      propertyPath: _beamDecalIntervalMeters
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       propertyPath: _beamOriginForwardOffset
       value: 2
       objectReference: {fileID: 0}
+    - target: {fileID: 7824852923150914141, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      propertyPath: _chargeAimIndicatorPrefab
+      value: 
+      objectReference: {fileID: 6694783469667081188, guid: 995b6674b8c97441881155e7278e1897, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -20952,6 +20988,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 2319171089922761703, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1472372953}
+    - targetCorrespondingSourceObject: {fileID: 2319171089922761703, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1472372959}
+    - targetCorrespondingSourceObject: {fileID: 2319171089922761703, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1472372958}
+    - targetCorrespondingSourceObject: {fileID: 2319171089922761703, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1472372960}
   m_SourcePrefab: {fileID: 100100000, guid: 6b7558aca05504a4dae94ee3502690be, type: 3}
 --- !u!1001 &1375839694
 PrefabInstance:
@@ -22606,6 +22651,7 @@ MonoBehaviour:
   observableSearch: 2
   ObservedComponents:
   - {fileID: 1472372950}
+  - {fileID: 1472372959}
   sceneViewId: 1
   InstantiationId: 0
   isRuntimeInstantiated: 0
@@ -22637,6 +22683,55 @@ MonoBehaviour:
   _effectHeight: 1.2
   _effectLifeSec: 2
   _minIntervalSec: 0.15
+--- !u!114 &1472372958
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1472372942}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25accf3b851bb4e1b8ba3aed3e18a311, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Gorilla.GorillaNetworkSync
+  _ai: {fileID: 1472372952}
+  _sync: {fileID: 1472372959}
+  _positionLerpSpeed: 12
+  _rotationLerpSpeedDeg: 720
+  _teleportDistance: 5
+  _logStateChange: 0
+--- !u!114 &1472372959
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1472372942}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba8bcb7604eff4de1a782a48e8b242c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Gorilla.GorillaSyncObject
+--- !u!114 &1472372960
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1472372942}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb2911929574b48d691a8950a945adfb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Gorilla.GorillaTargetSelector
+  _retargetIntervalSec: 3
+  _distanceWeight: 1
+  _hateWeight: 0.08
+  _stickyBonus: 10
+  _hateHalfLifeSec: 12
+  _maxTargetDistance: 40
+  _logRetarget: 0
 --- !u!1001 &1473548521
 PrefabInstance:
   m_ObjectHideFlags: 0

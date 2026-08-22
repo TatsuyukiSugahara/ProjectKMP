@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 2319171089922761699}
   - component: {fileID: 7824852923150914141}
   - component: {fileID: 3114836833867332793}
+  - component: {fileID: 8081190605002328858}
   m_Layer: 0
   m_Name: Gorilla
   m_TagString: Untagged
@@ -139,6 +140,171 @@ MonoBehaviour:
   _stampAttackStaggerTime: 1.2
   _sweepAttackStaggerTime: 0.8
   _sweepAttackProbability: 0.7
+  _chargeAttackMinRange: 3.5
+  _chargeAttackRange: 12
+  _chargeAttackProbability: 0.7
+  _chargeAttackCooldownSec: 6
+  _chargeWindupTime: 1
+  _chargeFollowUpWindupTime: 0.3
+  _chargeAimLockRatio: 0.85
+  _chargeAimTurnSpeedDeg: 120
+  _chargeLeanBackAngleDeg: 28
+  _chargeLeanForwardAngleDeg: 18
+  _chargeHomingSpeedDeg: 45
+  _chargeTurnTime: 0.4
+  _chargeDistanceFalloff: 0.8
+  _phaseChargeCounts: 01000000020000000200000003000000
+  _chargeSpeed: 11
+  _chargeMaxDistance: 14
+  _chargeAttackDamage: 35
+  _chargeHitRadius: 1.6
+  _chargeKnockbackDistance: 8
+  _chargeKnockbackDurationSec: 0.5
+  _chargeKnockbackArcHeight: 2.5
+  _chargeHitStaggerTime: 1
+  _chargeMissStaggerTime: 1.7
+  _chargeAttackChargeEffectPrefab: {fileID: 0}
+  _rockThrowMinRange: 10
+  _rockThrowRange: 28
+  _rockThrowProbability: 0.6
+  _rockThrowCooldownSec: 7
+  _rockThrowWindupTime: 1.2
+  _rockThrowAimTurnSpeedDeg: 150
+  _rockThrowDamage: 25
+  _rockThrowRadius: 4
+  _rockThrowStaggerTime: 1.2
+  _rockThrowRockPrefab: {fileID: 0}
+  _rockThrowRockScale: 1.6
+  _rockThrowDigForwardOffset: 2.2
+  _rockThrowHoldHeight: 3.2
+  _rockThrowHoldForwardOffset: 0.6
+  _rockThrowSpeed: 22
+  _rockThrowArcHeight: 5
+  _rockThrowDecalPrefab: {fileID: 0}
+  _rockThrowImpactEffectPrefab: {fileID: 0}
+  _rockThrowImpactEffectScale: 0.35
+  _rockThrowDebrisCount: 7
+  _rockThrowDebrisScale: 0.45
+  _rockThrowDebrisSpreadSpeed: 7
+  _rockThrowDebrisUpSpeed: 6.5
+  _rockThrowDebrisLifetimeSec: 2.5
+  _phaseRockThrowCounts: 01000000010000000200000003000000
+  _rushPunchMinRange: 2.5
+  _rushPunchRange: 8
+  _rushPunchProbability: 0.5
+  _rushPunchCooldownSec: 8
+  _rushPunchWindupTime: 0.5
+  _rushPunchSpeed: 7.5
+  _rushPunchInterval: 0.6
+  _rushPunchDamage: 12
+  _rushPunchReach: 3.2
+  _rushPunchHitRadius: 1.8
+  _rushPunchKnockbackDistance: 0.9
+  _rushPunchHomingSpeedDeg: 60
+  _rushPunchStaggerTime: 1.4
+  _rushPunchKeepDistance: 2.6
+  _rushPunchLungeDistance: 0.55
+  _rushPunchFinishDamageMultiplier: 2.2
+  _rushPunchFinishKnockbackDistance: 6
+  _phaseRushPunchCounts: 04000000050000000600000008000000
+  _rushPunchIntervalPhaseMultipliers:
+  - 1
+  - 0.9
+  - 0.5
+  - 0.45
+  _rushPunchFistPrefab: {fileID: 0}
+  _rushPunchFistScale: 1.1
+  _rushPunchFistHeight: 1.5
+  _useHandBoneAnchor: 1
+  _rightHandBoneName: leg.F.R
+  _leftHandBoneName: leg.F.L
+  _handBoneLength: 0.29
+  _pounceMinRange: 7
+  _pounceRange: 20
+  _pounceProbability: 0.5
+  _pounceCooldownSec: 9
+  _pounceWindupTime: 0.7
+  _pounceLeapDurationSec: 0.75
+  _pounceJumpHeight: 8
+  _pounceMaxDistance: 18
+  _pounceDamage: 32
+  _pounceRadius: 5
+  _pounceKnockbackDistance: 6
+  _pounceStaggerTime: 1.5
+  _pounceCameraShake: 0.45
+  _pounceDebrisPrefab: {fileID: 0}
+  _pounceDebrisCount: 12
+  _pounceDebrisScale: 0.55
+  _fissureMinRange: 4
+  _fissureRange: 24
+  _fissureProbability: 0.5
+  _fissureCooldownSec: 8
+  _fissureWindupTime: 0.8
+  _fissureAimLockRatio: 0.7
+  _fissureAimTurnSpeedDeg: 120
+  _fissureSpeed: 26
+  _fissureLength: 22
+  _fissureWidth: 1.8
+  _fissureDamage: 22
+  _fissureKnockbackDistance: 4
+  _fissureKnockbackArcHeight: 4.5
+  _fissureStaggerTime: 1.4
+  _fissureSpreadAngleDeg: 26
+  _phaseFissureCounts: 01000000010000000200000003000000
+  _fissureCameraShake: 0.5
+  _fissureDecalPrefab: {fileID: 0}
+  _fissureSpikePrefab: {fileID: 0}
+  _fissureSpikeScale: 1.4
+  _fissureSpikeRiseSec: 0.12
+  _fissureSpikeLifetimeSec: 2.1
+  _fissureHandRaiseHeight: 3.9
+  _fissureHandForwardOffset: 1.8
+  _fissureHandScale: 1.7
+  _fissureDebrisCount: 8
+  _useGrab: 0
+  _grabReach: 4.5
+  _grabAngleDeg: 70
+  _grabProbability: 0.35
+  _grabCooldownSec: 14
+  _grabWindupTime: 0.6
+  _grabAimLockRatio: 0.65
+  _grabAimTurnSpeedDeg: 150
+  _grabHoldSec: 4
+  _grabRescueDamage: 60
+  _grabHoldHeight: 3
+  _grabHoldForwardOffset: 2
+  _grabSlamDamage: 45
+  _grabSlamKnockbackDistance: 7
+  _grabStaggerTime: 1.6
+  _grabHandPrefab: {fileID: 0}
+  _grabHandScale: 1.6
+  _grabSqueezeDamage: 6
+  _grabEscapeMashCount: 12
+  _roarRadius: 14
+  _roarWaveSpeed: 26
+  _roarDamage: 5
+  _roarKnockbackDistance: 9
+  _roarKnockbackDurationSec: 0.55
+  _roarKnockbackArcHeight: 3.5
+  _roarCameraShake: 0.6
+  _attackTelegraphPrefab: {fileID: 0}
+  _showMeleeTelegraph: 1
+  _phaseHpThresholds:
+  - 0.75
+  - 0.5
+  - 0.25
+  _phaseSpeedMultipliers:
+  - 1
+  - 1.15
+  - 1.3
+  - 1.5
+  _phaseStaggerMultipliers:
+  - 1
+  - 0.85
+  - 0.7
+  - 0.55
+  _phaseNormalAttackComboCounts: 01000000020000000200000003000000
+  _roarOnPhaseUp: 1
   _normalAttackDamage: 20
   _normalAttackHitRange: 3
   _normalAttackHitAngle: 120
@@ -192,15 +358,18 @@ MonoBehaviour:
   _sweepImpactEffectScale2: 0.16000001
   _stampAttackChargeEffectPrefab: {fileID: 3526373135642884375, guid: 9c3c4cf28e1304cc199ca4022dcc1ecc, type: 3}
   _stampAttackChargeEffectHeight: 1.2
-  _beamAttackRange: 6
+  _beamAttackRange: 12
   _beamAttackProbability: 0.5
-  _beamAttackCooldownSec: 6
-  _beamWindupTime: 0.6
-  _beamDuration: 3
-  _beamStaggerTime: 1
-  _beamLength: 10
-  _beamGrowDuration: 0.2
-  _beamWidth: 1.2
+  _beamAttackCooldownSec: 10
+  _beamWindupTime: 3
+  _beamDuration: 1.4
+  _beamShotCount: 2
+  _beamReaimTime: 0.55
+  _beamAimLockRatio: 0.75
+  _beamStaggerTime: 1.4
+  _beamLength: 16
+  _beamGrowDuration: 0.08
+  _beamWidth: 3
   _beamOriginHeight: 1.2
   _beamOriginForwardOffset: 1.2
   _beamInitialDamage: 3
@@ -211,7 +380,7 @@ MonoBehaviour:
   _beamFiringShakeAmount: 0.06
   _beamFadeOutDuration: 0.8
   _beamDecalPrefab: {fileID: 0}
-  _beamDecalIntervalMeters: 2
+  _beamDecalIntervalMeters: 2.1
   _beamDecalWidthScale: 1.2
 --- !u!114 &3114836833867332793
 MonoBehaviour:
@@ -233,6 +402,32 @@ MonoBehaviour:
   _onHit:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &8081190605002328858
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2319171089922761703}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26841f93454d94d73a8e0c13da29be92, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProjectKMP.Gorilla.GorillaPhaseAppearance
+  _goldPhase: 3
+  _goldColor: {r: 1, g: 0.58, b: 0.1, a: 1}
+  _furTexels:
+  - {x: 5, y: 6}
+  _nightPhase: 4
+  _rageColor: {r: 1.5, g: 0.88, b: 0.14, a: 1}
+  _useNightSky: 1
+  _auraPrefab: {fileID: 7812349207479316048, guid: 96e0f848e00214e8ebf6efd0fc3f30b0, type: 3}
+  _auraScale: 1
+  _auraHeight: 0.9
+  _auraColor: {r: 1.6, g: 1, b: 0.3, a: 1}
+  _burstHitStopSec: 0.09
+  _burstCameraShake: 0.7
+  _burstRingRadius: 9
 --- !u!1 &2319171090657101123
 GameObject:
   m_ObjectHideFlags: 0

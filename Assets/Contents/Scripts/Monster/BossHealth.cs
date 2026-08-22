@@ -288,8 +288,9 @@ namespace ProjectKMP.Monster
             _lastReactionSegment = segment;
             if (segment <= 0) return;
 
-            Gorilla.GorillaAI gorilla = GetComponent<Gorilla.GorillaAI>();
-            gorilla?.BeginTeamPowerStun(segment == 1 ? 0.85f : 0.55f);
+            // @note ここでのけぞらせるのはやめた。HPが段を割ったときの反応は
+            //       GorillaAI 側のフェーズ移行(咆哮ステート)が担当する。
+            //       両方やると、のけぞりで Update が止まって咆哮が再生されない
 
             Color color = segment == 1
                 ? new Color(1.0f, 0.22f, 0.12f, 1.0f)

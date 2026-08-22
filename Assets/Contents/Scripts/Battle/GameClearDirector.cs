@@ -147,9 +147,11 @@ namespace ProjectKMP.Battle
             var bossGauge = FindAnyObjectByType<BossHealthGauge>();
             if (bossGauge != null) bossGauge.SetVisible(false);
 
-            // ボスを倒れさせる(各クライアントが自分の画面で再生する)
+            // ボスを倒れさせる(各クライアントが自分の画面で再生する)。
+            // HPは MonsterSyncObject で全員に配られていて倒れる瞬間はそろうため、ステート同期には載せない。
+            // ChangeState はゲストでは弾かれるので、権限を問わない専用の入口を使う
             var gorillaAI = FindAnyObjectByType<GorillaAI>();
-            if (gorillaAI != null && !gorillaAI.IsDead) gorillaAI.ChangeState(new GorillaStateDeath());
+            if (gorillaAI != null && !gorillaAI.IsDead) gorillaAI.PlayDeathLocally();
 
             PlayFinishBlow(cameraController);
 
