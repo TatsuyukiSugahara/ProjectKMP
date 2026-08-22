@@ -37,6 +37,7 @@ namespace ProjectKMP.Gorilla
         private GameObject _chargeEffectInstance;
         private Collider _bodyCollider;
         private CharacterController _ignoredPlayerController;
+        private GorillaAttackTelegraph _telegraph;
 
         public void Enter(GorillaAI owner)
         {
@@ -49,6 +50,12 @@ namespace ProjectKMP.Gorilla
             // 落下してくる体に押されると、真下にいたプレイヤーが床の下へ押し出されてしまう。
             // スタンプの間だけ体どうしの当たり判定を切る(攻撃判定は着地点からの距離で取るので影響しない)
             BeginIgnorePlayerCollision(owner);
+
+            // 当たる範囲(足元を中心とした円)を地面に出す。
+            // 向き不問の攻撃なので、出た瞬間から「この円の外へ逃げる」だけを伝えればよい
+            _telegraph = GorillaAttackTelegraph.SpawnCircle(
+                owner.MeleeTelegraphPrefab, _groundPosition, owner.StampAttackRadius);
+            if (_telegraph != null) _telegraph.SetLocked(true);
 
             // 上昇開始（ジャンプモーション）
             owner.PlayAnimation(GorillaAI.ANIM_JUMP);
@@ -117,6 +124,11 @@ namespace ProjectKMP.Gorilla
                 if (!_hasApplyDamage)
                 {
                     _hasApplyDamage = true;
+
+                    // 着地したので予測は役目を終える
+                    GorillaAttackTelegraph.Dismiss(_telegraph);
+                    _telegraph = null;
+
                     SpawnImpactEffect(owner);
 
                     // 着地点に地面を抉った痕を残す。エフェクトと同じく全クライアントで
@@ -139,6 +151,9 @@ namespace ProjectKMP.Gorilla
             SetHeight(owner, 0f);
 
             EndIgnorePlayerCollision();
+
+            GorillaAttackTelegraph.Dismiss(_telegraph);
+            _telegraph = null;
 
             if (_chargeEffectInstance != null)
             {

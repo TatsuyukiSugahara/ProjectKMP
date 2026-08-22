@@ -3,11 +3,20 @@ using UnityEngine;
 
 namespace ProjectKMP.Gorilla
 {
-    /// <summary>通常攻撃ステート（攻撃タイプ判定でスタンプ攻撃以外が選ばれた場合の単発攻撃）</summary>
+    /// <summary>
+    /// 通常攻撃ステート（攻撃タイプ判定でスタンプ攻撃以外が選ばれた場合の頭突き）。
+    ///
+    /// 連撃数を渡すと、振り切ったあと硬直へ行かずにもう一度自分へ遷移して連続で殴る。
+    /// 2撃目以降は振りかぶりを短くして畳みかけ、最後の1撃のあとだけ通常どおり硬直するので、
+    /// 「連撃を耐えきれば大きな反撃チャンスが来る」という読み合いになる。
+    /// </summary>
     public class GorillaStateNormalAttack : IGorillaState
     {
         /// <summary>予備動作（振りかぶり）の時間。攻撃モーションをスローで見せて溜める</summary>
         private const float WINDUP_TIME = 0.5f;
+
+        /// <summary>2撃目以降の振りかぶり時間(秒)。1撃目より短くして連続で来ている感を出す</summary>
+        private const float FOLLOW_UP_WINDUP_TIME = 0.22f;
 
         /// <summary>予備動作中のアニメーション再生速度倍率(通常速度に対する割合)。小さいほどはっきり止まって見える</summary>
         private const float WINDUP_SPEED_MULTIPLIER = 0.1f;
@@ -24,6 +33,32 @@ namespace ProjectKMP.Gorilla
         private float _baseAnimatorSpeed;
         private Vector3 _originalPosition;
         private GameObject _chargeEffectInstance;
+        private GorillaAttackTelegraph _telegraph;
+
+        /// <summary>この一撃のあと、あと何回続けて殴るか</summary>
+        private readonly int _comboRemaining;
+
+        /// <summary>連撃の2撃目以降か。振りかぶりの長さが変わる</summary>
+        private readonly bool _isFollowUp;
+
+        /// <summary>この一撃の振りかぶり時間</summary>
+        private float WindupTime => _isFollowUp ? FOLLOW_UP_WINDUP_TIME : WINDUP_TIME;
+
+        /// <summary>単発の頭突き</summary>
+        public GorillaStateNormalAttack() : this(0, false)
+        {
+        }
+
+        /// <summary>
+        /// 連撃つきの頭突き。
+        /// </summary>
+        /// <param name="comboRemaining">この一撃のあと、続けて殴る回数</param>
+        /// <param name="isFollowUp">2撃目以降なら true。振りかぶりが短くなる</param>
+        public GorillaStateNormalAttack(int comboRemaining, bool isFollowUp)
+        {
+            _comboRemaining = Mathf.Max(0, comboRemaining);
+            _isFollowUp = isFollowUp;
+        }
 
         public void Enter(GorillaAI owner)
         {
@@ -38,6 +73,13 @@ namespace ProjectKMP.Gorilla
             // 攻撃モーション自体をスローで再生することで、振りかぶりの予備動作として見せる
             owner.PlayAnimation(GorillaAI.ANIM_NORMAL_ATTACK);
             owner.Animator.speed = _baseAnimatorSpeed * WINDUP_SPEED_MULTIPLIER;
+
+            // 当たる範囲(正面の扇形)を地面に出す。振りかぶりに入った時点で向きは固定されているので、
+            // 最初から「もう曲がらない」色で出して、逃げる方向をすぐ判断できるようにする
+            _telegraph = GorillaAttackTelegraph.SpawnSector(
+                owner.MeleeTelegraphPrefab, owner.transform.position, owner.transform.eulerAngles.y,
+                owner.NormalAttackHitRange, owner.NormalAttackHitAngle);
+            if (_telegraph != null) _telegraph.SetLocked(true);
 
             // チャージ中のエフェクトを体に出す
             if (owner.NormalAttackChargeEffectPrefab != null)
@@ -54,16 +96,20 @@ namespace ProjectKMP.Gorilla
             if (!_hasSwungYet)
             {
                 // 溜まるほど震えが大きくなる(チャージ感の演出)
-                float chargeRatio = Mathf.Clamp01(_elapsedTime / WINDUP_TIME);
+                float chargeRatio = Mathf.Clamp01(_elapsedTime / WindupTime);
                 Vector2 jitter = Random.insideUnitCircle * (MAX_SHAKE_AMOUNT * chargeRatio);
                 owner.transform.position = _originalPosition + new Vector3(jitter.x, 0f, jitter.y);
 
-                if (_elapsedTime < WINDUP_TIME) return;
+                if (_elapsedTime < WindupTime) return;
 
                 // 予備動作が終わったので位置と速度を戻し、実際の振り切りに入る
                 owner.transform.position = _originalPosition;
                 _hasSwungYet = true;
                 owner.Animator.speed = _baseAnimatorSpeed;
+
+                // 振り切りに入ったら予測は役目を終える
+                GorillaAttackTelegraph.Dismiss(_telegraph);
+                _telegraph = null;
 
                 if (_chargeEffectInstance != null)
                 {
@@ -80,7 +126,7 @@ namespace ProjectKMP.Gorilla
                 return;
             }
 
-            float swingElapsed = _elapsedTime - WINDUP_TIME;
+            float swingElapsed = _elapsedTime - WindupTime;
 
             // 振り切りの中間(ヒットエフェクトと同じタイミング)で一度だけ単発ダメージを発生させる
             if (!_hasApplyDamage && swingElapsed >= ATTACK_MOTION_TIME * 0.5f)
@@ -109,6 +155,14 @@ namespace ProjectKMP.Gorilla
 
             if (swingElapsed >= ATTACK_MOTION_TIME)
             {
+                // まだ連撃が残っていれば硬直を挟まずにもう一度殴る。
+                // 硬直に入るのは最後の1撃のあとだけなので、そこが反撃のタイミングになる
+                if (_comboRemaining > 0)
+                {
+                    owner.ChangeState(new GorillaStateNormalAttack(_comboRemaining - 1, true));
+                    return;
+                }
+
                 owner.ChangeState(new GorillaStateStagger(owner.NormalAttackStaggerTime));
             }
         }
@@ -149,6 +203,9 @@ namespace ProjectKMP.Gorilla
             // 硬直等で早期に抜けた場合でも、スロー・震え・エフェクトが残らないよう必ず後始末する
             owner.Animator.speed = _baseAnimatorSpeed;
             owner.transform.position = _originalPosition;
+
+            GorillaAttackTelegraph.Dismiss(_telegraph);
+            _telegraph = null;
 
             if (_chargeEffectInstance != null)
             {
