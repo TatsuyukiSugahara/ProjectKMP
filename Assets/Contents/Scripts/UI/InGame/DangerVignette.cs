@@ -97,6 +97,22 @@ namespace ProjectKMP.UI
             _dangerGoal = Mathf.Clamp01(danger01);
         }
 
+        /// <summary>
+        /// 出ている縁をその場で消す。
+        ///
+        /// 普段はゆっくり薄くしてちらつきを防いでいるが、決着の瞬間のように
+        /// 「次のフレームにはもう写っていてほしくない」場面では薄れるのを待てない。
+        /// リザルトの背景に使う画面を撮るのもこの直後なので、待たずに消し切る。
+        /// </summary>
+        public static void Clear()
+        {
+            if (_instance == null) return;
+
+            _instance._dangerGoal = 0.0f;
+            _instance._danger = 0.0f;
+            if (_instance._image != null) _instance._image.enabled = false;
+        }
+
         /// <summary>いまの危なさ</summary>
         private float ResolveDanger()
         {

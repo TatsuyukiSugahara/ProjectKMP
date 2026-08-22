@@ -136,6 +136,9 @@ namespace ProjectKMP.Battle
             // 最終フェーズの赤みを消す。決着の絵に赤が乗ったままだと締まらない
             FinalPhaseDirector.End();
 
+            // 瀕死の赤い縁も消す。薄れるのを待つとリザルト用に撮る絵に間に合わないので、その場で消し切る
+            DangerVignette.Clear();
+
             // ターゲットカメラを解く。解かないと、倒したあとも照準がボスに残り続ける
             var cameraController = FindAnyObjectByType<Player.ThirdPersonCamera>();
             if (cameraController != null) cameraController.ReleaseLockOn();

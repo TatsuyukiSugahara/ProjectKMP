@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ProjectKMP.Battle;
 using ProjectKMP.Core;
 using ProjectKMP.UI.InGame;
 using R3;
@@ -33,12 +34,19 @@ namespace ProjectKMP.UI.Presenters
             _subscriptions.Add(status.CurrentHp.Subscribe(_ => Apply()));
             _subscriptions.Add(status.MaxHp.Subscribe(_ => Apply()));
             _subscriptions.Add(status.IsDead.Subscribe(_ => Apply()));
+
+            // 操作できない間は出さない。カットシーンや決着の絵に赤が乗っていると締まらない
+            _subscriptions.Add(BattlePlayGate.OnChanged.Subscribe(_ => Apply()));
         }
 
         private void OnDisable()
         {
             foreach (var subscription in _subscriptions) subscription.Dispose();
             _subscriptions.Clear();
+
+            // 縁はシーンをまたいで生き残るので、渡す側が居なくなるときに消しておく。
+            // これをしないと最後に渡した濃さのまま、次のシーンでも出たままになる
+            DangerVignette.Clear();
         }
 
         private void Apply()
@@ -56,6 +64,9 @@ namespace ProjectKMP.UI.Presenters
 
             // 死んでいる間は出さない。倒れた画面を赤く塗っても意味がない
             if (status.IsDead.CurrentValue) return 0.0f;
+
+            // 操作を止めている間も出さない。戦っていないのに急かす必要はない
+            if (!BattlePlayGate.IsPlayable) return 0.0f;
             if (status.MaxHp.CurrentValue <= 0) return 0.0f;
 
             float ratio = status.HpRatio01;
