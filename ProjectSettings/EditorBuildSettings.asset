@@ -9,7 +9,7 @@ EditorBuildSettings:
     path: Assets/Build/Scenes/Boot.unity
     guid: 6e5510e12e84242968cee3cd66d23582
   - enabled: 1
-    path: Assets/Build/Scenes/Title.unity
+    path: Assets/OpenCampus/Title.unity
     guid: 4121a9dd318934af495e624688f0fed3
   - enabled: 1
     path: Assets/Build/Scenes/Lobby.unity
@@ -21,7 +21,7 @@ EditorBuildSettings:
     path: Assets/Build/Scenes/Result.unity
     guid: 564a9f78244124c828d6ee4d767caacd
   - enabled: 1
-    path: Assets/Build/Scenes/InGame.unity
+    path: Assets/OpenCampus/InGame.unity
     guid: a01779b0d2b034f4a8799cc9ac776003
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: b7ee4d41900d6421986177147ab4cb49, type: 2}
